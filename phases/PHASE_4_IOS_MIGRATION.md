@@ -33,8 +33,8 @@ Phase 4 ports the web app to iOS with native features:
 ### **Task 4.1: Install iOS Dependencies**
 
 ```bash
-# Voice recognition
-npx expo install expo-speech
+# Voice recognition - Apple Speech Framework
+npm install @react-native-voice/voice
 
 # Haptics
 npx expo install expo-haptics
@@ -48,13 +48,40 @@ npm install --save-dev detox@^20.0.0
 npm install --save-dev detox-expo-helpers
 ```
 
+**Configure app.json for Speech Recognition permissions:**
+```json
+{
+  "expo": {
+    "plugins": [
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "Allow Voice Fit to use your microphone for voice logging.",
+          "speechRecognitionPermission": "Allow Voice Fit to recognize your speech for workout logging."
+        }
+      ]
+    ],
+    "ios": {
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Voice Fit uses speech recognition to log your workouts hands-free.",
+        "NSMicrophoneUsageDescription": "Voice Fit needs microphone access to hear your workout commands."
+      }
+    }
+  }
+}
+```
+
 ---
 
-### **Task 4.2: Create iOS Voice Service**
+### **Task 4.2: Create iOS Voice Service with Apple Speech Framework**
 
 **Create `src/services/voice/VoiceService.ios.ts`:**
 ```typescript
-import * as Speech from 'expo-speech';
+import Voice, {
+  SpeechResultsEvent,
+  SpeechErrorEvent,
+  SpeechRecognizedEvent,
+} from '@react-native-voice/voice';
 import { IVoiceService, VoiceRecognitionResult } from './VoiceService';
 
 export class VoiceServiceIOS implements IVoiceService {
@@ -62,44 +89,110 @@ export class VoiceServiceIOS implements IVoiceService {
   private errorCallback?: (error: Error) => void;
   private isListening = false;
 
-  async startListening(): Promise<void> {
-    try {
-      // Request permissions
-      const { status } = await Speech.requestPermissionsAsync();
-      if (status !== 'granted') {
-        throw new Error('Speech recognition permission denied');
-      }
+  constructor() {
+    // Set up event listeners
+    Voice.onSpeechStart = this.onSpeechStart.bind(this);
+    Voice.onSpeechEnd = this.onSpeechEnd.bind(this);
+    Voice.onSpeechResults = this.onSpeechResults.bind(this);
+    Voice.onSpeechError = this.onSpeechError.bind(this);
+    Voice.onSpeechPartialResults = this.onSpeechPartialResults.bind(this);
+  }
 
-      this.isListening = true;
+  private onSpeechStart(): void {
+    console.log('[VoiceService.ios] Speech recognition started');
+    this.isListening = true;
+  }
 
-      // Start recognition
-      Speech.startSpeechRecognitionAsync({
-        language: 'en-US',
-        onResult: (result) => {
-          if (this.resultCallback) {
-            this.resultCallback({
-              transcript: result.transcript,
-              confidence: result.confidence || 0.9,
-            });
-          }
-        },
-        onError: (error) => {
-          if (this.errorCallback) {
-            this.errorCallback(new Error(error.message));
-          }
-        },
+  private onSpeechEnd(): void {
+    console.log('[VoiceService.ios] Speech recognition ended');
+    this.isListening = false;
+  }
+
+  private onSpeechResults(event: SpeechResultsEvent): void {
+    if (event.value && event.value.length > 0 && this.resultCallback) {
+      const transcript = event.value[0];
+      console.log('[VoiceService.ios] Final result:', transcript);
+
+      this.resultCallback({
+        transcript,
+        confidence: 0.95, // Apple Speech Framework doesn't provide confidence scores
       });
-    } catch (error) {
-      if (this.errorCallback) {
-        this.errorCallback(error as Error);
+    }
+  }
+
+  private onSpeechPartialResults(event: SpeechResultsEvent): void {
+    if (event.value && event.value.length > 0) {
+      const transcript = event.value[0];
+      console.log('[VoiceService.ios] Partial result:', transcript);
+
+      // Optionally handle partial results for real-time feedback
+      if (this.resultCallback) {
+        this.resultCallback({
+          transcript,
+          confidence: 0.7, // Lower confidence for partial results
+        });
       }
     }
   }
 
-  stopListening(): void {
-    if (this.isListening) {
-      Speech.stopSpeechRecognitionAsync();
+  private onSpeechError(event: SpeechErrorEvent): void {
+    console.error('[VoiceService.ios] Speech error:', event.error);
+
+    if (this.errorCallback) {
+      this.errorCallback(new Error(event.error?.message || 'Speech recognition error'));
+    }
+
+    this.isListening = false;
+  }
+
+  async startListening(): Promise<void> {
+    try {
+      // Check if speech recognition is available
+      const available = await Voice.isAvailable();
+      if (!available) {
+        throw new Error('Speech recognition not available on this device');
+      }
+
+      // Destroy any existing session
+      if (this.isListening) {
+        await Voice.destroy();
+      }
+
+      // Start listening with Apple Speech Framework
+      await Voice.start('en-US', {
+        EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 10000, // 10 seconds max
+        EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 1500, // 1.5s silence = done
+        EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 1500,
+      });
+
+      console.log('[VoiceService.ios] Listening started');
+    } catch (error) {
+      console.error('[VoiceService.ios] Start error:', error);
+      if (this.errorCallback) {
+        this.errorCallback(error as Error);
+      }
+      throw error;
+    }
+  }
+
+  async stopListening(): Promise<void> {
+    try {
+      await Voice.stop();
       this.isListening = false;
+      console.log('[VoiceService.ios] Listening stopped');
+    } catch (error) {
+      console.error('[VoiceService.ios] Stop error:', error);
+    }
+  }
+
+  async destroy(): Promise<void> {
+    try {
+      await Voice.destroy();
+      Voice.removeAllListeners();
+      this.isListening = false;
+      console.log('[VoiceService.ios] Voice service destroyed');
+    } catch (error) {
+      console.error('[VoiceService.ios] Destroy error:', error);
     }
   }
 
@@ -112,7 +205,8 @@ export class VoiceServiceIOS implements IVoiceService {
   }
 
   isSupported(): boolean {
-    return Speech.isAvailableAsync();
+    // Apple Speech Framework is always available on iOS 10+
+    return true;
   }
 }
 ```
