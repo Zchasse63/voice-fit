@@ -160,9 +160,9 @@ export class VoiceServiceIOS implements IVoiceService {
 
       // Start listening with Apple Speech Framework
       await Voice.start('en-US', {
-        EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 10000, // 10 seconds max
-        EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 1500, // 1.5s silence = done
-        EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 1500,
+        EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 60000, // 60 seconds max (full workout session)
+        EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 2000, // 2s silence = done (user finished speaking)
+        EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 1500, // 1.5s pause = might be done
       });
 
       console.log('[VoiceService.ios] Listening started');
