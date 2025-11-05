@@ -105,3 +105,13 @@ env/
 .turbo
 .vercel
 
+# ===========================
+# Voice Fit Project Directories
+# (Only voice-fit-app should be in builds)
+# ===========================
+archive/
+api/
+phases/
+tests/
+backend-development/
+
