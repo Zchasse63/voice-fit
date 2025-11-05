@@ -11,19 +11,39 @@
       "resizeMode": "contain",
       "backgroundColor": "#FBF7F5"
     },
+    "plugins": [
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "Allow Voice Fit to use your microphone for voice logging.",
+          "speechRecognitionPermission": "Allow Voice Fit to recognize your speech for workout logging."
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.voicefit.app"
+      "bundleIdentifier": "com.voicefit.app",
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Voice Fit uses speech recognition to log your workouts hands-free.",
+        "NSMicrophoneUsageDescription": "Voice Fit needs microphone access to hear your workout commands."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FBF7F5"
-      }
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "90cab9ec-0491-445b-81a3-c290125ebe5a"
+      }
     }
   }
 }
-
