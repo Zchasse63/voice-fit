@@ -106,12 +106,14 @@ env/
 .vercel
 
 # ===========================
-# Voice Fit Project Directories
-# (Only voice-fit-app should be in builds)
+# Voice Fit Monorepo Structure
 # ===========================
+# Keep archive and tests at root
 archive/
+tests/
+
+# Old directories (now moved to apps/)
+voice-fit-app/
 api/
 phases/
-tests/
-backend-development/
 

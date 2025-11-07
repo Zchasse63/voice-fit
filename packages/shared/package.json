@@ -1,0 +1,17 @@
+{
+  "name": "@voice-fit/shared",
+  "version": "1.0.0",
+  "description": "Shared types, utilities, and constants for Voice Fit monorepo",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": ["voice-fit", "shared"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
+
