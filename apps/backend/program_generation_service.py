@@ -20,10 +20,7 @@ import json
 from typing import List, Dict, Any, Tuple, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
-import sys
 
-# Add parent directory to path to import smart_namespace_selector
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 from smart_namespace_selector import SmartNamespaceSelector
 
 load_dotenv()
