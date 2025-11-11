@@ -132,6 +132,43 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    // Migration from v4 to v5 (Weather Integration - Elevation & GAP)
+    {
+      toVersion: 5,
+      steps: [
+        // Add elevation and GAP fields to runs table
+        addColumns({
+          table: 'runs',
+          columns: [
+            { name: 'elevation_gain', type: 'number', isOptional: true },
+            { name: 'elevation_loss', type: 'number', isOptional: true },
+            { name: 'grade_adjusted_pace', type: 'number', isOptional: true },
+            { name: 'grade_percent', type: 'number', isOptional: true },
+            { name: 'terrain_difficulty', type: 'string', isOptional: true },
+          ],
+        }),
+      ],
+    },
+    // Migration from v5 to v6 (UI Redesign - Chat Messages)
+    {
+      toVersion: 6,
+      steps: [
+        // Add messages table for unified chat interface
+        createTable({
+          name: 'messages',
+          columns: [
+            { name: 'user_id', type: 'string', isIndexed: true },
+            { name: 'text', type: 'string' },
+            { name: 'sender', type: 'string' },
+            { name: 'message_type', type: 'string' },
+            { name: 'data', type: 'string', isOptional: true },
+            { name: 'synced', type: 'boolean' },
+            { name: 'created_at', type: 'number' },
+            { name: 'updated_at', type: 'number' },
+          ],
+        }),
+      ],
+    },
   ],
 });
 

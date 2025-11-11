@@ -12,6 +12,11 @@ export default class Run extends Model {
   @field('pace') pace!: number; // minutes per mile
   @field('avg_speed') avgSpeed!: number; // mph
   @field('calories') calories!: number;
+  @field('elevation_gain') elevationGain!: number; // meters
+  @field('elevation_loss') elevationLoss!: number; // meters
+  @field('grade_adjusted_pace') gradeAdjustedPace?: number; // GAP in minutes per mile
+  @field('grade_percent') gradePercent!: number; // average grade percentage
+  @field('terrain_difficulty') terrainDifficulty!: string; // flat, rolling, moderate_uphill, etc.
   @field('route') route!: string; // JSON string of coordinates
   @field('synced') synced!: boolean;
   @readonly @date('created_at') createdAt!: Date;

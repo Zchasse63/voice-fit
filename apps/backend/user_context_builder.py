@@ -21,10 +21,10 @@ class UserContextBuilder:
     async def build_context(self, user_id: str) -> str:
         """
         Build comprehensive user context string for AI system prompt
-        
+
         Args:
             user_id: User's unique identifier
-            
+
         Returns:
             Formatted context string to inject into system prompt
         """
@@ -35,6 +35,10 @@ class UserContextBuilder:
         weekly_volume = await self._calculate_weekly_volume(user_id)
         readiness = await self._get_latest_readiness(user_id)
         current_program = await self._get_current_program(user_id)
+        recent_prs = await self._get_recent_prs(user_id, limit=5)
+        recent_runs = await self._get_recent_runs(user_id, days=14)
+        streaks = await self._get_user_streaks(user_id)
+        badges = await self._get_user_badges(user_id)
         
         # Build context string
         context_parts = []
@@ -106,12 +110,54 @@ class UserContextBuilder:
             context_parts.append(f"- Soreness: {readiness.get('soreness', 'N/A')}/10")
             context_parts.append(f"- Stress: {readiness.get('stress', 'N/A')}/10")
             context_parts.append(f"- Energy: {readiness.get('energy', 'N/A')}/10")
-            context_parts.append(f"- Overall Readiness: {readiness.get('overall_score', 'N/A')}/100")
+            context_parts.append(f"- Overall Score: {readiness.get('score', 'N/A')}/100")
             context_parts.append("")
-        
+
+        # Recent PRs
+        if recent_prs:
+            context_parts.append("**Recent Personal Records (Last 30 Days):**")
+            for pr in recent_prs:
+                exercise = pr.get('exercise_name', 'Unknown')
+                weight = pr.get('weight', 0)
+                reps = pr.get('reps', 0)
+                one_rm = pr.get('one_rm', 0)
+                achieved_at = pr.get('achieved_at', 'unknown')
+                context_parts.append(f"- {exercise}: {weight}lbs x {reps} reps (Est. 1RM: {one_rm}lbs) - {achieved_at}")
+            context_parts.append("")
+
+        # Recent Runs (Premium feature)
+        if recent_runs:
+            context_parts.append("**Recent Runs (Last 14 Days):**")
+            for run in recent_runs[:5]:  # Show last 5 runs
+                distance = run.get('distance', 0)
+                duration = run.get('duration', 0)
+                pace = run.get('pace', 0)
+                date = run.get('start_time', 'unknown')
+                context_parts.append(f"- {date}: {distance} miles in {duration} min (Pace: {pace} min/mile)")
+            context_parts.append("")
+
+        # Streaks (Premium feature)
+        if streaks:
+            context_parts.append("**Current Streaks:**")
+            for streak in streaks:
+                streak_type = streak.get('streak_type', 'unknown')
+                current = streak.get('current_count', 0)
+                longest = streak.get('longest_count', 0)
+                context_parts.append(f"- {streak_type}: {current} days (Longest: {longest} days)")
+            context_parts.append("")
+
+        # Badges (Premium feature)
+        if badges:
+            context_parts.append("**Recent Badges Earned:**")
+            for badge in badges[:5]:  # Show last 5 badges
+                badge_name = badge.get('badge_name', 'Unknown')
+                earned_at = badge.get('earned_at', 'unknown')
+                context_parts.append(f"- {badge_name} - {earned_at}")
+            context_parts.append("")
+
         # Instructions for AI
-        context_parts.append("**Important:** Use this context to provide personalized advice. Consider their injury history, current volume, recovery status, and experience level when making recommendations.")
-        
+        context_parts.append("**Important:** Use this context to provide personalized advice. Consider their injury history, current volume, recovery status, experience level, recent PRs, and training consistency when making recommendations.")
+
         return "\n".join(context_parts)
     
     async def _get_user_profile(self, user_id: str) -> Optional[Dict[str, Any]]:
@@ -136,46 +182,70 @@ class UserContextBuilder:
         """Fetch recent workouts"""
         try:
             cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
-            result = self.supabase.table('workouts').select('*').eq('user_id', user_id).gte('date', cutoff_date).order('date', desc=True).execute()
-            
+            result = self.supabase.table('workouts').select('*').eq('user_id', user_id).gte('start_time', cutoff_date).order('start_time', desc=True).execute()
+
             # Format workouts with exercise details
             workouts = []
             for workout in (result.data or []):
-                # Fetch exercises for this workout
-                exercises_result = self.supabase.table('workout_exercises').select('*').eq('workout_id', workout['id']).execute()
-                exercises = exercises_result.data or []
-                
-                # Format exercise strings
-                exercise_strings = []
+                # Fetch workout logs (sets) for this workout
+                logs_result = self.supabase.table('workout_logs').select('*').eq('workout_id', workout['id']).execute()
+                logs = logs_result.data or []
+
+                # Get unique exercise IDs
+                exercise_ids = list(set([log['exercise_id'] for log in logs if log.get('exercise_id')]))
+
+                # Fetch exercise names
+                exercise_names = {}
+                if exercise_ids:
+                    exercises_result = self.supabase.table('exercises').select('id, original_name').in_('id', exercise_ids).execute()
+                    for ex in (exercises_result.data or []):
+                        exercise_names[ex['id']] = ex['original_name']
+
+                # Group by exercise and aggregate sets
+                exercise_data = {}
                 total_rpe = 0
                 rpe_count = 0
-                
-                for ex in exercises:
-                    ex_name = ex.get('exercise_name', 'Unknown')
-                    weight = ex.get('weight', 0)
-                    reps = ex.get('reps', 0)
-                    sets = ex.get('sets', 1)
-                    rpe = ex.get('rpe')
-                    
-                    ex_str = f"{ex_name} {sets}x{reps}"
-                    if weight:
-                        ex_str += f" @ {weight}lbs"
+
+                for log in logs:
+                    exercise_id = log.get('exercise_id')
+                    exercise_name = exercise_names.get(exercise_id, 'Unknown')
+                    weight = log.get('weight_used', 0)
+                    reps = log.get('reps_completed', 0)
+                    rpe = log.get('rpe')
+
+                    # Group by exercise
+                    if exercise_name not in exercise_data:
+                        exercise_data[exercise_name] = {
+                            'sets': 0,
+                            'weight': weight,
+                            'reps': reps,
+                            'rpe': rpe
+                        }
+                    exercise_data[exercise_name]['sets'] += 1
+
                     if rpe:
-                        ex_str += f" (RPE {rpe})"
                         total_rpe += rpe
                         rpe_count += 1
-                    
+
+                # Format exercise strings
+                exercise_strings = []
+                for ex_name, data in exercise_data.items():
+                    ex_str = f"{ex_name} {data['sets']}x{data['reps']}"
+                    if data['weight']:
+                        ex_str += f" @ {data['weight']}lbs"
+                    if data['rpe']:
+                        ex_str += f" (RPE {data['rpe']})"
                     exercise_strings.append(ex_str)
-                
+
                 avg_rpe = round(total_rpe / rpe_count, 1) if rpe_count > 0 else None
-                
+
                 workouts.append({
-                    'date': workout.get('date', 'unknown'),
+                    'date': workout.get('start_time', 'unknown'),
                     'exercises': exercise_strings,
                     'avg_rpe': avg_rpe,
                     'notes': workout.get('notes', '')
                 })
-            
+
             return workouts
         except Exception as e:
             print(f"Error fetching recent workouts: {e}")
@@ -186,30 +256,40 @@ class UserContextBuilder:
         try:
             # Get workouts from last 7 days
             cutoff_date = (datetime.now() - timedelta(days=7)).isoformat()
-            workouts_result = self.supabase.table('workouts').select('id').eq('user_id', user_id).gte('date', cutoff_date).execute()
-            
+            workouts_result = self.supabase.table('workouts').select('id').eq('user_id', user_id).gte('start_time', cutoff_date).execute()
+
             if not workouts_result.data:
                 return {}
-            
+
             workout_ids = [w['id'] for w in workouts_result.data]
-            
-            # Get all exercises from these workouts
-            exercises_result = self.supabase.table('workout_exercises').select('exercise_name, sets').in_('workout_id', workout_ids).execute()
-            
-            # Sum sets by exercise
+
+            # Get all workout logs from these workouts (each log is one set)
+            logs_result = self.supabase.table('workout_logs').select('exercise_id').in_('workout_id', workout_ids).execute()
+
+            # Get unique exercise IDs
+            exercise_ids = list(set([log['exercise_id'] for log in (logs_result.data or []) if log.get('exercise_id')]))
+
+            # Fetch exercise names
+            exercise_names = {}
+            if exercise_ids:
+                exercises_result = self.supabase.table('exercises').select('id, original_name').in_('id', exercise_ids).execute()
+                for ex in (exercises_result.data or []):
+                    exercise_names[ex['id']] = ex['original_name']
+
+            # Count sets by exercise
             volume = {}
-            for ex in (exercises_result.data or []):
-                ex_name = ex.get('exercise_name', 'Unknown')
-                sets = ex.get('sets', 1)
-                
+            for log in (logs_result.data or []):
+                exercise_id = log.get('exercise_id')
+                ex_name = exercise_names.get(exercise_id, 'Unknown')
+
                 # Normalize exercise names (e.g., "Bench Press" and "Barbell Bench Press" -> "Bench Press")
                 normalized_name = self._normalize_exercise_name(ex_name)
-                
+
                 if normalized_name in volume:
-                    volume[normalized_name] += sets
+                    volume[normalized_name] += 1  # Each log is one set
                 else:
-                    volume[normalized_name] = sets
-            
+                    volume[normalized_name] = 1
+
             return volume
         except Exception as e:
             print(f"Error calculating weekly volume: {e}")
@@ -218,20 +298,59 @@ class UserContextBuilder:
     async def _get_latest_readiness(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Fetch latest readiness check-in"""
         try:
-            result = self.supabase.table('readiness_logs').select('*').eq('user_id', user_id).order('created_at', desc=True).limit(1).single().execute()
+            result = self.supabase.table('readiness_scores').select('*').eq('user_id', user_id).order('date', desc=True).limit(1).single().execute()
             return result.data if result.data else None
         except Exception as e:
             print(f"Error fetching readiness: {e}")
             return None
-    
+
     async def _get_current_program(self, user_id: str) -> Optional[Dict[str, Any]]:
         """Fetch current training program"""
         try:
-            result = self.supabase.table('user_programs').select('*').eq('user_id', user_id).eq('is_active', True).single().execute()
+            result = self.supabase.table('generated_programs').select('*').eq('user_profile_id', user_id).eq('is_active', True).single().execute()
             return result.data if result.data else None
         except Exception as e:
             print(f"Error fetching current program: {e}")
             return None
+
+    async def _get_recent_prs(self, user_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Fetch recent personal records"""
+        try:
+            # Get PRs from last 30 days
+            cutoff_date = (datetime.now() - timedelta(days=30)).isoformat()
+            result = self.supabase.table('pr_history').select('*').eq('user_id', user_id).gte('achieved_at', cutoff_date).order('achieved_at', desc=True).limit(limit).execute()
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching recent PRs: {e}")
+            return []
+
+    async def _get_recent_runs(self, user_id: str, days: int = 14) -> List[Dict[str, Any]]:
+        """Fetch recent running workouts"""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+            result = self.supabase.table('runs').select('*').eq('user_id', user_id).gte('start_time', cutoff_date).order('start_time', desc=True).execute()
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching recent runs: {e}")
+            return []
+
+    async def _get_user_streaks(self, user_id: str) -> List[Dict[str, Any]]:
+        """Fetch user's current streaks"""
+        try:
+            result = self.supabase.table('user_streaks').select('*').eq('user_id', user_id).execute()
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching user streaks: {e}")
+            return []
+
+    async def _get_user_badges(self, user_id: str) -> List[Dict[str, Any]]:
+        """Fetch user's recently earned badges"""
+        try:
+            result = self.supabase.table('user_badges').select('*').eq('user_id', user_id).order('earned_at', desc=True).limit(10).execute()
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching user badges: {e}")
+            return []
     
     def _normalize_exercise_name(self, name: str) -> str:
         """Normalize exercise names for volume tracking"""

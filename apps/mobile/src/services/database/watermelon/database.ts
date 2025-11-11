@@ -17,6 +17,7 @@ import PRHistory from './models/PRHistory';
 import InjuryLog from './models/InjuryLog';
 import UserBadge from './models/UserBadge';
 import UserStreak from './models/UserStreak';
+import Message from './models/Message';
 
 // Create SQLite adapter
 const adapter = new SQLiteAdapter({
@@ -41,8 +42,9 @@ export const database = new Database({
     InjuryLog,
     UserBadge,
     UserStreak,
+    Message,
   ],
 });
 
-console.log('[WatermelonDB] Database initialized with schema v3');
+console.log('[WatermelonDB] Database initialized with schema v6');
 

@@ -8,7 +8,7 @@
 import { appSchema, tableSchema } from '@nozbe/watermelondb';
 
 export const schema = appSchema({
-  version: 4,
+  version: 6,
   tables: [
     tableSchema({
       name: 'workout_logs',
@@ -48,6 +48,11 @@ export const schema = appSchema({
         { name: 'pace', type: 'number' }, // minutes per mile
         { name: 'avg_speed', type: 'number' }, // mph
         { name: 'calories', type: 'number' },
+        { name: 'elevation_gain', type: 'number', isOptional: true }, // meters
+        { name: 'elevation_loss', type: 'number', isOptional: true }, // meters
+        { name: 'grade_adjusted_pace', type: 'number', isOptional: true }, // GAP in minutes per mile
+        { name: 'grade_percent', type: 'number', isOptional: true }, // average grade percentage
+        { name: 'terrain_difficulty', type: 'string', isOptional: true }, // flat, rolling, moderate_uphill, etc.
         { name: 'route', type: 'string' }, // JSON string of coordinates
         { name: 'synced', type: 'boolean' },
         { name: 'created_at', type: 'number' },
@@ -125,6 +130,19 @@ export const schema = appSchema({
         { name: 'current_count', type: 'number' },
         { name: 'longest_count', type: 'number' },
         { name: 'last_activity_date', type: 'number' },
+        { name: 'synced', type: 'boolean' },
+        { name: 'created_at', type: 'number' },
+        { name: 'updated_at', type: 'number' },
+      ],
+    }),
+    tableSchema({
+      name: 'messages',
+      columns: [
+        { name: 'user_id', type: 'string', isIndexed: true },
+        { name: 'text', type: 'string' },
+        { name: 'sender', type: 'string' }, // 'user' or 'ai'
+        { name: 'message_type', type: 'string' }, // 'workout_log', 'question', 'general', 'onboarding', 'adherence_alert'
+        { name: 'data', type: 'string', isOptional: true }, // JSON string of additional data
         { name: 'synced', type: 'boolean' },
         { name: 'created_at', type: 'number' },
         { name: 'updated_at', type: 'number' },

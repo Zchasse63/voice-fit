@@ -11,7 +11,7 @@ import Slider from '@react-native-community/slider';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../store/auth.store';
 import { readinessService, DetailedReadinessInput } from '../../services/readiness/ReadinessService';
-import { InjuryDetectionService } from '../../services/injury/InjuryDetectionService';
+import { InjuryDetectionService, InjuryDetectionResult } from '../../services/injury/InjuryDetectionService';
 import InjuryDetectionModal from '../injury/InjuryDetectionModal';
 import { Moon, Zap, Brain, Battery } from 'lucide-react-native';
 
@@ -34,7 +34,7 @@ export default function DetailedReadinessForm({ onComplete }: { onComplete?: () 
   const [notes, setNotes] = useState<string>(''); // Phase 3: User notes for injury detection
   const [isSaving, setIsSaving] = useState(false);
   const [showInjuryModal, setShowInjuryModal] = useState(false);
-  const [detectedInjury, setDetectedInjury] = useState<any>(null);
+  const [detectedInjury, setDetectedInjury] = useState<InjuryDetectionResult | null>(null);
 
   const sliders: SliderConfig[] = [
     {

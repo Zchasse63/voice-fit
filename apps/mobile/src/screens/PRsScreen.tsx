@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { Trophy, TrendingUp, Award } from 'lucide-react-native';
 import PRProgressionChart from '../components/charts/PRProgressionChart';
@@ -8,7 +8,9 @@ import ErrorMessage from '../components/common/ErrorMessage';
 import SyncStatus from '../components/common/SyncStatus';
 import { database } from '../services/database/watermelon/database';
 import Set from '../services/database/watermelon/models/Set';
+import PRHistory from '../services/database/watermelon/models/PRHistory';
 import { Q } from '@nozbe/watermelondb';
+import { useAuthStore } from '../store/auth.store';
 
 interface PersonalRecord {
   id: string;
@@ -31,107 +33,118 @@ const fitnessMetrics = [
   { label: 'Streak', value: '0 weeks', icon: Award },
 ];
 
+const ITEMS_PER_PAGE = 20;
+
 export default function PRsScreen() {
   const { isDark } = useTheme();
+  const user = useAuthStore((state) => state.user);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
   const [progression, setProgression] = useState<ProgressionPoint[]>([]);
   const [metrics, setMetrics] = useState(fitnessMetrics);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   useEffect(() => {
     loadProgressData();
-  }, []);
+  }, [user?.id]);
 
-  const loadProgressData = async () => {
+  const loadProgressData = async (loadMore = false) => {
+    if (!user?.id) return;
+
     try {
-      setIsLoading(true);
+      if (loadMore) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+        setPage(0);
+        setPRs([]);
+      }
       setError(null);
 
-      // Get all sets from database
-      const allSets = await database.get<Set>('sets').query().fetch();
+      const currentPage = loadMore ? page + 1 : 0;
 
-      if (allSets.length === 0) {
-        setIsLoading(false);
-        return;
+      // Get PRs from pr_history table with pagination
+      const prRecords = await database
+        .get<PRHistory>('pr_history')
+        .query(
+          Q.where('user_id', user.id),
+          Q.sortBy('achieved_at', Q.desc),
+          Q.skip(currentPage * ITEMS_PER_PAGE),
+          Q.take(ITEMS_PER_PAGE)
+        )
+        .fetch();
+
+      // Check if we have more data
+      if (prRecords.length < ITEMS_PER_PAGE) {
+        setHasMore(false);
       }
 
-      // Group sets by exercise
-      const setsByExercise = new Map<string, Set[]>();
-      allSets.forEach((set) => {
-        const exerciseName = set.exerciseName;
-        if (!setsByExercise.has(exerciseName)) {
-          setsByExercise.set(exerciseName, []);
-        }
-        setsByExercise.get(exerciseName)!.push(set);
-      });
+      // Convert PR records to PersonalRecord format
+      const personalRecords: PersonalRecord[] = prRecords.map((pr) => ({
+        id: pr.id,
+        exercise: pr.exerciseName,
+        weight: pr.weight,
+        reps: pr.reps,
+        date: new Date(pr.achievedAt),
+        improvement: 'PR!', // Could calculate from previous PR if needed
+      }));
 
-      // Calculate PRs for each exercise (max weight for each rep range)
-      const personalRecords: PersonalRecord[] = [];
+      // Append to existing PRs if loading more, otherwise replace
+      if (loadMore) {
+        setPRs([...prs, ...personalRecords]);
+        setPage(currentPage);
+      } else {
+        setPRs(personalRecords);
+      }
 
-      setsByExercise.forEach((sets, exerciseName) => {
-        // Find max weight for this exercise
-        let maxSet = sets[0];
-        sets.forEach((set) => {
-          if (set.weight > maxSet.weight) {
-            maxSet = set;
-          }
-        });
+      // Calculate metrics (only on initial load, not when loading more)
+      if (!loadMore) {
+        // Get total count from database
+        const totalCount = await database
+          .get<PRHistory>('pr_history')
+          .query(Q.where('user_id', user.id))
+          .fetchCount();
 
-        // Calculate improvement (compare to second best)
-        const sortedSets = [...sets].sort((a, b) => b.weight - a.weight);
-        const improvement = sortedSets.length > 1
-          ? `+${maxSet.weight - sortedSets[1].weight} lbs`
-          : 'New PR!';
+        const oneMonthAgo = new Date();
+        oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
+        const prsThisMonth = await database
+          .get<PRHistory>('pr_history')
+          .query(
+            Q.where('user_id', user.id),
+            Q.where('achieved_at', Q.gte(oneMonthAgo.getTime()))
+          )
+          .fetchCount();
 
-        personalRecords.push({
-          id: maxSet.id,
-          exercise: exerciseName,
-          weight: maxSet.weight,
-          reps: maxSet.reps,
-          date: maxSet.createdAt,
-          improvement,
-        });
-      });
+        // Get unique exercise count
+        const allPRs = await database
+          .get<PRHistory>('pr_history')
+          .query(Q.where('user_id', user.id))
+          .fetch();
+        const uniqueExercises = new Set(allPRs.map((pr) => pr.exerciseName)).size;
 
-      // Sort PRs by date (most recent first)
-      personalRecords.sort((a, b) => b.date.getTime() - a.date.getTime());
-      setPRs(personalRecords);
-
-      // Calculate metrics
-      const totalPRs = personalRecords.length;
-      const oneMonthAgo = new Date();
-      oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
-      const prsThisMonth = personalRecords.filter((pr) => pr.date >= oneMonthAgo).length;
-
-      setMetrics([
-        { label: 'Total PRs', value: totalPRs.toString(), icon: Trophy },
-        { label: 'This Month', value: prsThisMonth.toString(), icon: TrendingUp },
-        { label: 'Exercises', value: setsByExercise.size.toString(), icon: Award },
-      ]);
-
-      // Get progression for first exercise (if any)
-      if (personalRecords.length > 0) {
-        const firstExercise = personalRecords[0].exercise;
-        const exerciseSets = setsByExercise.get(firstExercise) || [];
-
-        // Sort by date and create progression points
-        const progressionPoints: ProgressionPoint[] = exerciseSets
-          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-          .map((set) => ({
-            date: set.createdAt.toISOString().split('T')[0],
-            weight: set.weight,
-            reps: set.reps,
-          }));
-
-        setProgression(progressionPoints);
+        setMetrics([
+          { label: 'Total PRs', value: totalCount.toString(), icon: Trophy },
+          { label: 'This Month', value: prsThisMonth.toString(), icon: TrendingUp },
+          { label: 'Exercises', value: uniqueExercises.toString(), icon: Award },
+        ]);
       }
 
       setIsLoading(false);
+      setIsLoadingMore(false);
     } catch (err) {
       console.error('Failed to load progress data:', err);
       setError('Failed to load progress data. Please try again.');
       setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  const handleLoadMore = () => {
+    if (!isLoadingMore && hasMore) {
+      loadProgressData(true);
     }
   };
 
@@ -224,6 +237,23 @@ export default function PRsScreen() {
             </View>
           )}
         </View>
+
+        {/* Load More Button */}
+        {hasMore && prs.length > 0 && (
+          <Pressable
+            onPress={handleLoadMore}
+            disabled={isLoadingMore}
+            className={`mt-4 p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'} items-center`}
+          >
+            {isLoadingMore ? (
+              <ActivityIndicator size="small" color={isDark ? '#4ADE80' : '#16A34A'} />
+            ) : (
+              <Text className={`text-base font-semibold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+                Load More PRs
+              </Text>
+            )}
+          </Pressable>
+        )}
 
         {/* Progress Chart */}
         {progression.length > 0 && prs.length > 0 && (

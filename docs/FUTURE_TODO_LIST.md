@@ -1,8 +1,204 @@
 # VoiceFit - Future To-Do List
 
-**Last Updated:** 2025-11-06
+**Last Updated:** 2025-11-11
 
 This document tracks future enhancements and AI fine-tuning work that will be completed AFTER the current phase (injury detection system) is fully tested and deployed.
+
+---
+
+## 🎨 **Lottie Badge Animations (Post-MVP)**
+
+**Status:** Not Started
+**Priority:** Low (Polish/Enhancement)
+**Estimated Time:** 2-3 hours
+**Dependencies:** None
+
+### **Overview**
+Replace the current simple badge unlock animations with professional Lottie animations for a more polished, celebratory experience when users unlock achievements.
+
+### **Current Implementation (MVP)**
+Using React Native Animated API with simple scale/fade animations:
+- Simple scale-up animation
+- Fade-in effect
+- Colored badge icons
+- Works but not as visually impressive
+
+### **Future Enhancement**
+Download and integrate 14 custom Lottie animation files for each badge type:
+
+**Required Lottie Files:**
+1. `streak-3day.json` - 3-day streak badge
+2. `streak-7day.json` - 7-day streak badge
+3. `streak-30day.json` - 30-day streak badge
+4. `streak-100day.json` - 100-day streak badge
+5. `volume-10k.json` - 10K lbs volume badge
+6. `volume-50k.json` - 50K lbs volume badge
+7. `volume-100k.json` - 100K lbs volume badge
+8. `volume-500k.json` - 500K lbs volume badge
+9. `pr-first.json` - First PR badge
+10. `pr-10.json` - 10 PRs badge
+11. `pr-50.json` - 50 PRs badge
+12. `consistency-80.json` - 80% consistency badge
+13. `consistency-90.json` - 90% consistency badge
+14. `consistency-100.json` - 100% consistency badge
+
+**Where to Download:**
+- **LottieFiles.com** (free, largest selection)
+- **IconScout.com** (free tier available)
+- **Creattie.com** (free tier available)
+
+**Search Terms:**
+- **Streak badges:** "fire streak", "flame animation", "streak badge"
+- **Volume badges:** "weight lifting", "dumbbell animation", "barbell"
+- **PR badges:** "trophy", "achievement unlock", "gold medal", "winner"
+- **Consistency badges:** "checkmark", "completion", "success badge", "100%"
+
+**Animation Requirements:**
+- Duration: 2-5 seconds
+- Format: JSON (Lottie format)
+- Include celebration effects (confetti, sparkles, etc.)
+- Smooth loop or one-time play
+
+### **Implementation Tasks**
+- [ ] Download 14 Lottie animation files
+- [ ] Save to `apps/mobile/assets/lottie/`
+- [ ] Update `BadgeUnlock.tsx` to use `lottie-react-native` instead of Animated API
+- [ ] Test animations on iOS and Android
+- [ ] Verify performance (animations should be smooth, not laggy)
+- [ ] Add fallback to simple animation if Lottie fails to load
+
+### **Code Changes Required**
+Update `apps/mobile/src/components/BadgeUnlock.tsx`:
+```typescript
+// Replace Animated API with LottieView
+import LottieView from 'lottie-react-native';
+
+const getBadgeAnimation = () => {
+  const animationMap: { [key in BadgeType]: any } = {
+    streak_3day: require('../../assets/lottie/streak-3day.json'),
+    // ... etc
+  };
+  return animationMap[badgeType];
+};
+
+<LottieView
+  ref={animationRef}
+  source={getBadgeAnimation()}
+  style={styles.animation}
+  loop={true}
+  autoPlay={true}
+/>
+```
+
+### **Why Post-MVP?**
+- **Time-consuming:** Finding and downloading 14 high-quality animations takes 1-2 hours
+- **Not critical:** Simple animations work fine for MVP
+- **Polish feature:** This is a "nice-to-have" enhancement, not core functionality
+- **Can be added later:** Easy to swap in Lottie animations after launch
+
+---
+
+## ⚡ **Backend Performance Optimization**
+
+**Status:** Not Started
+**Priority:** Medium
+**Estimated Time:** 1-2 weeks
+**Dependencies:** None (can be done anytime)
+
+### **Overview**
+Optimize backend API endpoint latency to improve user experience. Current latency is acceptable but can be improved through database optimization, caching, and query optimization.
+
+### **Current Performance Baseline**
+Based on test suite results (2025-11-10):
+- **Analytics Endpoints:** 1.7s average (Target: <1s)
+  - Volume Analytics: 2.1s
+  - Fatigue Analytics: 1.4s
+  - Deload Analytics: 1.6s
+- **AI Endpoints:** 4.1s average (Target: <3s)
+  - AI Coach: 8.1s (OpenAI API call)
+  - Workout Insights: 0.1s
+- **Running Endpoints:** 0.3s average ✅ (Target: <2s)
+
+### **Optimization Tasks**
+
+#### 1. Database Optimization
+- [ ] **Add database indexes** for frequently queried fields:
+  - `workouts.user_id` + `workouts.date` (composite index)
+  - `workout_logs.workout_id` + `workout_logs.exercise_name`
+  - `readiness_scores.user_id` + `readiness_scores.date`
+  - `runs.user_id` + `runs.date`
+  - `pr_history.user_id` + `pr_history.exercise_name`
+- [ ] **Optimize complex queries** in analytics services:
+  - Volume tracking: Reduce multiple queries to single JOIN
+  - Fatigue monitoring: Cache readiness trend calculations
+  - Deload recommendation: Optimize weeks_since_deload calculation
+- [ ] **Add query result caching** for expensive calculations:
+  - Weekly volume calculations (cache for 1 hour)
+  - Fatigue scores (cache for 30 minutes)
+  - User context building (cache for 15 minutes)
+
+#### 2. Connection Pooling
+- [ ] **Implement Supabase connection pooling**:
+  - Use pgBouncer for connection pooling
+  - Configure max connections and timeout settings
+  - Reuse connections across requests
+- [ ] **Add connection retry logic** for transient failures
+
+#### 3. Caching Layer
+- [ ] **Add Redis caching** for frequently accessed data:
+  - User profiles (cache for 1 hour)
+  - Recent workouts (cache for 15 minutes)
+  - Analytics results (cache for 30 minutes)
+  - User context (cache for 15 minutes)
+- [ ] **Implement cache invalidation** on data updates:
+  - Clear user cache when workout is logged
+  - Clear analytics cache when readiness is updated
+  - Clear context cache when PR is achieved
+
+#### 4. AI Endpoint Optimization
+- [ ] **Optimize AI Coach prompts** to reduce token count:
+  - Reduce system prompt length
+  - Compress user context (remove redundant info)
+  - Use more concise formatting
+- [ ] **Implement streaming responses** for AI Coach:
+  - Stream tokens as they're generated
+  - Improve perceived latency
+  - Better UX for long responses
+- [ ] **Add response caching** for common questions:
+  - Cache AI Coach responses for identical questions
+  - Cache workout insights for same workout data
+  - TTL: 24 hours
+
+#### 5. Parallel Processing
+- [ ] **Parallelize independent operations**:
+  - Fetch user profile + workouts + readiness in parallel
+  - Calculate volume + fatigue + deload in parallel
+  - Use asyncio for concurrent database queries
+- [ ] **Batch database queries** where possible:
+  - Fetch all user data in single query with JOINs
+  - Reduce round-trips to database
+
+#### 6. Monitoring and Profiling
+- [ ] **Add performance monitoring**:
+  - Track endpoint latency in production
+  - Log slow queries (>1s)
+  - Monitor database query performance
+- [ ] **Profile slow endpoints**:
+  - Identify bottlenecks in analytics endpoints
+  - Optimize slowest code paths
+  - Add performance metrics to logs
+
+### **Expected Improvements**
+After optimization:
+- **Analytics Endpoints:** 0.5-0.8s (50-60% improvement)
+- **AI Endpoints:** 2-3s (25-50% improvement)
+- **Running Endpoints:** 0.2-0.3s (already fast)
+
+### **Testing**
+- [ ] Update latency test thresholds after optimization
+- [ ] Run load tests to verify improvements
+- [ ] Monitor production latency for 1 week
+- [ ] Collect user feedback on perceived speed
 
 ---
 

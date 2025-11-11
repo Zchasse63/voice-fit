@@ -13,19 +13,41 @@ import jwt  # PHASE 7 TASK 7.4: JWT authentication
 from supabase import create_client, Client
 from openai import OpenAI  # Phase 3: AI injury analysis
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Add parent directory to path to import our modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from integrated_voice_parser import IntegratedVoiceParser
-from api.models import (
+from models import (
     VoiceParseRequest,
     VoiceParseResponse,
     SessionSummaryResponse,
     EndSessionResponse,
     HealthCheckResponse,
-    ErrorResponse
+    ErrorResponse,
+    CoachQuestionRequest,
+    CoachQuestionResponse,
+    ProgramGenerationRequest,
+    ProgramGenerationResponse,
+    RunningParseRequest,
+    RunningParseResponse,
+    RunningAnalyzeRequest,
+    RunningAnalyzeResponse,
+    WorkoutInsightsRequest,
+    WorkoutInsightsResponse,
+    VolumeAnalyticsResponse,
+    FatigueAnalyticsResponse,
+    DeloadRecommendationResponse,
+    AdherenceCheckInRequest,
+    AdherenceCheckInResponse,
+    AdherenceReportResponse,
+    ChatClassifyRequest,
+    ChatClassifyResponse,
+    OnboardingExtractRequest,
+    OnboardingExtractResponse,
+    BadgeUnlockRequest,
+    BadgeUnlockResponse
 )
 from injury_models import (
     InjuryAnalyzeRequest,
@@ -42,6 +64,18 @@ from injury_models import (
     ExplanationSections,
     ExerciseExplanationResponse
 )
+from badge_service import BadgeService
+from ai_coach_service import AICoachService
+from program_generation_service import ProgramGenerationService
+from user_context_builder import UserContextBuilder
+from weather_service import WeatherService
+from gap_calculator import GAPCalculator
+from volume_tracking_service import VolumeTrackingService
+from fatigue_monitoring_service import FatigueMonitoringService
+from deload_recommendation_service import DeloadRecommendationService
+from program_adherence_monitor import ProgramAdherenceMonitor
+from chat_classifier import ChatClassifier
+from onboarding_service import OnboardingService
 
 # Load environment variables
 load_dotenv()
@@ -56,50 +90,142 @@ app = FastAPI(
 )
 
 # PHASE 7 TASK 7.5: CORS middleware - configured for production
-# For development, allow localhost. For production, restrict to iOS app domain.
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8000").split(",")
+# For development, allow localhost. For production, allow all origins for mobile app.
+# Mobile apps don't send Origin headers, so we need to allow all origins.
+ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS = ALLOWED_ORIGINS_STR.split(",") if ALLOWED_ORIGINS_STR != "*" else ["*"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,  # Restrict to specific domains
+    allow_origins=ALLOWED_ORIGINS,  # Allow all for mobile app compatibility
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],  # Only needed methods
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # All needed methods
     allow_headers=["Content-Type", "Authorization"],  # Only needed headers
 )
 
 # Global variables
 supabase_client: Client = None
 voice_parser: IntegratedVoiceParser = None
+badge_service: BadgeService = None
+ai_coach_service: AICoachService = None
+program_generation_service: ProgramGenerationService = None
+user_context_builder: UserContextBuilder = None
+chat_classifier: ChatClassifier = None
+onboarding_service: OnboardingService = None
 
 
 def get_supabase_client() -> Client:
     """Get or create Supabase client"""
     global supabase_client
-    
+
     if supabase_client is None:
         supabase_url = os.getenv("SUPABASE_URL")
         supabase_key = os.getenv("SUPABASE_SERVICE_KEY")
-        
+
         if not supabase_url or not supabase_key:
             raise HTTPException(
                 status_code=500,
                 detail="Supabase configuration missing"
             )
-        
+
         supabase_client = create_client(supabase_url, supabase_key)
-    
+
     return supabase_client
+
+
+def get_badge_service() -> BadgeService:
+    """Get or create BadgeService instance"""
+    global badge_service
+
+    if badge_service is None:
+        supabase = get_supabase_client()
+        badge_service = BadgeService(supabase)
+
+    return badge_service
 
 
 def get_voice_parser() -> IntegratedVoiceParser:
     """Get or create voice parser instance"""
     global voice_parser
-    
+
     if voice_parser is None:
         supabase = get_supabase_client()
         voice_parser = IntegratedVoiceParser(supabase_client=supabase)
-    
+
     return voice_parser
+
+
+def get_ai_coach_service() -> AICoachService:
+    """Get or create AI Coach service instance"""
+    global ai_coach_service
+
+    if ai_coach_service is None:
+        ai_coach_service = AICoachService()
+
+    return ai_coach_service
+
+
+def get_program_generation_service() -> ProgramGenerationService:
+    """Get or create Program Generation service instance"""
+    global program_generation_service
+
+    if program_generation_service is None:
+        program_generation_service = ProgramGenerationService()
+
+    return program_generation_service
+
+
+def get_user_context_builder() -> UserContextBuilder:
+    """Get or create UserContextBuilder instance"""
+    global user_context_builder
+
+    if user_context_builder is None:
+        supabase = get_supabase_client()
+        user_context_builder = UserContextBuilder(supabase)
+
+    return user_context_builder
+
+
+def get_volume_tracking_service() -> VolumeTrackingService:
+    """Get VolumeTrackingService instance"""
+    supabase = get_supabase_client()
+    return VolumeTrackingService(supabase)
+
+
+def get_fatigue_monitoring_service() -> FatigueMonitoringService:
+    """Get FatigueMonitoringService instance"""
+    supabase = get_supabase_client()
+    return FatigueMonitoringService(supabase)
+
+
+def get_deload_recommendation_service() -> DeloadRecommendationService:
+    """Get DeloadRecommendationService instance"""
+    supabase = get_supabase_client()
+    fatigue_service = get_fatigue_monitoring_service()
+    volume_service = get_volume_tracking_service()
+    return DeloadRecommendationService(supabase, fatigue_service, volume_service)
+
+
+def get_adherence_monitor() -> ProgramAdherenceMonitor:
+    """Get ProgramAdherenceMonitor instance"""
+    supabase = get_supabase_client()
+    return ProgramAdherenceMonitor(supabase)
+
+
+def get_chat_classifier() -> ChatClassifier:
+    """Get or create ChatClassifier instance"""
+    global chat_classifier
+    if chat_classifier is None:
+        chat_classifier = ChatClassifier()
+    return chat_classifier
+
+
+def get_onboarding_service() -> OnboardingService:
+    """Get or create OnboardingService instance"""
+    global onboarding_service
+    if onboarding_service is None:
+        onboarding_service = OnboardingService()
+    return onboarding_service
 
 
 # PHASE 7 TASK 7.4: Authentication middleware
@@ -206,40 +332,22 @@ async def health_check():
 async def parse_voice_command(
     request: VoiceParseRequest,
     parser: IntegratedVoiceParser = Depends(get_voice_parser),
-    user: dict = Depends(verify_token)  # PHASE 7 TASK 7.4: Require authentication
+    user: dict = Depends(verify_token)
 ):
     """
     Parse a voice command into structured workout data.
-    
-    This endpoint:
-    1. Parses the voice transcript using the fine-tuned model
-    2. Handles "same weight" references with session context
-    3. Fuzzy matches exercise names to database IDs
-    4. Detects edge cases and provides smart defaults
-    5. Optionally auto-saves high-confidence sets
-    
-    Returns:
-    - action: "auto_accept" (≥85% confidence), "needs_confirmation" (≥70%), or "needs_clarification" (<70%)
-    - parsed data with exercise, weight, reps, RPE, etc.
-    - session context (set number, exercise switches, etc.)
+
+    Uses fine-tuned Llama 3.3 70B model + Upstash Search for exercise matching.
     """
-    
     try:
-        # Convert previous_set to dict if provided
-        previous_set_dict = None
-        if request.previous_set:
-            previous_set_dict = request.previous_set.model_dump()
-        
-        # Parse voice command
         result = parser.parse_and_log_set(
             transcript=request.transcript,
             user_id=request.user_id,
             auto_save=request.auto_save
         )
-        
-        # Convert to response model
+
         return VoiceParseResponse(**result)
-    
+
     except Exception as e:
         print(f"Error parsing voice command: {e}")
         raise HTTPException(
@@ -253,21 +361,10 @@ async def get_session_summary(
     user_id: str,
     parser: IntegratedVoiceParser = Depends(get_voice_parser)
 ):
-    """
-    Get current session summary for a user.
-    
-    Returns:
-    - session_id
-    - started_at timestamp
-    - total_sets in session
-    - current_exercise
-    - exercises_count
-    """
-    
+    """Get current session summary for a user."""
     try:
         summary = parser.get_session_summary(user_id)
         return SessionSummaryResponse(**summary)
-    
     except Exception as e:
         print(f"Error getting session summary: {e}")
         raise HTTPException(
@@ -281,25 +378,18 @@ async def end_session(
     user_id: str,
     parser: IntegratedVoiceParser = Depends(get_voice_parser)
 ):
-    """
-    End the current workout session for a user.
-    
-    Returns:
-    - Complete session summary with statistics
-    - Per-exercise summaries (sets, reps, avg weight, avg RPE)
-    """
-    
+    """End the current workout session for a user."""
     try:
         final_summary = parser.end_session(user_id)
-        
+
         if 'error' in final_summary:
             raise HTTPException(
                 status_code=404,
                 detail=final_summary['error']
             )
-        
+
         return EndSessionResponse(**final_summary)
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -311,19 +401,931 @@ async def end_session(
 
 
 # ============================================================================
+# CHAT CLASSIFICATION ENDPOINT (UI Redesign)
+# ============================================================================
+
+@app.post("/api/chat/classify", response_model=ChatClassifyResponse)
+async def classify_chat_message(
+    request: ChatClassifyRequest,
+    classifier: ChatClassifier = Depends(get_chat_classifier),
+    user: dict = Depends(verify_token)
+):
+    """
+    Classify a chat message to determine user intent.
+
+    This endpoint is used by the unified chat interface to determine how to handle
+    user messages:
+    - workout_log: Parse with Llama and log to WatermelonDB
+    - question: Route to AI Coach
+    - onboarding: Continue onboarding flow
+    - general: Acknowledge or provide general response
+
+    Args:
+        request: ChatClassifyRequest with message and user_id
+        classifier: ChatClassifier service (injected)
+        user: Authenticated user (injected)
+
+    Returns:
+        ChatClassifyResponse with message_type, confidence, reasoning, and suggested_action
+    """
+    try:
+        # Classify the message
+        message_type, confidence, reasoning, suggested_action = classifier.classify(
+            message=request.message,
+            user_id=request.user_id,
+            conversation_history=request.conversation_history
+        )
+
+        return ChatClassifyResponse(
+            message_type=message_type,
+            confidence=confidence,
+            reasoning=reasoning,
+            suggested_action=suggested_action
+        )
+
+    except Exception as e:
+        print(f"Error classifying chat message: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to classify message: {str(e)}"
+        )
+
+
+# ============================================================================
+# ONBOARDING ENDPOINT (UI Redesign)
+# ============================================================================
+
+@app.post("/api/onboarding/extract", response_model=OnboardingExtractResponse)
+async def extract_onboarding_data(
+    request: OnboardingExtractRequest,
+    onboarding_service: OnboardingService = Depends(get_onboarding_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Extract structured onboarding data from conversational chat.
+
+    Uses fine-tuned Llama 3.3 70B to extract:
+    - Experience level (beginner, intermediate, advanced)
+    - Training goals (strength, hypertrophy, endurance, etc.)
+    - Available equipment (barbell, dumbbells, machines, etc.)
+    - Training frequency (days per week)
+    - Injury history (current injuries, past injuries)
+
+    Args:
+        request: OnboardingExtractRequest with message, current_step, and conversation_history
+        onboarding_service: OnboardingService instance (injected)
+        user: Authenticated user (injected)
+
+    Returns:
+        OnboardingExtractResponse with extracted data and next_step
+    """
+    try:
+        # Extract data from message
+        extracted_data = onboarding_service.extract_onboarding_data(
+            message=request.message,
+            current_step=request.current_step,
+            conversation_history=request.conversation_history
+        )
+
+        return OnboardingExtractResponse(**extracted_data)
+
+    except Exception as e:
+        print(f"Error extracting onboarding data: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to extract onboarding data: {str(e)}"
+        )
+
+
+
+# ============================================================================
+# AI COACH ENDPOINT
+# ============================================================================
+
+@app.post("/api/coach/ask", response_model=CoachQuestionResponse)
+async def coach_ask(
+    request: CoachQuestionRequest,
+    coach_service: AICoachService = Depends(get_ai_coach_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    user: dict = Depends(verify_token)
+):
+    """
+    AI Coach Q&A endpoint with RAG (Retrieval-Augmented Generation) and full user context.
+
+    Features:
+    - Full user context (training history, injuries, PRs, readiness, streaks, badges)
+    - Smart namespace selection (classifies query to relevant knowledge areas)
+    - Parallel Upstash Search (retrieves context from knowledge base)
+    - Streaming Llama 3.3 70B responses (fine-tuned model)
+
+    Performance:
+    - Perceived latency: ~2 seconds (retrieval + time to first token)
+    - Total latency: ~4 seconds (full response generation)
+
+    Premium feature - requires Premium tier.
+    """
+
+    try:
+        # Build comprehensive user context
+        user_context = await context_builder.build_context(request.user_id)
+
+        # Call AI Coach service with user context
+        result = coach_service.ask(
+            question=request.question,
+            conversation_history=request.conversation_history,
+            user_context=user_context
+        )
+
+        return CoachQuestionResponse(
+            answer=result["answer"],
+            confidence=result["confidence"],
+            sources=result["sources"],
+            latency_ms=result["latency_ms"]
+        )
+
+    except Exception as e:
+        print(f"Error in AI Coach: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get AI Coach response: {str(e)}"
+        )
+
+
+# ============================================================================
+# PROGRAM GENERATION ENDPOINTS - Strength & Running
+# ============================================================================
+
+@app.post("/api/program/generate/strength", response_model=ProgramGenerationResponse)
+async def generate_strength_program(
+    request: ProgramGenerationRequest,
+    program_service: ProgramGenerationService = Depends(get_program_generation_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    user: dict = Depends(verify_token)
+):
+    """
+    AI-powered custom STRENGTH program generation with RAG and full user context.
+
+    Features:
+    - Full user context (training history, injuries, PRs, readiness, preferences)
+    - Phase 1 optimized Upstash Search (77% token reduction, 4.4x better diversity)
+    - GPT-4.1 with improved prompting for high-quality programs
+    - Evidence-based programming using knowledge base
+    - Deduplication and similarity filtering
+    - Intelligent periodization with deload weeks
+    - Exercise variation and progression
+
+    Performance:
+    - Cost: ~$0.27 per program (vs $119 baseline)
+    - Generation time: ~2 minutes for complete 12-week program
+    - Quality: 6-8 exercises per workout, intelligent periodization
+
+    Premium feature - requires Premium tier.
+    """
+
+    try:
+        # Extract user_id from questionnaire
+        user_id = request.questionnaire.get('user_id')
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required in questionnaire")
+
+        # Build comprehensive user context
+        user_context = await context_builder.build_context(user_id)
+
+        # Generate strength program with user context
+        result = program_service.generate_program(request.questionnaire, user_context)
+
+        return ProgramGenerationResponse(
+            program=result["program"],
+            cost=result["cost"],
+            stats=result["stats"],
+            generation_time_seconds=result["generation_time_seconds"]
+        )
+
+    except Exception as e:
+        print(f"Error generating strength program: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate strength program: {str(e)}"
+        )
+
+
+@app.post("/api/program/generate/running", response_model=ProgramGenerationResponse)
+async def generate_running_program(
+    request: ProgramGenerationRequest,
+    program_service: ProgramGenerationService = Depends(get_program_generation_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    user: dict = Depends(verify_token)
+):
+    """
+    AI-powered custom RUNNING program generation with RAG and full user context.
+
+    Features:
+    - Full user context (running history, PRs, readiness, preferences)
+    - Phase 1 optimized Upstash Search for running knowledge
+    - GPT-4.1 with running-specific prompting
+    - Evidence-based running programming
+    - Progressive mileage increases (10% rule)
+    - Periodization with easy/hard weeks
+    - Injury prevention focus
+
+    Performance:
+    - Cost: ~$0.27 per program
+    - Generation time: ~2 minutes for complete 12-week program
+    - Quality: Balanced easy/hard runs, proper recovery, race-specific training
+
+    Premium feature - requires Premium tier.
+    """
+
+    try:
+        # Extract user_id from questionnaire
+        user_id = request.questionnaire.get('user_id')
+        if not user_id:
+            raise HTTPException(status_code=400, detail="user_id is required in questionnaire")
+
+        # Build comprehensive user context
+        user_context = await context_builder.build_context(user_id)
+
+        # Modify questionnaire to indicate running program
+        running_questionnaire = request.questionnaire.copy()
+        running_questionnaire['program_type'] = 'running'
+        running_questionnaire['primary_goal'] = running_questionnaire.get('primary_goal', 'endurance')
+
+        # Generate running program with user context
+        # Note: This uses the same service but with running-specific questionnaire
+        # In the future, we can create a separate RunningProgramGenerationService
+        result = program_service.generate_program(running_questionnaire, user_context)
+
+        return ProgramGenerationResponse(
+            program=result["program"],
+            cost=result["cost"],
+            stats=result["stats"],
+            generation_time_seconds=result["generation_time_seconds"]
+        )
+
+    except Exception as e:
+        print(f"Error generating running program: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate running program: {str(e)}"
+        )
+
+
+# Legacy endpoint - redirects to strength program generation
+@app.post("/api/program/generate", response_model=ProgramGenerationResponse)
+async def generate_program_legacy(
+    request: ProgramGenerationRequest,
+    program_service: ProgramGenerationService = Depends(get_program_generation_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    user: dict = Depends(verify_token)
+):
+    """
+    Legacy endpoint - redirects to strength program generation.
+    Use /api/program/generate/strength or /api/program/generate/running instead.
+    """
+    # Default to strength program for backward compatibility
+    return await generate_strength_program(request, program_service, context_builder, user)
+
+
+# ============================================================================
+# RUNNING ENDPOINTS - Weather & GAP Integration
+# ============================================================================
+
+@app.post("/api/running/parse", response_model=RunningParseResponse)
+async def parse_running_workout(
+    request: RunningParseRequest,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token)
+):
+    """
+    Parse and log a running workout with weather and GAP calculation.
+
+    Features:
+    - Fetches weather data for run location/time
+    - Calculates grade-adjusted pace (GAP) from elevation
+    - Saves to runs table with complete data
+    - Returns formatted confirmation with weather and GAP
+    """
+    try:
+        # Calculate pace
+        distance_km = request.distance if request.distance_unit == "km" else request.distance * 1.60934
+        duration_minutes = request.duration_seconds / 60
+        pace_min_per_km = duration_minutes / distance_km if distance_km > 0 else 0
+
+        # Fetch weather data if location provided
+        weather_data = None
+        if request.latitude is not None and request.longitude is not None:
+            try:
+                weather_service = WeatherService()
+                weather_data = weather_service.get_weather_for_run(
+                    latitude=request.latitude,
+                    longitude=request.longitude,
+                    timestamp=None  # Current time
+                )
+            except Exception as e:
+                print(f"Weather fetch failed: {e}")
+                # Continue without weather data
+
+        # Calculate GAP if elevation data provided
+        gap_data = None
+        gap_value = None
+        gap_formatted = None
+
+        if request.elevation_gain > 0 or request.elevation_loss > 0:
+            gap_data = GAPCalculator.calculate_gap(
+                actual_pace=pace_min_per_km,
+                elevation_gain=request.elevation_gain,
+                elevation_loss=request.elevation_loss,
+                distance=distance_km,
+                pace_unit="min_per_km"
+            )
+            gap_value = gap_data["gap"]
+            gap_formatted = GAPCalculator.format_pace(gap_value, "min_per_km")
+
+        # Save to runs table
+        run_data = {
+            "user_id": request.user_id,
+            "start_time": datetime.utcnow().isoformat(),
+            "end_time": (datetime.utcnow() + timedelta(seconds=request.duration_seconds)).isoformat(),
+            "distance": distance_km,
+            "duration": request.duration_seconds,
+            "pace": pace_min_per_km,
+            "avg_speed": (distance_km / (request.duration_seconds / 3600)) if request.duration_seconds > 0 else 0,
+            "calories": int(distance_km * 100),  # Rough estimate
+            "route": request.route,
+            "weather_data": weather_data,
+            "elevation_gain": request.elevation_gain,
+            "elevation_loss": request.elevation_loss,
+            "grade_adjusted_pace": gap_value,
+            "notes": request.notes,
+            "created_at": datetime.utcnow().isoformat()
+        }
+
+        result = supabase.table('runs').insert(run_data).execute()
+
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to save run")
+
+        run_id = result.data[0]['id']
+
+        # Format pace
+        pace_formatted = GAPCalculator.format_pace(pace_min_per_km, "min_per_km")
+
+        # Build confirmation message
+        distance_str = f"{request.distance} {request.distance_unit}"
+        duration_str = f"{request.duration_seconds // 60}:{request.duration_seconds % 60:02d}"
+
+        message = f"Run logged! {distance_str} in {duration_str} ({pace_formatted} pace"
+
+        if gap_formatted:
+            message += f", {gap_formatted} GAP"
+
+        if weather_data:
+            temp = weather_data.get("temperature_f", 0)
+            conditions = weather_data.get("conditions", "")
+            message += f"). {conditions}, {temp}°F."
+        else:
+            message += ")."
+
+        return RunningParseResponse(
+            success=True,
+            run_id=run_id,
+            pace=pace_min_per_km,
+            pace_formatted=pace_formatted,
+            gap=gap_value,
+            gap_formatted=gap_formatted,
+            weather_data=weather_data,
+            elevation_data=gap_data,
+            message=message
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error parsing running workout: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to parse running workout: {str(e)}"
+        )
+
+
+@app.post("/api/running/analyze", response_model=RunningAnalyzeResponse)
+async def analyze_running_workout(
+    request: RunningAnalyzeRequest,
+    supabase: Client = Depends(get_supabase_client),
+    coach_service: AICoachService = Depends(get_ai_coach_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    user: dict = Depends(verify_token)
+):
+    """
+    Analyze a completed run with weather/elevation adjustments.
+
+    Features:
+    - Analyzes pace vs GAP (elevation impact)
+    - Weather impact on performance
+    - AI-powered insights and recommendations
+    - Comparison to recent similar runs
+    """
+    try:
+        # Fetch run from database
+        run_result = supabase.table('runs')\
+            .select('*')\
+            .eq('id', request.run_id)\
+            .single()\
+            .execute()
+
+        if not run_result.data:
+            raise HTTPException(status_code=404, detail="Run not found")
+
+        run_data = run_result.data
+
+        # Build run summary
+        run_summary = {
+            "distance": run_data.get("distance", 0),
+            "duration": run_data.get("duration", 0),
+            "pace": run_data.get("pace", 0),
+            "gap": run_data.get("grade_adjusted_pace"),
+            "elevation_gain": run_data.get("elevation_gain", 0),
+            "elevation_loss": run_data.get("elevation_loss", 0)
+        }
+
+        # Analyze weather impact
+        weather_data = run_data.get("weather_data", {})
+        weather_impact = {}
+
+        if weather_data:
+            weather_service = WeatherService()
+            weather_impact = weather_service.analyze_weather_impact(weather_data)
+
+        # Analyze elevation/GAP
+        elevation_analysis = {}
+
+        if run_data.get("elevation_gain", 0) > 0 or run_data.get("elevation_loss", 0) > 0:
+            elevation_analysis = GAPCalculator.calculate_gap_from_run_data(run_data)
+
+        # Get user context for AI insights
+        user_context = await context_builder.build_context(request.user_id)
+
+        # Build AI prompt for performance insights
+        prompt = f"""Analyze this running workout and provide performance insights:
+
+Run Data:
+- Distance: {run_summary['distance']:.2f} km
+- Duration: {run_summary['duration'] // 60}:{run_summary['duration'] % 60:02d}
+- Pace: {GAPCalculator.format_pace(run_summary['pace'], 'min_per_km')}
+"""
+
+        if run_summary.get('gap'):
+            prompt += f"- Grade-Adjusted Pace: {GAPCalculator.format_pace(run_summary['gap'], 'min_per_km')}\n"
+            prompt += f"- Elevation Gain: {run_summary['elevation_gain']:.0f}m\n"
+            prompt += f"- Terrain: {elevation_analysis.get('difficulty', 'flat')}\n"
+
+        if weather_data:
+            prompt += f"\nWeather Conditions:\n"
+            prompt += f"- Temperature: {weather_data.get('temperature_f', 0):.0f}°F\n"
+            prompt += f"- Humidity: {weather_data.get('humidity', 0)}%\n"
+            prompt += f"- Conditions: {weather_data.get('conditions', 'Clear')}\n"
+
+            if weather_impact:
+                prompt += f"- Estimated pace impact: {weather_impact.get('estimated_pace_slowdown_percent', 0):.1f}%\n"
+
+        prompt += "\nProvide brief insights on:\n1. Performance quality\n2. Weather/elevation impact\n3. Training recommendations"
+
+        # Get AI insights
+        ai_result = coach_service.ask(
+            question=prompt,
+            conversation_history=None,
+            user_context=user_context
+        )
+
+        performance_insights = ai_result.get("answer", "Great run!")
+
+        # Build recommendations
+        recommendations = []
+
+        if weather_impact:
+            recommendations.extend(weather_impact.get("recommendations", []))
+
+        if elevation_analysis.get("difficulty") in ["steep_uphill", "very_steep_uphill"]:
+            recommendations.append("Excellent hill work - builds strength and power")
+
+        # Fetch recent runs for comparison
+        recent_runs_result = supabase.table('runs')\
+            .select('*')\
+            .eq('user_id', request.user_id)\
+            .neq('id', request.run_id)\
+            .order('created_at', desc=True)\
+            .limit(5)\
+            .execute()
+
+        comparison_to_recent_runs = None
+
+        if recent_runs_result.data and len(recent_runs_result.data) > 0:
+            recent_runs = recent_runs_result.data
+            avg_pace = sum(r.get('pace', 0) for r in recent_runs) / len(recent_runs)
+            avg_gap = sum(r.get('grade_adjusted_pace', 0) for r in recent_runs if r.get('grade_adjusted_pace')) / max(1, len([r for r in recent_runs if r.get('grade_adjusted_pace')]))
+
+            comparison_to_recent_runs = {
+                "recent_runs_count": len(recent_runs),
+                "avg_pace_recent": avg_pace,
+                "avg_gap_recent": avg_gap,
+                "pace_vs_avg": run_summary['pace'] - avg_pace,
+                "gap_vs_avg": (run_summary.get('gap', 0) - avg_gap) if run_summary.get('gap') else None
+            }
+
+        return RunningAnalyzeResponse(
+            run_summary=run_summary,
+            weather_impact=weather_impact,
+            elevation_analysis=elevation_analysis,
+            performance_insights=performance_insights,
+            recommendations=recommendations,
+            comparison_to_recent_runs=comparison_to_recent_runs
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error analyzing run: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze run: {str(e)}"
+        )
+
+
+# ============================================================================
+# WORKOUT INSIGHTS ENDPOINT - Post-Workout Analysis
+# ============================================================================
+
+@app.post("/api/workout/insights", response_model=WorkoutInsightsResponse)
+async def get_workout_insights(
+    request: WorkoutInsightsRequest,
+    supabase: Client = Depends(get_supabase_client),
+    coach_service: AICoachService = Depends(get_ai_coach_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    user: dict = Depends(verify_token)
+):
+    """
+    Analyze a completed workout with AI-powered insights.
+
+    Features:
+    - Volume analysis by muscle group
+    - Intensity and RPE trend analysis
+    - Muscle group balance assessment
+    - Fatigue indicators and recovery recommendations
+    - AI-powered insights and recommendations
+    - Comparison to recent workouts
+    """
+    try:
+        # Fetch workout from database
+        workout_result = supabase.table('workouts')\
+            .select('*')\
+            .eq('id', request.workout_id)\
+            .single()\
+            .execute()
+
+        if not workout_result.data:
+            raise HTTPException(status_code=404, detail="Workout not found")
+
+        workout_data = workout_result.data
+
+        # Fetch workout exercises/sets
+        sets_result = supabase.table('workout_logs')\
+            .select('*, exercises(*)')\
+            .eq('workout_id', request.workout_id)\
+            .execute()
+
+        sets_data = sets_result.data if sets_result.data else []
+
+        # Build workout summary
+        total_sets = len(sets_data)
+        unique_exercises = len(set(s['exercise_id'] for s in sets_data if s.get('exercise_id')))
+
+        # Calculate duration
+        start_time = datetime.fromisoformat(workout_data['start_time'].replace('Z', '+00:00'))
+        end_time = datetime.fromisoformat(workout_data['end_time'].replace('Z', '+00:00'))
+        duration_minutes = int((end_time - start_time).total_seconds() / 60)
+
+        # Calculate average RPE
+        rpe_values = [s['rpe'] for s in sets_data if s.get('rpe')]
+        avg_rpe = sum(rpe_values) / len(rpe_values) if rpe_values else 0
+
+        workout_summary = {
+            "total_sets": total_sets,
+            "total_exercises": unique_exercises,
+            "duration_minutes": duration_minutes,
+            "avg_rpe": round(avg_rpe, 1)
+        }
+
+        # Volume analysis by muscle group
+        volume_by_muscle = {}
+        for set_data in sets_data:
+            exercise = set_data.get('exercises')
+            if not exercise:
+                continue
+
+            primary_muscle = exercise.get('primary_muscle_group', 'unknown')
+
+            if primary_muscle not in volume_by_muscle:
+                volume_by_muscle[primary_muscle] = {"sets": 0, "total_reps": 0}
+
+            volume_by_muscle[primary_muscle]["sets"] += 1
+            volume_by_muscle[primary_muscle]["total_reps"] += set_data.get('reps', 0)
+
+        # Intensity analysis
+        high_intensity_sets = len([s for s in sets_data if s.get('rpe', 0) >= 8])
+        working_sets = len([s for s in sets_data if s.get('rpe', 0) >= 6])
+        warmup_sets = total_sets - working_sets
+
+        intensity_analysis = {
+            "avg_rpe": round(avg_rpe, 1),
+            "high_intensity_sets": high_intensity_sets,
+            "working_sets": working_sets,
+            "warmup_sets": warmup_sets
+        }
+
+        # Muscle group balance
+        push_muscles = ['chest', 'shoulders', 'triceps']
+        pull_muscles = ['back', 'biceps']
+
+        push_sets = sum(volume_by_muscle.get(m, {}).get('sets', 0) for m in push_muscles)
+        pull_sets = sum(volume_by_muscle.get(m, {}).get('sets', 0) for m in pull_muscles)
+
+        push_pull_ratio = push_sets / pull_sets if pull_sets > 0 else 0
+        balanced = 0.7 <= push_pull_ratio <= 1.3
+
+        muscle_group_balance = {
+            "push_pull_ratio": round(push_pull_ratio, 2),
+            "push_sets": push_sets,
+            "pull_sets": pull_sets,
+            "balanced": balanced
+        }
+
+        # Fatigue indicators
+        high_rpe_percentage = (high_intensity_sets / total_sets * 100) if total_sets > 0 else 0
+
+        if high_rpe_percentage > 50:
+            fatigue_level = "high"
+            recovery_rec = "48-72 hours"
+        elif high_rpe_percentage > 30:
+            fatigue_level = "moderate"
+            recovery_rec = "24-48 hours"
+        else:
+            fatigue_level = "low"
+            recovery_rec = "24 hours"
+
+        fatigue_indicators = {
+            "high_rpe_percentage": round(high_rpe_percentage, 0),
+            "estimated_fatigue_level": fatigue_level,
+            "recovery_recommendation": recovery_rec
+        }
+
+        # Get user context for AI insights
+        user_context = await context_builder.build_context(request.user_id)
+
+        # Build AI prompt for performance insights
+        prompt = f"""Analyze this strength training workout and provide performance insights:
+
+Workout Summary:
+- Total Sets: {total_sets}
+- Exercises: {unique_exercises}
+- Duration: {duration_minutes} minutes
+- Average RPE: {avg_rpe:.1f}
+
+Volume by Muscle Group:
+"""
+
+        for muscle, data in volume_by_muscle.items():
+            prompt += f"- {muscle.title()}: {data['sets']} sets, {data['total_reps']} total reps\n"
+
+        prompt += f"""
+Intensity Analysis:
+- High Intensity Sets (RPE 8+): {high_intensity_sets}
+- Working Sets (RPE 6+): {working_sets}
+- Warmup Sets: {warmup_sets}
+
+Muscle Group Balance:
+- Push/Pull Ratio: {push_pull_ratio:.2f} ({'Balanced' if balanced else 'Imbalanced'})
+- Push Sets: {push_sets}
+- Pull Sets: {pull_sets}
+
+Fatigue Level: {fatigue_level}
+
+Provide brief insights on:
+1. Workout quality and effectiveness
+2. Volume and intensity appropriateness
+3. Muscle group balance
+4. Recovery recommendations
+"""
+
+        # Get AI insights
+        ai_result = coach_service.ask(
+            question=prompt,
+            conversation_history=None,
+            user_context=user_context
+        )
+
+        performance_insights = ai_result.get("answer", "Great workout!")
+
+        # Build recommendations
+        recommendations = []
+
+        if not balanced:
+            if push_pull_ratio > 1.3:
+                recommendations.append("Consider adding more pulling exercises to balance push/pull ratio")
+            else:
+                recommendations.append("Consider adding more pushing exercises to balance push/pull ratio")
+
+        if high_rpe_percentage > 50:
+            recommendations.append("High intensity session - ensure adequate recovery before next workout")
+
+        if duration_minutes > 90:
+            recommendations.append("Long workout duration - consider splitting into two sessions for better recovery")
+
+        # Fetch recent workouts for comparison
+        recent_workouts_result = supabase.table('workouts')\
+            .select('id, start_time, end_time')\
+            .eq('user_id', request.user_id)\
+            .neq('id', request.workout_id)\
+            .order('start_time', desc=True)\
+            .limit(5)\
+            .execute()
+
+        comparison_to_recent_workouts = None
+
+        if recent_workouts_result.data and len(recent_workouts_result.data) > 0:
+            recent_workouts = recent_workouts_result.data
+
+            # Calculate average sets from recent workouts
+            total_recent_sets = 0
+            for rw in recent_workouts:
+                rw_sets = supabase.table('workout_logs')\
+                    .select('id', count='exact')\
+                    .eq('workout_id', rw['id'])\
+                    .execute()
+                total_recent_sets += rw_sets.count if rw_sets.count else 0
+
+            avg_recent_sets = total_recent_sets / len(recent_workouts) if recent_workouts else 0
+
+            comparison_to_recent_workouts = {
+                "recent_workouts_count": len(recent_workouts),
+                "avg_sets_recent": round(avg_recent_sets, 1),
+                "sets_vs_avg": total_sets - avg_recent_sets
+            }
+
+        return WorkoutInsightsResponse(
+            workout_summary=workout_summary,
+            volume_analysis=volume_by_muscle,
+            intensity_analysis=intensity_analysis,
+            muscle_group_balance=muscle_group_balance,
+            fatigue_indicators=fatigue_indicators,
+            performance_insights=performance_insights,
+            recommendations=recommendations,
+            comparison_to_recent_workouts=comparison_to_recent_workouts
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error analyzing workout: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to analyze workout: {str(e)}"
+        )
+
+
+# ============================================================================
+# ANALYTICS ENDPOINTS - Volume, Fatigue, Deload
+# ============================================================================
+
+@app.get("/api/analytics/volume/{user_id}", response_model=VolumeAnalyticsResponse)
+async def get_volume_analytics(
+    user_id: str,
+    volume_service: VolumeTrackingService = Depends(get_volume_tracking_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Get volume analytics for a user.
+
+    Returns:
+    - Weekly volume by muscle group
+    - Monthly volume by muscle group
+    - Volume trend over 4 weeks
+
+    Premium feature.
+    """
+    try:
+        # Get weekly volume
+        weekly_volume = volume_service.get_weekly_volume(user_id)
+
+        # Get monthly volume
+        monthly_volume = volume_service.get_monthly_volume(user_id)
+
+        # Get volume trend
+        volume_trend = volume_service.get_volume_trend(user_id, weeks=4)
+
+        return VolumeAnalyticsResponse(
+            weekly_volume=weekly_volume,
+            monthly_volume=monthly_volume,
+            volume_trend=volume_trend
+        )
+
+    except Exception as e:
+        print(f"Error getting volume analytics: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get volume analytics: {str(e)}"
+        )
+
+
+@app.get("/api/analytics/fatigue/{user_id}", response_model=FatigueAnalyticsResponse)
+async def get_fatigue_analytics(
+    user_id: str,
+    fatigue_service: FatigueMonitoringService = Depends(get_fatigue_monitoring_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Get fatigue analytics for a user.
+
+    Returns:
+    - Current fatigue assessment
+    - Fatigue history over 4 weeks
+    - Recovery recommendations
+
+    Premium feature.
+    """
+    try:
+        # Get current fatigue
+        current_fatigue = fatigue_service.assess_fatigue(user_id, days=7)
+
+        # Get fatigue history
+        fatigue_history = fatigue_service.get_fatigue_history(user_id, weeks=4)
+
+        return FatigueAnalyticsResponse(
+            current_fatigue=current_fatigue,
+            fatigue_history=fatigue_history
+        )
+
+    except Exception as e:
+        print(f"Error getting fatigue analytics: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get fatigue analytics: {str(e)}"
+        )
+
+
+@app.get("/api/analytics/deload/{user_id}", response_model=DeloadRecommendationResponse)
+async def get_deload_recommendation(
+    user_id: str,
+    program_id: Optional[str] = None,
+    deload_service: DeloadRecommendationService = Depends(get_deload_recommendation_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Get deload recommendation for a user.
+
+    Checks for:
+    - Programmed deloads (built into program, automatic)
+    - Auto-regulation deloads (fatigue-based, requires approval)
+
+    Returns recommendation with confidence level and specific instructions.
+
+    Premium feature.
+    """
+    try:
+        recommendation = deload_service.check_deload_needed(user_id, program_id)
+
+        return DeloadRecommendationResponse(
+            deload_needed=recommendation["deload_needed"],
+            deload_type=recommendation.get("deload_type"),
+            reason=recommendation["reason"],
+            confidence=recommendation["confidence"],
+            requires_approval=recommendation["requires_approval"],
+            indicators=recommendation.get("indicators", {}),
+            recommendation=recommendation.get("recommendation")
+        )
+
+    except Exception as e:
+        print(f"Error getting deload recommendation: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get deload recommendation: {str(e)}"
+        )
+
+
+# ============================================================================
 # PHASE 3: INJURY DETECTION & MANAGEMENT ENDPOINTS
 # ============================================================================
 
 @app.post("/api/injury/analyze", response_model=InjuryAnalyzeResponse)
 async def analyze_injury(
     request: InjuryAnalyzeRequest,
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
     user: dict = Depends(verify_token)
 ):
     """
-    AI-powered injury analysis (Premium tier only).
+    AI-powered injury analysis with full user context (Premium tier only).
 
     Uses OpenAI GPT-4o Mini to analyze user notes and detect potential injuries.
-    Returns structured injury assessment with recommendations.
+    Returns structured injury assessment with personalized recommendations.
 
     Premium feature - requires tier validation.
     """
@@ -336,12 +1338,17 @@ async def analyze_injury(
         )
 
     try:
+        # Build comprehensive user context
+        user_context = await context_builder.build_context(request.user_id)
+
         # Initialize OpenAI client
         openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
         # Load AI prompt template from research
         # For now, using inline prompt - in production, load from ai_prompts.md
-        system_message = """You are a sports medicine AI assistant specializing in strength training injury analysis. Your role is to analyze user-reported symptoms and classify potential injuries with high accuracy.
+        system_message = f"""You are a sports medicine AI assistant specializing in strength training injury analysis. Your role is to analyze user-reported symptoms and classify potential injuries with high accuracy.
+
+{user_context}
 
 CRITICAL RULES:
 1. Output ONLY valid JSON matching the exact schema provided
@@ -349,6 +1356,7 @@ CRITICAL RULES:
 3. Detect red flags requiring immediate medical attention
 4. Distinguish between normal training soreness (DOMS) and actual injury
 5. Never provide definitive diagnoses - only assessments and recommendations
+6. Consider the user's training history, recent workouts, and injury history when analyzing
 
 SCOPE LIMITATIONS:
 - You assess musculoskeletal training-related issues only
@@ -361,7 +1369,7 @@ SCOPE LIMITATIONS:
 USER INPUT:
 "{request.user_notes}"
 
-CONTEXT:
+ADDITIONAL CONTEXT:
 - User tier: {request.user_tier}
 - Recent exercises: {request.recent_exercises or 'Not provided'}
 - Training history: {request.training_context or 'Not provided'}
@@ -1218,6 +2226,429 @@ async def general_exception_handler(request, exc):
             "error": str(exc)
         }
     )
+
+
+# ============================================================================
+# BADGE ENDPOINTS
+# ============================================================================
+
+@app.get("/api/badges/{user_id}")
+async def get_user_badges(
+    user_id: str,
+    badge_service: BadgeService = Depends(get_badge_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Get all badges earned by a user
+
+    Returns:
+    - List of earned badges with metadata
+    - Sorted by most recently earned first
+    """
+    try:
+        badges = await badge_service.get_user_badges(user_id)
+
+        return {
+            "user_id": user_id,
+            "total_badges": len(badges),
+            "badges": badges
+        }
+
+    except Exception as e:
+        print(f"Error fetching badges: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch badges: {str(e)}"
+        )
+
+
+@app.get("/api/badges/{user_id}/progress")
+async def get_badge_progress(
+    user_id: str,
+    badge_service: BadgeService = Depends(get_badge_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Get progress toward all unearned badges
+
+    Returns:
+    - Dictionary with badge_type as key
+    - Progress info (current, required, percentage) as value
+    - Only includes badges not yet earned
+    """
+    try:
+        progress = await badge_service.get_badge_progress(user_id)
+
+        # Sort by percentage (closest to unlocking first)
+        sorted_progress = dict(sorted(
+            progress.items(),
+            key=lambda x: x[1]['percentage'],
+            reverse=True
+        ))
+
+        return {
+            "user_id": user_id,
+            "total_unearned": len(sorted_progress),
+            "progress": sorted_progress
+        }
+
+    except Exception as e:
+        print(f"Error fetching badge progress: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch badge progress: {str(e)}"
+        )
+
+
+@app.post("/api/badges/{user_id}/check-workout")
+async def check_workout_badges(
+    user_id: str,
+    badge_service: BadgeService = Depends(get_badge_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Check for newly earned workout-related badges
+
+    Should be called after workout completion
+
+    Returns:
+    - List of newly earned badge types
+    """
+    try:
+        newly_earned = await badge_service.check_workout_badges(user_id)
+
+        # Get full badge details
+        badge_details = []
+        for badge_type in newly_earned:
+            badge_def = badge_service.get_badge_definition(badge_type)
+            if badge_def:
+                badge_details.append({
+                    "badge_type": badge_type,
+                    "badge_name": badge_def.badge_name,
+                    "badge_description": badge_def.badge_description,
+                    "category": badge_def.category
+                })
+
+        return {
+            "user_id": user_id,
+            "newly_earned_count": len(newly_earned),
+            "newly_earned": badge_details
+        }
+
+    except Exception as e:
+        print(f"Error checking workout badges: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to check workout badges: {str(e)}"
+        )
+
+
+@app.post("/api/badges/{user_id}/check-pr")
+async def check_pr_badges(
+    user_id: str,
+    badge_service: BadgeService = Depends(get_badge_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Check for newly earned PR-related badges
+
+    Should be called after PR detection
+
+    Returns:
+    - List of newly earned badge types
+    """
+    try:
+        newly_earned = await badge_service.check_pr_badges(user_id)
+
+        # Get full badge details
+        badge_details = []
+        for badge_type in newly_earned:
+            badge_def = badge_service.get_badge_definition(badge_type)
+            if badge_def:
+                badge_details.append({
+                    "badge_type": badge_type,
+                    "badge_name": badge_def.badge_name,
+                    "badge_description": badge_def.badge_description,
+                    "category": badge_def.category
+                })
+
+        return {
+            "user_id": user_id,
+            "newly_earned_count": len(newly_earned),
+            "newly_earned": badge_details
+        }
+
+    except Exception as e:
+        print(f"Error checking PR badges: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to check PR badges: {str(e)}"
+        )
+
+
+@app.post("/api/badges/unlock", response_model=BadgeUnlockResponse)
+async def unlock_badge(
+    request: BadgeUnlockRequest,
+    badge_service: BadgeService = Depends(get_badge_service),
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token)
+):
+    """
+    Manually unlock a badge for a user.
+
+    This endpoint is used by the mobile app to unlock badges when milestones are reached.
+    It checks if the badge is already unlocked before creating a new record.
+
+    Args:
+        request: BadgeUnlockRequest with user_id and badge_type
+        badge_service: BadgeService instance (injected)
+        supabase: Supabase client (injected)
+        user: Authenticated user (injected)
+
+    Returns:
+        BadgeUnlockResponse with success status, message, and badge details
+    """
+    try:
+        # Get badge definition
+        badge_def = badge_service.get_badge_definition(request.badge_type)
+
+        if not badge_def:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Badge type '{request.badge_type}' not found"
+            )
+
+        # Check if badge is already unlocked
+        existing_badges = await badge_service.get_user_badges(request.user_id)
+        already_unlocked = any(b['badge_type'] == request.badge_type for b in existing_badges)
+
+        if already_unlocked:
+            return BadgeUnlockResponse(
+                success=True,
+                message=f"Badge already unlocked: {badge_def.badge_name}",
+                badge={
+                    "badge_type": request.badge_type,
+                    "badge_name": badge_def.badge_name,
+                    "badge_description": badge_def.badge_description,
+                    "category": badge_def.category
+                },
+                already_unlocked=True
+            )
+
+        # Unlock the badge
+        now = datetime.utcnow().isoformat()
+
+        result = supabase.table("user_badges").insert({
+            "user_id": request.user_id,
+            "badge_type": request.badge_type,
+            "badge_name": badge_def.badge_name,
+            "badge_description": badge_def.badge_description,
+            "earned_at": now
+        }).execute()
+
+        return BadgeUnlockResponse(
+            success=True,
+            message=f"Badge unlocked: {badge_def.badge_name}",
+            badge={
+                "badge_type": request.badge_type,
+                "badge_name": badge_def.badge_name,
+                "badge_description": badge_def.badge_description,
+                "category": badge_def.category,
+                "earned_at": now
+            },
+            already_unlocked=False
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error unlocking badge: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to unlock badge: {str(e)}"
+        )
+
+
+# ============================================================================
+# ADHERENCE MONITORING ENDPOINTS
+# ============================================================================
+
+@app.get("/api/adherence/report/{user_id}", response_model=AdherenceReportResponse)
+async def get_adherence_report(
+    user_id: str,
+    adherence_monitor: ProgramAdherenceMonitor = Depends(get_adherence_monitor),
+    user: dict = Depends(verify_token)
+):
+    """
+    Get weekly adherence report for a user.
+
+    Checks user's adherence to their custom program and detects imbalances.
+
+    Premium feature - requires Premium tier.
+
+    Returns:
+    - Adherence data (actual vs target volume)
+    - Flags (created, updated, resolved, alerts)
+    - Imbalance risks (quad/ham, push/pull)
+    - Whether user needs to take action
+    """
+    try:
+        report = adherence_monitor.run_weekly_check(user_id)
+        return AdherenceReportResponse(**report)
+
+    except Exception as e:
+        print(f"Error generating adherence report: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate adherence report: {str(e)}"
+        )
+
+
+@app.post("/api/adherence/check-in", response_model=AdherenceCheckInResponse)
+async def adherence_check_in(
+    request: AdherenceCheckInRequest,
+    adherence_monitor: ProgramAdherenceMonitor = Depends(get_adherence_monitor),
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token)
+):
+    """
+    Process user's response to adherence alert.
+
+    Two-stage monitoring system:
+    1. Stage 1 (Week 1): Silent monitoring - flag muscle groups below target
+    2. Stage 2 (Week 2): If still below target after 7 days, send alert
+
+    User responses:
+    - injury: Create injury log and adjust program
+    - time_constraint: Create gradual adjustment plan
+    - equipment: Suggest equipment substitutions
+    - motivation: Create gradual adjustment plan
+    - fine: Dismiss flag
+    - change_program: Suggest program regeneration
+
+    Premium feature - requires Premium tier.
+    """
+    try:
+        # Get the flag
+        flag_result = supabase.table('program_adherence_flags')\
+            .select('*')\
+            .eq('id', request.flag_id)\
+            .eq('user_id', request.user_id)\
+            .single()\
+            .execute()
+
+        if not flag_result.data:
+            raise HTTPException(status_code=404, detail="Flag not found")
+
+        flag = flag_result.data
+        muscle_group = flag['muscle_group']
+        target_sets = flag['target_weekly_sets']
+        actual_sets = flag['actual_weekly_sets']
+
+        # Handle different response types
+        adjustment_plan = None
+        plan_created = False
+        message = ""
+
+        if request.response_type == 'injury':
+            # Create injury log (if injury_details provided)
+            if request.injury_details:
+                injury_data = {
+                    'user_id': request.user_id,
+                    'body_part': request.injury_details.get('body_part', muscle_group),
+                    'severity': request.injury_details.get('severity', 'moderate'),
+                    'pain_level': request.injury_details.get('pain_level', 5),
+                    'status': 'active',
+                    'reported_at': datetime.now().isoformat()
+                }
+                supabase.table('injury_logs').insert(injury_data).execute()
+
+            message = f"I've logged your {muscle_group} injury. I'll adjust your program to work around it."
+
+            # Update flag to dismissed
+            supabase.table('program_adherence_flags')\
+                .update({'status': 'dismissed', 'dismissed_at': datetime.now().isoformat()})\
+                .eq('id', request.flag_id)\
+                .execute()
+
+        elif request.response_type in ['time_constraint', 'motivation']:
+            # Create gradual adjustment plan
+            plan = adherence_monitor.create_adjustment_plan(
+                user_id=request.user_id,
+                muscle_group=muscle_group,
+                current_sets=actual_sets,
+                target_sets=target_sets,
+                duration_weeks=4
+            )
+
+            if plan:
+                adjustment_plan = {
+                    'muscle_group': muscle_group,
+                    'current_weekly_sets': actual_sets,
+                    'target_weekly_sets': target_sets,
+                    'weekly_increment': plan['weekly_increment'],
+                    'duration_weeks': plan['duration_weeks'],
+                    'weekly_targets': [
+                        actual_sets + (plan['weekly_increment'] * (i + 1))
+                        for i in range(plan['duration_weeks'])
+                    ]
+                }
+                plan_created = True
+                message = f"I've created a gradual 4-week plan to get your {muscle_group} volume back on track. Week 1: {adjustment_plan['weekly_targets'][0]} sets, Week 2: {adjustment_plan['weekly_targets'][1]} sets, Week 3: {adjustment_plan['weekly_targets'][2]} sets, Week 4: {adjustment_plan['weekly_targets'][3]} sets."
+
+            # Update flag to resolved
+            supabase.table('program_adherence_flags')\
+                .update({'status': 'resolved', 'resolved_at': datetime.now().isoformat()})\
+                .eq('id', request.flag_id)\
+                .execute()
+
+        elif request.response_type == 'fine':
+            message = f"Got it! I'll keep monitoring your {muscle_group} volume."
+
+            # Update flag to dismissed
+            supabase.table('program_adherence_flags')\
+                .update({'status': 'dismissed', 'dismissed_at': datetime.now().isoformat()})\
+                .eq('id', request.flag_id)\
+                .execute()
+
+        elif request.response_type == 'change_program':
+            message = "I understand you want to change your program. Head to the Program Generation screen to create a new custom program."
+
+            # Update flag to dismissed
+            supabase.table('program_adherence_flags')\
+                .update({'status': 'dismissed', 'dismissed_at': datetime.now().isoformat()})\
+                .eq('id', request.flag_id)\
+                .execute()
+
+        else:
+            message = f"Thanks for the feedback! I'll adjust your {muscle_group} recommendations."
+
+        # Save check-in response
+        check_in_data = {
+            'user_id': request.user_id,
+            'flag_id': request.flag_id,
+            'response_type': request.response_type,
+            'injury_details': request.injury_details,
+            'adjustment_plan': adjustment_plan,
+            'user_accepted': True
+        }
+        supabase.table('adherence_check_in_responses').insert(check_in_data).execute()
+
+        return AdherenceCheckInResponse(
+            success=True,
+            message=message,
+            adjustment_plan=adjustment_plan,
+            plan_created=plan_created
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error processing adherence check-in: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process check-in: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

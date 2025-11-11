@@ -34,6 +34,11 @@ export const useRunStore = create<RunState>((set, get) => ({
     pace: 0,
     avgSpeed: 0,
     calories: 0,
+    elevationGain: 0,
+    elevationLoss: 0,
+    gradeAdjustedPace: null,
+    gradePercent: 0,
+    terrainDifficulty: 'flat',
   },
   error: null,
   hasPermission: false,
@@ -137,6 +142,11 @@ export const useRunStore = create<RunState>((set, get) => ({
               run.pace = finalStats.pace;
               run.avgSpeed = finalStats.avgSpeed;
               run.calories = finalStats.calories;
+              run.elevationGain = finalStats.elevationGain;
+              run.elevationLoss = finalStats.elevationLoss;
+              run.gradeAdjustedPace = finalStats.gradeAdjustedPace || undefined;
+              run.gradePercent = finalStats.gradePercent;
+              run.terrainDifficulty = finalStats.terrainDifficulty;
               run.route = JSON.stringify(finalCoordinates);
               run.synced = false;
             });
@@ -183,6 +193,11 @@ export const useRunStore = create<RunState>((set, get) => ({
         pace: 0,
         avgSpeed: 0,
         calories: 0,
+        elevationGain: 0,
+        elevationLoss: 0,
+        gradeAdjustedPace: null,
+        gradePercent: 0,
+        terrainDifficulty: 'flat',
       },
       error: null,
     });

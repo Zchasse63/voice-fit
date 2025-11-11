@@ -3,7 +3,7 @@ import { View, Text, ScrollView, Pressable, Modal } from 'react-native';
 import { useAuthStore } from '../store/auth.store';
 import { useWorkoutStore } from '../store/workout.store';
 import { useTheme } from '../theme/ThemeContext';
-import { Dumbbell, TrendingUp, Calendar, BookOpen, Settings } from 'lucide-react-native';
+import { Dumbbell, TrendingUp, Calendar, BookOpen, Settings, BarChart2 } from 'lucide-react-native';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import SyncStatus from '../components/common/SyncStatus';
@@ -12,6 +12,7 @@ import ReadinessCheckCard from '../components/readiness/ReadinessCheckCard';
 import ActiveInjuryBanner from '../components/injury/ActiveInjuryBanner';
 import RecoveryCheckInModal from '../components/injury/RecoveryCheckInModal';
 import ExerciseLibraryScreen from './ExerciseLibraryScreen';
+import AnalyticsScreen from './AnalyticsScreen';
 import InjuryLoggingService from '../services/injury/InjuryLoggingService';
 import InjuryLog from '../services/database/watermelon/models/InjuryLog';
 import SettingsScreen from './SettingsScreen';
@@ -29,6 +30,7 @@ export default function HomeScreen() {
   const [weeklyStats, setWeeklyStats] = useState({ workoutCount: 0, totalVolume: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [showExerciseLibrary, setShowExerciseLibrary] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
   // Injury tracking state
@@ -199,13 +201,14 @@ export default function HomeScreen() {
 
           <Pressable
             className={`flex-row items-center p-4 rounded-xl mb-3 active:opacity-80 min-h-[60px] ${isDark ? 'bg-info-dark' : 'bg-info-light'}`}
-            accessibilityLabel="View Progress"
-            accessibilityHint="Navigate to progress tracking screen"
+            onPress={() => setShowAnalytics(true)}
+            accessibilityLabel="View Analytics"
+            accessibilityHint="View volume, fatigue, and deload analytics"
             accessibilityRole="button"
           >
-            <TrendingUp color="white" size={24} />
+            <BarChart2 color="white" size={24} />
             <Text className="text-base font-body-semibold text-white ml-3">
-              View Progress
+              View Analytics
             </Text>
           </Pressable>
 
@@ -294,6 +297,26 @@ export default function HomeScreen() {
           }`}
           onPress={() => setShowExerciseLibrary(false)}
           accessibilityLabel="Close Exercise Library"
+          accessibilityRole="button"
+        >
+          <Text className={`text-2xl ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>×</Text>
+        </Pressable>
+      </Modal>
+
+      {/* Analytics Modal */}
+      <Modal
+        visible={showAnalytics}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowAnalytics(false)}
+      >
+        <AnalyticsScreen />
+        <Pressable
+          className={`absolute top-12 right-6 w-10 h-10 rounded-full items-center justify-center ${
+            isDark ? 'bg-gray-800' : 'bg-white'
+          }`}
+          onPress={() => setShowAnalytics(false)}
+          accessibilityLabel="Close Analytics"
           accessibilityRole="button"
         >
           <Text className={`text-2xl ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>×</Text>

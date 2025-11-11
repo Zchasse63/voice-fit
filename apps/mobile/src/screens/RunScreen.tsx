@@ -121,6 +121,19 @@ export default function RunScreen() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  const formatTerrain = (difficulty: string): string => {
+    const terrainMap: { [key: string]: string } = {
+      flat: 'Flat',
+      rolling: 'Rolling',
+      moderate_uphill: 'Moderate ↗',
+      steep_uphill: 'Steep ↗',
+      very_steep_uphill: 'Very Steep ↗',
+      moderate_downhill: 'Moderate ↘',
+      steep_downhill: 'Steep ↘',
+    };
+    return terrainMap[difficulty] || 'Flat';
+  };
+
   if (isLoading) {
     return <LoadingSpinner message="Initializing GPS..." fullScreen />;
   }
@@ -249,20 +262,48 @@ export default function RunScreen() {
 
         {/* Additional Stats */}
         {isTracking && (
-          <View className="flex-row justify-around mt-6">
-            <View className="items-center">
-              <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Avg Speed</Text>
-              <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                {stats.avgSpeed.toFixed(1)} mph
-              </Text>
+          <>
+            <View className="flex-row justify-around mt-6">
+              <View className="items-center">
+                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Avg Speed</Text>
+                <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  {stats.avgSpeed.toFixed(1)} mph
+                </Text>
+              </View>
+              <View className="items-center">
+                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Calories</Text>
+                <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  {stats.calories}
+                </Text>
+              </View>
             </View>
-            <View className="items-center">
-              <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Calories</Text>
-              <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                {stats.calories}
-              </Text>
-            </View>
-          </View>
+
+            {/* Elevation & GAP Stats */}
+            {(stats.elevationGain > 0 || stats.elevationLoss > 0) && (
+              <View className="flex-row justify-around mt-4 pt-4 border-t border-gray-700">
+                <View className="items-center">
+                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Elevation</Text>
+                  <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                    +{Math.round(stats.elevationGain)}m / -{Math.round(stats.elevationLoss)}m
+                  </Text>
+                </View>
+                {stats.gradeAdjustedPace && (
+                  <View className="items-center">
+                    <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>GAP</Text>
+                    <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                      {formatPace(stats.gradeAdjustedPace)}/mi
+                    </Text>
+                  </View>
+                )}
+                <View className="items-center">
+                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Terrain</Text>
+                  <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                    {formatTerrain(stats.terrainDifficulty)}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </>
         )}
       </View>
     </View>

@@ -17,6 +17,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Mic, X } from 'lucide-react-native';
 import { voiceAPIClient, VoiceAPIError } from '../../services/api';
+import { VoiceParseResponse } from '../../services/api/config';
 import { useWorkoutStore } from '../../store/workout.store';
 import { useTheme } from '../../theme/ThemeContext';
 import { hapticsService } from '../../services/haptics';
@@ -27,7 +28,7 @@ export default function VoiceFAB() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [parsedData, setParsedData] = useState<any>(null);
+  const [parsedData, setParsedData] = useState<VoiceParseResponse | null>(null);
 
   const addSet = useWorkoutStore((state) => state.addSet);
 

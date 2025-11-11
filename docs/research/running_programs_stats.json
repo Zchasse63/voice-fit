@@ -1,0 +1,22 @@
+{
+  "total_programs": 400,
+  "by_race_distance": {
+    "5K": 100,
+    "10K": 100,
+    "Half_Marathon": 100,
+    "Marathon": 100
+  },
+  "by_experience": {
+    "advanced": 133,
+    "intermediate": 134,
+    "beginner": 133
+  },
+  "duration_range": {
+    "min_weeks": 8,
+    "max_weeks": 20
+  },
+  "volume_range": {
+    "min_peak_km": 20.0,
+    "max_peak_km": 140
+  }
+}

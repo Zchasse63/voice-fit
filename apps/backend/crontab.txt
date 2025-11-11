@@ -1,0 +1,39 @@
+# VoiceFit Backend Cron Jobs
+#
+# To install these cron jobs:
+# 1. Edit your crontab: crontab -e
+# 2. Add the lines below (adjust paths as needed)
+# 3. Save and exit
+#
+# To view current cron jobs: crontab -l
+# To remove all cron jobs: crontab -r
+
+# Weekly Adherence Check
+# Runs every Sunday at 11:59 PM
+# Checks program adherence for all Premium users
+# Sends alerts for muscle groups below target volume
+# Detects quad/ham and push/pull imbalances
+0 23 * * 0 cd /Users/zach/Desktop/VoiceFit && /usr/bin/python3 apps/backend/cron_weekly_adherence_check.py >> /var/log/voicefit/adherence_check.log 2>&1
+
+# Alternative: Run at midnight on Monday (start of week)
+# 0 0 * * 1 cd /Users/zach/Desktop/VoiceFit && /usr/bin/python3 apps/backend/cron_weekly_adherence_check.py >> /var/log/voicefit/adherence_check.log 2>&1
+
+# Note: Make sure to create the log directory first:
+# sudo mkdir -p /var/log/voicefit
+# sudo chown $USER /var/log/voicefit
+
+# Cron Schedule Format:
+# * * * * * command
+# │ │ │ │ │
+# │ │ │ │ └─── Day of week (0-7, Sunday = 0 or 7)
+# │ │ │ └───── Month (1-12)
+# │ │ └─────── Day of month (1-31)
+# │ └───────── Hour (0-23)
+# └─────────── Minute (0-59)
+
+# Examples:
+# 0 0 * * * - Every day at midnight
+# 0 */6 * * * - Every 6 hours
+# 0 9 * * 1-5 - Every weekday at 9 AM
+# 0 23 * * 0 - Every Sunday at 11 PM
+

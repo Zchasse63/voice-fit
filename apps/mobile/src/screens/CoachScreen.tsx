@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
-import { Send, Bot, User } from 'lucide-react-native';
+import { Send, Bot, User, Mic, MicOff } from 'lucide-react-native';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
+import { voiceService } from '../services/voice';
+import { hapticsService } from '../services/haptics';
 
 interface Message {
   id: string;

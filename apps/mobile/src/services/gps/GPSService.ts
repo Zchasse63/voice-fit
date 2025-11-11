@@ -14,6 +14,11 @@ export interface RunStats {
   pace: number; // minutes per mile
   avgSpeed: number; // mph
   calories: number;
+  elevationGain: number; // meters
+  elevationLoss: number; // meters
+  gradeAdjustedPace: number | null; // minutes per mile (GAP)
+  gradePercent: number; // average grade percentage
+  terrainDifficulty: string; // flat, rolling, moderate_uphill, etc.
 }
 
 class GPSService {
@@ -184,6 +189,106 @@ class GPSService {
   }
 
   /**
+   * Calculate elevation gain and loss from GPS data
+   */
+  getElevationData(): { gain: number; loss: number } {
+    if (this.coordinates.length < 2) {
+      return { gain: 0, loss: 0 };
+    }
+
+    let totalGain = 0;
+    let totalLoss = 0;
+
+    for (let i = 1; i < this.coordinates.length; i++) {
+      const prevAltitude = this.coordinates[i - 1].altitude;
+      const currAltitude = this.coordinates[i].altitude;
+
+      // Skip if altitude data is missing
+      if (prevAltitude === null || currAltitude === null) {
+        continue;
+      }
+
+      const elevationChange = currAltitude - prevAltitude;
+
+      // Only count significant changes (> 1 meter) to filter GPS noise
+      if (elevationChange > 1) {
+        totalGain += elevationChange;
+      } else if (elevationChange < -1) {
+        totalLoss += Math.abs(elevationChange);
+      }
+    }
+
+    return {
+      gain: totalGain,
+      loss: totalLoss,
+    };
+  }
+
+  /**
+   * Calculate grade-adjusted pace (GAP)
+   * Formula: GAP = Actual Pace × (1 - 0.075 × Grade%)
+   */
+  private calculateGAP(
+    actualPace: number,
+    elevationGain: number,
+    elevationLoss: number,
+    distance: number
+  ): { gap: number; gradePercent: number; difficulty: string } {
+    // Handle edge cases
+    if (distance <= 0) {
+      return { gap: actualPace, gradePercent: 0, difficulty: 'flat' };
+    }
+
+    // Calculate net elevation change
+    const netElevationChange = elevationGain - elevationLoss;
+
+    // Calculate average grade percentage
+    const gradePercent = (netElevationChange / distance) * 100;
+
+    // Calculate pace adjustment
+    // Formula: GAP = Actual Pace × (1 - 0.075 × Grade%)
+    const adjustmentPercent = 0.075 * gradePercent;
+    let gap = actualPace * (1 - adjustmentPercent / 100);
+
+    // Ensure GAP is positive and reasonable
+    if (gap <= 0) {
+      gap = actualPace;
+    }
+
+    // Classify terrain difficulty
+    let difficulty = 'flat';
+    if (Math.abs(gradePercent) < 0.5) {
+      difficulty = 'flat';
+    } else if (gradePercent > 0) {
+      // Uphill
+      if (gradePercent > 5) {
+        difficulty = 'very_steep_uphill';
+      } else if (gradePercent > 3) {
+        difficulty = 'steep_uphill';
+      } else if (gradePercent > 1) {
+        difficulty = 'moderate_uphill';
+      } else {
+        difficulty = 'rolling';
+      }
+    } else {
+      // Downhill
+      if (gradePercent < -5) {
+        difficulty = 'steep_downhill';
+      } else if (gradePercent < -3) {
+        difficulty = 'moderate_downhill';
+      } else {
+        difficulty = 'rolling';
+      }
+    }
+
+    return {
+      gap,
+      gradePercent,
+      difficulty,
+    };
+  }
+
+  /**
    * Calculate run statistics
    */
   getRunStats(): RunStats {
@@ -197,12 +302,37 @@ class GPSService {
     // Rough calorie calculation (based on average 100 calories per mile)
     const calories = Math.round(distanceMiles * 100);
 
+    // Calculate elevation data
+    const elevationData = this.getElevationData();
+
+    // Calculate GAP if we have elevation data
+    let gradeAdjustedPace: number | null = null;
+    let gradePercent = 0;
+    let terrainDifficulty = 'flat';
+
+    if (elevationData.gain > 0 || elevationData.loss > 0) {
+      const gapData = this.calculateGAP(
+        pace,
+        elevationData.gain,
+        elevationData.loss,
+        distance
+      );
+      gradeAdjustedPace = gapData.gap;
+      gradePercent = gapData.gradePercent;
+      terrainDifficulty = gapData.difficulty;
+    }
+
     return {
       distance,
       duration,
       pace,
       avgSpeed,
       calories,
+      elevationGain: elevationData.gain,
+      elevationLoss: elevationData.loss,
+      gradeAdjustedPace,
+      gradePercent,
+      terrainDifficulty,
     };
   }
 
@@ -241,6 +371,46 @@ class GPSService {
       console.error('❌ Failed to get current location:', error);
       return null;
     }
+  }
+
+  /**
+   * Format pace as MM:SS string
+   */
+  formatPace(pace: number): string {
+    const minutes = Math.floor(pace);
+    const seconds = Math.round((pace - minutes) * 60);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Get formatted run summary with GAP
+   */
+  getFormattedRunSummary(): {
+    distance: string;
+    duration: string;
+    pace: string;
+    gap: string | null;
+    elevation: string;
+    terrain: string;
+  } {
+    const stats = this.getRunStats();
+    const distanceMiles = (stats.distance * 0.000621371).toFixed(2);
+    const durationMinutes = Math.floor(stats.duration / 60);
+    const durationSeconds = Math.floor(stats.duration % 60);
+    const paceFormatted = this.formatPace(stats.pace);
+    const gapFormatted = stats.gradeAdjustedPace
+      ? this.formatPace(stats.gradeAdjustedPace)
+      : null;
+    const elevationFormatted = `+${Math.round(stats.elevationGain)}m / -${Math.round(stats.elevationLoss)}m`;
+
+    return {
+      distance: `${distanceMiles} mi`,
+      duration: `${durationMinutes}:${durationSeconds.toString().padStart(2, '0')}`,
+      pace: `${paceFormatted}/mi`,
+      gap: gapFormatted ? `${gapFormatted}/mi` : null,
+      elevation: elevationFormatted,
+      terrain: stats.terrainDifficulty,
+    };
   }
 }
 

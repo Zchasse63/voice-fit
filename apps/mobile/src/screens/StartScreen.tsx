@@ -10,11 +10,16 @@ import { useTheme } from '../theme/ThemeContext';
 
 type WorkoutType = 'workout' | 'run' | null;
 
+type StartScreenNavigationProp = {
+  navigate: (screen: string, params?: Record<string, unknown>) => void;
+  goBack: () => void;
+};
+
 export default function StartScreen() {
   const { isDark } = useTheme();
   const [selectedType, setSelectedType] = useState<WorkoutType>(null);
   const startWorkout = useWorkoutStore((state) => state.startWorkout);
-  const navigation = useNavigation<any>();
+  const navigation = useNavigation<StartScreenNavigationProp>();
   const {
     isChecking,
     trigger,

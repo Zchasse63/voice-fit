@@ -10,7 +10,7 @@ import { View, Text, Pressable, ActivityIndicator, TextInput } from 'react-nativ
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../store/auth.store';
 import { readinessService, SimpleReadinessInput } from '../../services/readiness/ReadinessService';
-import { InjuryDetectionService } from '../../services/injury/InjuryDetectionService';
+import { InjuryDetectionService, InjuryDetectionResult } from '../../services/injury/InjuryDetectionService';
 import InjuryDetectionModal from '../injury/InjuryDetectionModal';
 import { CheckCircle } from 'lucide-react-native';
 
@@ -37,7 +37,7 @@ export default function ReadinessCheckCard() {
   const [todayScore, setTodayScore] = useState<number | null>(null);
   const [notes, setNotes] = useState<string>(''); // Phase 3: User notes for injury detection
   const [showInjuryModal, setShowInjuryModal] = useState(false);
-  const [detectedInjury, setDetectedInjury] = useState<any>(null);
+  const [detectedInjury, setDetectedInjury] = useState<InjuryDetectionResult | null>(null);
 
   useEffect(() => {
     loadTodayScore();
