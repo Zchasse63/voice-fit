@@ -1,7 +1,7 @@
 """
 OnboardingService - Extract structured data from conversational onboarding
 
-Uses fine-tuned Llama 3.3 70B to extract structured onboarding data from
+Uses Kimi K2 Thinking to extract structured onboarding data from
 natural conversation in the Chat interface.
 
 Extracts:
@@ -20,21 +20,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-NEBIUS_API_KEY = os.getenv("NEBIUS_API_KEY")
-NEBIUS_BASE_URL = os.getenv("NEBIUS_BASE_URL", "https://api.tokenfactory.nebius.com/v1")
-VOICE_MODEL_ID = os.getenv("VOICE_MODEL_ID", "meta-llama/Llama-3.3-70B-Instruct-fast-LoRa:voice-fit-original-UrGX")
+KIMI_API_KEY = os.getenv("KIMI_API_KEY")
+KIMI_BASE_URL = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
+KIMI_MODEL_ID = os.getenv("KIMI_MODEL_ID", "kimi-k2-thinking")
 
 
 class OnboardingService:
     """Service for extracting structured onboarding data from conversation"""
-    
+
     def __init__(self):
         """Initialize onboarding service"""
-        self.nebius_api_key = NEBIUS_API_KEY
-        self.nebius_base_url = NEBIUS_BASE_URL
-        self.model_id = VOICE_MODEL_ID
-        
-        if not all([self.nebius_api_key, self.model_id]):
+        self.kimi_api_key = KIMI_API_KEY
+        self.kimi_base_url = KIMI_BASE_URL
+        self.model_id = KIMI_MODEL_ID
+
+        if not all([self.kimi_api_key, self.model_id]):
             raise ValueError("Missing required environment variables for Onboarding service")
     
     def extract_onboarding_data(
@@ -74,11 +74,11 @@ class OnboardingService:
         
         # Add current message
         messages.append({"role": "user", "content": message})
-        
-        # Call Llama for extraction
-        url = f"{self.nebius_base_url}/chat/completions"
+
+        # Call Kimi for extraction
+        url = f"{self.kimi_base_url}/chat/completions"
         headers = {
-            "Authorization": f"Bearer {self.nebius_api_key}",
+            "Authorization": f"Bearer {self.kimi_api_key}",
             "Content-Type": "application/json"
         }
         

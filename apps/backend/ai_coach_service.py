@@ -4,7 +4,7 @@ AI Coach Service with RAG (Retrieval-Augmented Generation)
 This service handles AI Coach queries using:
 1. Smart namespace selection (classify query to relevant knowledge areas)
 2. Parallel Upstash Search (retrieve relevant context from knowledge base)
-3. Streaming Llama 3.3 70B responses (fine-tuned model with RAG context)
+3. Streaming Kimi K2 Thinking responses (with RAG context)
 
 Optimizations:
 - Streaming: Reduces perceived latency from ~4s to ~2s
@@ -26,9 +26,9 @@ load_dotenv()
 # Configuration
 UPSTASH_SEARCH_URL = os.getenv("UPSTASH_SEARCH_REST_URL")
 UPSTASH_SEARCH_TOKEN = os.getenv("UPSTASH_SEARCH_REST_TOKEN")
-NEBIUS_API_KEY = os.getenv("NEBIUS_API_KEY")
-NEBIUS_BASE_URL = os.getenv("NEBIUS_BASE_URL")
-VOICE_MODEL_ID = os.getenv("VOICE_MODEL_ID")
+KIMI_API_KEY = os.getenv("KIMI_API_KEY")
+KIMI_BASE_URL = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
+KIMI_MODEL_ID = os.getenv("KIMI_MODEL_ID", "kimi-k2-thinking")
 
 # Namespace categories for smart selection
 NAMESPACE_CATEGORIES = {
@@ -48,16 +48,16 @@ NAMESPACE_CATEGORIES = {
 
 class AICoachService:
     """AI Coach service with RAG capabilities"""
-    
+
     def __init__(self):
         """Initialize AI Coach service"""
         self.upstash_url = UPSTASH_SEARCH_URL
         self.upstash_token = UPSTASH_SEARCH_TOKEN
-        self.nebius_api_key = NEBIUS_API_KEY
-        self.nebius_base_url = NEBIUS_BASE_URL
-        self.model_id = VOICE_MODEL_ID
-        
-        if not all([self.upstash_url, self.upstash_token, self.nebius_api_key, self.model_id]):
+        self.kimi_api_key = KIMI_API_KEY
+        self.kimi_base_url = KIMI_BASE_URL
+        self.model_id = KIMI_MODEL_ID
+
+        if not all([self.upstash_url, self.upstash_token, self.kimi_api_key, self.model_id]):
             raise ValueError("Missing required environment variables for AI Coach service")
     
     def classify_query_to_namespaces(self, query: str) -> List[str]:
@@ -175,7 +175,7 @@ class AICoachService:
         
         return context_strings, sources, latency
     
-    def call_llama_streaming(
+    def call_kimi_streaming(
         self,
         query: str,
         context: List[str],
@@ -183,7 +183,7 @@ class AICoachService:
         user_context: Optional[str] = None
     ) -> Tuple[str, float, float]:
         """
-        Call Llama model with STREAMING enabled.
+        Call Kimi K2 model with STREAMING enabled.
 
         Args:
             query: User's question
@@ -197,7 +197,7 @@ class AICoachService:
             - Total inference time (ms)
         """
         # Build system prompt with user context first (most important)
-        system_prompt = """You are an expert fitness coach for VoiceFit with deep knowledge of strength training, hypertrophy, recovery, nutrition, and programming. Provide evidence-based, practical advice.
+        system_prompt = """You are an expert fitness coach for VoiceFit with deep knowledge of strength training, hypertrophy, recovery, nutrition, and programming. You have a friendly, encouraging personality and provide evidence-based, practical advice.
 
 """
 
@@ -212,22 +212,22 @@ class AICoachService:
             system_prompt += f"\n{ctx}\n"
 
         system_prompt += "\n\nProvide a concise, actionable answer based on the user's context and knowledge base above."
-        
+
         # Build messages with conversation history
         messages = [{"role": "system", "content": system_prompt}]
-        
+
         if conversation_history:
             messages.extend(conversation_history)
-        
+
         messages.append({"role": "user", "content": query})
-        
+
         # Prepare request
-        url = f"{self.nebius_base_url}/chat/completions"
+        url = f"{self.kimi_base_url}/chat/completions"
         headers = {
-            "Authorization": f"Bearer {self.nebius_api_key}",
+            "Authorization": f"Bearer {self.kimi_api_key}",
             "Content-Type": "application/json"
         }
-        
+
         payload = {
             "model": self.model_id,
             "messages": messages,
@@ -235,12 +235,12 @@ class AICoachService:
             "max_tokens": 300,
             "stream": True  # ENABLE STREAMING
         }
-        
+
         start_time = time.time()
         response = requests.post(url, headers=headers, json=payload, stream=True)
-        
+
         if response.status_code != 200:
-            raise Exception(f"Llama API error: {response.status_code} - {response.text}")
+            raise Exception(f"Kimi API error: {response.status_code} - {response.text}")
         
         # Process streaming response
         full_response = ""
@@ -301,8 +301,8 @@ class AICoachService:
         # Step 2: Parallel retrieval from Upstash
         context, sources, retrieval_latency = self.retrieve_context_parallel(question, namespaces, top_k=3)
 
-        # Step 3: Streaming Llama response with user context
-        answer, ttft, inference_latency = self.call_llama_streaming(question, context, conversation_history, user_context)
+        # Step 3: Streaming Kimi response with user context
+        answer, ttft, inference_latency = self.call_kimi_streaming(question, context, conversation_history, user_context)
         
         # Calculate metrics
         total_latency = (time.time() - total_start) * 1000

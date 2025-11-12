@@ -2,11 +2,7 @@
 Integrated Voice Parser with Session Management
 
 This class integrates voice parsing with workout session management and database logging.
-Uses the fine-tuned Llama 3.3 70B model for voice parsing (same model as AI Coach).
-
-Model: meta-llama/Llama-3.3-70B-Instruct-fast-LoRa:voice-fit-original-UrGX
-Training Data: 24,275 examples across voice parsing, AI coach, and other categories
-Hosted on: Nebius AI Studio
+Uses Kimi K2 Thinking model for voice parsing.
 
 Features:
 - Session-aware parsing (tracks current exercise, previous sets)
@@ -29,10 +25,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Nebius AI configuration (Llama 3.3 70B)
-NEBIUS_API_KEY = os.getenv("NEBIUS_API_KEY")
-NEBIUS_BASE_URL = os.getenv("NEBIUS_BASE_URL")
-VOICE_MODEL_ID = os.getenv("VOICE_MODEL_ID")
+# Kimi AI configuration
+KIMI_API_KEY = os.getenv("KIMI_API_KEY")
+KIMI_BASE_URL = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
+KIMI_MODEL_ID = os.getenv("KIMI_MODEL_ID", "kimi-k2-thinking")
 
 # Upstash Search configuration (for exercise matching)
 UPSTASH_SEARCH_URL = os.getenv("UPSTASH_SEARCH_REST_URL")
@@ -48,7 +44,7 @@ class IntegratedVoiceParser:
     Integrated voice parser with session management.
 
     Handles voice command parsing, session tracking, and database logging.
-    Uses fine-tuned Llama 3.3 70B model + Upstash Search for exercise matching.
+    Uses Kimi K2 Thinking model + Upstash Search for exercise matching.
     """
 
     def __init__(self, supabase_client: Client):
@@ -66,7 +62,7 @@ class IntegratedVoiceParser:
             self.search_client = None
             print("⚠️  Upstash Search not configured - exercise matching will be limited")
 
-        if not all([NEBIUS_API_KEY, NEBIUS_BASE_URL, VOICE_MODEL_ID]):
+        if not all([KIMI_API_KEY, KIMI_BASE_URL, KIMI_MODEL_ID]):
             raise ValueError("Missing required environment variables for voice parsing")
     
     def parse_and_log_set(
@@ -94,8 +90,8 @@ class IntegratedVoiceParser:
         # Check for "same weight" reference
         same_weight_detected = self._detect_same_weight(transcript)
 
-        # Parse the transcript using Llama
-        parsed_data = self._parse_with_llama(transcript, session, same_weight_detected)
+        # Parse the transcript using Kimi
+        parsed_data = self._parse_with_kimi(transcript, session, same_weight_detected)
 
         # Match exercise name to database using Upstash Search
         if parsed_data.get('exercise_name') and self.search_client:
@@ -225,9 +221,9 @@ class IntegratedVoiceParser:
             print(f"Error matching exercise: {e}")
             return None
 
-    def _parse_with_llama(self, transcript: str, session: Dict, same_weight_detected: bool = False) -> Dict[str, Any]:
+    def _parse_with_kimi(self, transcript: str, session: Dict, same_weight_detected: bool = False) -> Dict[str, Any]:
         """
-        Parse voice transcript using fine-tuned Llama 3.3 70B model.
+        Parse voice transcript using Kimi K2 Thinking model.
 
         Args:
             transcript: Voice transcript
@@ -262,16 +258,16 @@ Only include fields that are mentioned in the transcript."""
         # Handle "same weight" reference
         if same_weight_detected and session.get('last_weight'):
             system_prompt += f"\n\nUser said 'same weight' - use weight: {session['last_weight']} {session.get('last_weight_unit', 'lbs')}"
-        
-        # Call Llama model
-        url = f"{NEBIUS_BASE_URL}/chat/completions"
+
+        # Call Kimi model
+        url = f"{KIMI_BASE_URL}/chat/completions"
         headers = {
-            "Authorization": f"Bearer {NEBIUS_API_KEY}",
+            "Authorization": f"Bearer {KIMI_API_KEY}",
             "Content-Type": "application/json"
         }
-        
+
         payload = {
-            "model": VOICE_MODEL_ID,
+            "model": KIMI_MODEL_ID,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": transcript}
@@ -279,17 +275,17 @@ Only include fields that are mentioned in the transcript."""
             "temperature": 0.1,  # Low temperature for consistency
             "max_tokens": 300
         }
-        
+
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=10)
-            
+
             if response.status_code != 200:
-                raise Exception(f"Llama API error: {response.status_code}")
+                raise Exception(f"Kimi API error: {response.status_code}")
             
             result = response.json()
             content = result['choices'][0]['message']['content']
 
-            # Parse JSON response (handle cases where Llama adds extra text)
+            # Parse JSON response (handle cases where Kimi adds extra text)
             try:
                 # First try direct parsing
                 parsed_data = json.loads(content)
@@ -300,16 +296,16 @@ Only include fields that are mentioned in the transcript."""
                 if json_match:
                     parsed_data = json.loads(json_match.group(0))
                 else:
-                    raise Exception("No valid JSON found in Llama response")
+                    raise Exception("No valid JSON found in Kimi response")
 
-            # Fix: Llama sometimes returns 'weight_value' instead of 'weight'
+            # Fix: Sometimes returns 'weight_value' instead of 'weight'
             if 'weight_value' in parsed_data and 'weight' not in parsed_data:
                 parsed_data['weight'] = parsed_data.pop('weight_value')
 
             return parsed_data
-            
+
         except Exception as e:
-            print(f"Error parsing with Llama: {e}")
+            print(f"Error parsing with Kimi: {e}")
             # Return fallback response
             return {
                 'exercise_name': 'Unknown Exercise',

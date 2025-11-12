@@ -7,7 +7,7 @@ Classifies user messages in the unified chat interface to determine intent:
 - general: General conversation
 - onboarding: User is in onboarding flow
 
-Uses fine-tuned Llama 3.3 70B model for accurate classification.
+Uses Kimi K2 Thinking model for accurate classification.
 """
 
 import os
@@ -21,17 +21,17 @@ load_dotenv()
 class ChatClassifier:
     """
     Classifies chat messages to determine user intent.
-    
-    Uses Llama 3.3 70B fine-tuned model for classification.
+
+    Uses Kimi K2 Thinking model for classification.
     """
-    
+
     def __init__(self):
-        self.nebius_api_key = os.getenv("NEBIUS_API_KEY")
-        self.nebius_base_url = os.getenv("NEBIUS_BASE_URL", "https://api.studio.nebius.ai/v1")
-        self.model_id = os.getenv("VOICE_MODEL_ID", "meta-llama/Llama-3.3-70B-Instruct-fast-LoRa:voice-fit-original-UrGX")
-        
-        if not self.nebius_api_key:
-            raise ValueError("NEBIUS_API_KEY environment variable is required")
+        self.kimi_api_key = os.getenv("KIMI_API_KEY")
+        self.kimi_base_url = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
+        self.model_id = os.getenv("KIMI_MODEL_ID", "kimi-k2-thinking")
+
+        if not self.kimi_api_key:
+            raise ValueError("KIMI_API_KEY environment variable is required")
     
     def classify(
         self,
@@ -95,11 +95,11 @@ Be conservative with workout_log classification - only classify as workout_log i
         
         # Add current message
         messages.append({"role": "user", "content": f"Classify this message: \"{message}\""})
-        
-        # Call Llama API
-        url = f"{self.nebius_base_url}/chat/completions"
+
+        # Call Kimi API
+        url = f"{self.kimi_base_url}/chat/completions"
         headers = {
-            "Authorization": f"Bearer {self.nebius_api_key}",
+            "Authorization": f"Bearer {self.kimi_api_key}",
             "Content-Type": "application/json"
         }
         
@@ -133,10 +133,10 @@ Be conservative with workout_log classification - only classify as workout_log i
             print(f"Error classifying message: {e}")
             # Fallback: Simple rule-based classification
             return self._fallback_classify(message)
-    
+
     def _fallback_classify(self, message: str) -> Tuple[str, float, str, str]:
         """
-        Fallback rule-based classification if Llama API fails.
+        Fallback rule-based classification if Kimi API fails.
         
         Args:
             message: User's chat message
