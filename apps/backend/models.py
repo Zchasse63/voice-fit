@@ -232,7 +232,7 @@ class ProgramGenerationResponse(BaseModel):
     """Response model for program generation endpoint"""
     program: Dict[str, Any] = Field(..., description="Complete 12-week training program")
     cost: Dict[str, Any] = Field(..., description="Cost breakdown for generation")
-    stats: Dict[str, int] = Field(..., description="Optimization statistics")
+    stats: Dict[str, Any] = Field(..., description="Optimization statistics (int or float values)")
     generation_time_seconds: float = Field(..., description="Time taken to generate program")
 
     class Config:
