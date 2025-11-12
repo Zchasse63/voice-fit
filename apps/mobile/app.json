@@ -58,8 +58,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "90cab9ec-0491-445b-81a3-c290125ebe5a"
+        "projectId": "23c0dd9e-85e7-4343-b846-94b566f572ce"
       }
-    }
+    },
+    "owner": "voice-fit"
   }
 }
