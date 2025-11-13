@@ -4,12 +4,13 @@ AI Coach Service with RAG (Retrieval-Augmented Generation)
 This service handles AI Coach queries using:
 1. Smart namespace selection (classify query to relevant knowledge areas)
 2. Parallel Upstash Search (retrieve relevant context from knowledge base)
-3. Streaming Kimi K2 Thinking responses (with RAG context)
+3. Streaming Grok 4 Fast Reasoning responses (with RAG context)
 
 Optimizations:
-- Streaming: Reduces perceived latency from ~4s to ~2s
+- Streaming: Reduces perceived latency
 - Parallel searches: Faster retrieval across multiple namespaces
 - Smart selection: Only search relevant namespaces (1-3 instead of all)
+- Grok 4 Fast: Better quality and faster than Kimi for reasoning tasks
 """
 
 import os
@@ -26,9 +27,9 @@ load_dotenv()
 # Configuration
 UPSTASH_SEARCH_URL = os.getenv("UPSTASH_SEARCH_REST_URL")
 UPSTASH_SEARCH_TOKEN = os.getenv("UPSTASH_SEARCH_REST_TOKEN")
-KIMI_API_KEY = os.getenv("KIMI_API_KEY")
-KIMI_BASE_URL = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
-KIMI_MODEL_ID = os.getenv("KIMI_MODEL_ID", "kimi-k2-thinking")
+XAI_API_KEY = os.getenv("XAI_API_KEY")
+XAI_BASE_URL = "https://api.x.ai/v1"
+GROK_MODEL_ID = "grok-4-fast-reasoning"
 
 # Namespace categories for smart selection
 NAMESPACE_CATEGORIES = {
@@ -53,11 +54,11 @@ class AICoachService:
         """Initialize AI Coach service"""
         self.upstash_url = UPSTASH_SEARCH_URL
         self.upstash_token = UPSTASH_SEARCH_TOKEN
-        self.kimi_api_key = KIMI_API_KEY
-        self.kimi_base_url = KIMI_BASE_URL
-        self.model_id = KIMI_MODEL_ID
+        self.xai_api_key = XAI_API_KEY
+        self.xai_base_url = XAI_BASE_URL
+        self.model_id = GROK_MODEL_ID
 
-        if not all([self.upstash_url, self.upstash_token, self.kimi_api_key, self.model_id]):
+        if not all([self.upstash_url, self.upstash_token, self.xai_api_key, self.model_id]):
             raise ValueError("Missing required environment variables for AI Coach service")
     
     def classify_query_to_namespaces(self, query: str) -> List[str]:
@@ -175,7 +176,7 @@ class AICoachService:
         
         return context_strings, sources, latency
     
-    def call_kimi_streaming(
+    def call_grok_streaming(
         self,
         query: str,
         context: List[str],
@@ -183,7 +184,7 @@ class AICoachService:
         user_context: Optional[str] = None
     ) -> Tuple[str, float, float]:
         """
-        Call Kimi K2 model with STREAMING enabled.
+        Call Grok 4 Fast Reasoning model with STREAMING enabled.
 
         Args:
             query: User's question
@@ -222,9 +223,9 @@ class AICoachService:
         messages.append({"role": "user", "content": query})
 
         # Prepare request
-        url = f"{self.kimi_base_url}/chat/completions"
+        url = f"{self.xai_base_url}/chat/completions"
         headers = {
-            "Authorization": f"Bearer {self.kimi_api_key}",
+            "Authorization": f"Bearer {self.xai_api_key}",
             "Content-Type": "application/json"
         }
 
@@ -232,7 +233,7 @@ class AICoachService:
             "model": self.model_id,
             "messages": messages,
             "temperature": 0.7,
-            "max_tokens": 300,
+            "max_tokens": 500,
             "stream": True  # ENABLE STREAMING
         }
 
@@ -240,7 +241,7 @@ class AICoachService:
         response = requests.post(url, headers=headers, json=payload, stream=True)
 
         if response.status_code != 200:
-            raise Exception(f"Kimi API error: {response.status_code} - {response.text}")
+            raise Exception(f"Grok API error: {response.status_code} - {response.text}")
         
         # Process streaming response
         full_response = ""
@@ -301,8 +302,8 @@ class AICoachService:
         # Step 2: Parallel retrieval from Upstash
         context, sources, retrieval_latency = self.retrieve_context_parallel(question, namespaces, top_k=3)
 
-        # Step 3: Streaming Kimi response with user context
-        answer, ttft, inference_latency = self.call_kimi_streaming(question, context, conversation_history, user_context)
+        # Step 3: Streaming Grok response with user context
+        answer, ttft, inference_latency = self.call_grok_streaming(question, context, conversation_history, user_context)
         
         # Calculate metrics
         total_latency = (time.time() - total_start) * 1000

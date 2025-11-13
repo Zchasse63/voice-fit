@@ -11,6 +11,8 @@ Uses Kimi K2 Thinking model for accurate classification.
 """
 
 import os
+import re
+import json
 import requests
 from typing import Dict, Any, List, Optional, Tuple
 from dotenv import load_dotenv
@@ -18,20 +20,58 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def extract_json_from_response(content: str) -> dict:
+    """
+    Extract JSON from Kimi K2 response, handling markdown code blocks.
+
+    Kimi K2 often wraps JSON in markdown code blocks like:
+    ```json
+    {"key": "value"}
+    ```
+
+    This function handles both plain JSON and markdown-wrapped JSON.
+    """
+    # Try direct parsing first
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    # Extract from markdown code block (```json ... ```)
+    json_match = re.search(r'```json\s*\n(.*?)\n```', content, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # Try extracting any JSON object
+    json_match = re.search(r'\{.*\}', content, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    # If all else fails, print the full content for debugging
+    print(f"DEBUG - Full response content:\n{content}\n")
+    raise ValueError(f"No valid JSON found in response")
+
+
 class ChatClassifier:
     """
     Classifies chat messages to determine user intent.
 
-    Uses Kimi K2 Thinking model for classification.
+    Uses Grok 4 Fast Reasoning for classification.
     """
 
     def __init__(self):
-        self.kimi_api_key = os.getenv("KIMI_API_KEY")
-        self.kimi_base_url = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
-        self.model_id = os.getenv("KIMI_MODEL_ID", "kimi-k2-thinking")
+        self.xai_api_key = os.getenv("XAI_API_KEY")
+        self.xai_base_url = "https://api.x.ai/v1"
+        self.model_id = "grok-4-fast-reasoning"
 
-        if not self.kimi_api_key:
-            raise ValueError("KIMI_API_KEY environment variable is required")
+        if not self.xai_api_key:
+            raise ValueError("XAI_API_KEY environment variable is required")
     
     def classify(
         self,
@@ -96,39 +136,38 @@ Be conservative with workout_log classification - only classify as workout_log i
         # Add current message
         messages.append({"role": "user", "content": f"Classify this message: \"{message}\""})
 
-        # Call Kimi API
-        url = f"{self.kimi_base_url}/chat/completions"
+        # Call Grok API
+        url = f"{self.xai_base_url}/chat/completions"
         headers = {
-            "Authorization": f"Bearer {self.kimi_api_key}",
+            "Authorization": f"Bearer {self.xai_api_key}",
             "Content-Type": "application/json"
         }
-        
+
         payload = {
             "model": self.model_id,
             "messages": messages,
             "temperature": 0.3,  # Lower temperature for more consistent classification
-            "max_tokens": 150,
+            "max_tokens": 200,  # Lower limit for Grok (no reasoning content in response)
             "response_format": {"type": "json_object"}  # Force JSON response
         }
-        
+
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
-            
+
             result = response.json()
             content = result["choices"][0]["message"]["content"]
-            
-            # Parse JSON response
-            import json
-            classification = json.loads(content)
-            
+
+            # Parse JSON response (handles markdown code blocks)
+            classification = extract_json_from_response(content)
+
             message_type = classification.get("message_type", "general")
             confidence = classification.get("confidence", 0.5)
             reasoning = classification.get("reasoning", "")
             suggested_action = classification.get("suggested_action", "acknowledge")
-            
+
             return message_type, confidence, reasoning, suggested_action
-            
+
         except Exception as e:
             print(f"Error classifying message: {e}")
             # Fallback: Simple rule-based classification

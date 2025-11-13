@@ -14,6 +14,7 @@ Features:
 """
 
 import os
+import re
 import json
 import time
 import requests
@@ -25,10 +26,49 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def extract_json_from_response(content: str) -> dict:
+    """
+    Extract JSON from Kimi K2 response, handling markdown code blocks.
+
+    Kimi K2 often wraps JSON in markdown code blocks like:
+    ```json
+    {"key": "value"}
+    ```
+
+    This function handles both plain JSON and markdown-wrapped JSON.
+    """
+    # Try direct parsing first
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        pass
+
+    # Extract from markdown code block (```json ... ```)
+    json_match = re.search(r'```json\s*\n(.*?)\n```', content, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # Try extracting any JSON object
+    json_match = re.search(r'\{.*\}', content, re.DOTALL)
+    if json_match:
+        try:
+            return json.loads(json_match.group(0))
+        except json.JSONDecodeError:
+            pass
+
+    # If all else fails, print the full content for debugging
+    print(f"DEBUG - Voice Parser Full response content:\n{content}\n")
+    raise ValueError(f"No valid JSON found in response")
+
 # Kimi AI configuration
 KIMI_API_KEY = os.getenv("KIMI_API_KEY")
 KIMI_BASE_URL = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
-KIMI_MODEL_ID = os.getenv("KIMI_MODEL_ID", "kimi-k2-thinking")
+# Use K2 Turbo Preview for voice parsing - optimized for speed (non-reasoning)
+KIMI_MODEL_ID = os.getenv("KIMI_VOICE_MODEL_ID", "kimi-k2-turbo-preview")
 
 # Upstash Search configuration (for exercise matching)
 UPSTASH_SEARCH_URL = os.getenv("UPSTASH_SEARCH_REST_URL")
@@ -188,6 +228,110 @@ class IntegratedVoiceParser:
         transcript_lower = transcript.lower()
         return any(phrase in transcript_lower for phrase in same_weight_phrases)
 
+    def _extract_exercise_name_from_transcript(self, transcript: str) -> str:
+        """
+        Extract exercise name from transcript by removing filler words and metadata.
+
+        Strategy:
+        1. Remove filler words (please, log, this, set, of, etc.)
+        2. Remove numbers and units (225, lbs, kg, pounds)
+        3. Remove workout metadata (reps, rep, rpe, rir, at, for)
+        4. Take first 3 remaining words as exercise name
+
+        Args:
+            transcript: Voice transcript
+
+        Returns:
+            Cleaned exercise name for search
+        """
+        # Words to skip when extracting exercise name
+        filler_words = {
+            # Action words
+            'please', 'log', 'add', 'record', 'save', 'enter',
+            # Determiners/pronouns
+            'this', 'that', 'a', 'an', 'the', 'my',
+            # Prepositions
+            'of', 'at', 'for', 'with', 'on', 'in',
+            # Workout metadata
+            'set', 'sets', 'rep', 'reps', 'rpe', 'rir', 'tempo',
+            # Units
+            'pounds', 'lbs', 'lb', 'kg', 'kgs', 'kilos', 'kilo',
+            # Common connectors
+            'and', 'to', 'x',
+            # Number words (in case voice transcription converts numbers to words)
+            'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
+            'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty',
+            'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred', 'thousand'
+        }
+
+        # Extract exercise name by filtering out noise
+        words = transcript.lower().split()
+        exercise_words = []
+
+        for word in words:
+            # Skip numbers (including decimals like 8.5)
+            if word.replace('.', '').isdigit():
+                continue
+            # Skip filler words
+            if word in filler_words:
+                continue
+            # Keep exercise-related words
+            exercise_words.append(word)
+            # Stop after 3 exercise words (most exercise names are 1-3 words)
+            if len(exercise_words) >= 3:
+                break
+
+        # Build search query from exercise words
+        if not exercise_words:
+            # Fallback: use first 3 words if filtering removed everything
+            return ' '.join(transcript.lower().split()[:3])
+        else:
+            return ' '.join(exercise_words)
+
+    def _get_exercise_examples_from_upstash(self, transcript: str, limit: int = 10) -> str:
+        """
+        Retrieve exercise examples from Upstash Search based on transcript.
+        This helps the model recognize exercise names and common variations.
+
+        Args:
+            transcript: Voice transcript
+            limit: Maximum number of examples to retrieve
+
+        Returns:
+            Formatted string with exercise examples
+        """
+        if not self.search_client:
+            return "No exercise examples available."
+
+        try:
+            # Extract clean exercise name from transcript
+            search_query = self._extract_exercise_name_from_transcript(transcript)
+
+            # Search in exercises namespace
+            index = self.search_client.index("exercises")
+            results = index.search(query=search_query, limit=limit)
+
+            if not results or len(results) == 0:
+                return "No exercise examples found."
+
+            # Format results as context
+            examples = []
+            for i, result in enumerate(results, 1):
+                content = result.content if hasattr(result, 'content') else {}
+                exercise_name = content.get('original_name', 'Unknown')
+                synonyms = content.get('synonyms', [])
+
+                example = f"{i}. {exercise_name}"
+                if synonyms:
+                    example += f" (also called: {', '.join(synonyms[:3])})"
+                examples.append(example)
+
+            return "Common exercises in our database:\n" + "\n".join(examples)
+
+        except Exception as e:
+            print(f"Error retrieving exercise examples: {e}")
+            return "No exercise examples available."
+
     def _match_exercise(self, exercise_name: str) -> Optional[Dict[str, Any]]:
         """
         Match exercise name to database using Upstash Search.
@@ -223,7 +367,7 @@ class IntegratedVoiceParser:
 
     def _parse_with_kimi(self, transcript: str, session: Dict, same_weight_detected: bool = False) -> Dict[str, Any]:
         """
-        Parse voice transcript using Kimi K2 Thinking model.
+        Parse voice transcript using Kimi K2 Turbo Preview with RAG.
 
         Args:
             transcript: Voice transcript
@@ -259,6 +403,16 @@ Only include fields that are mentioned in the transcript."""
         if same_weight_detected and session.get('last_weight'):
             system_prompt += f"\n\nUser said 'same weight' - use weight: {session['last_weight']} {session.get('last_weight_unit', 'lbs')}"
 
+        # Build user prompt with RAG context
+        user_prompt = transcript
+        if self.search_client:
+            exercise_examples = self._get_exercise_examples_from_upstash(transcript)
+            user_prompt = f"""EXERCISE DATABASE CONTEXT:
+{exercise_examples}
+
+VOICE TRANSCRIPT TO PARSE:
+{transcript}"""
+
         # Call Kimi model
         url = f"{KIMI_BASE_URL}/chat/completions"
         headers = {
@@ -270,14 +424,14 @@ Only include fields that are mentioned in the transcript."""
             "model": KIMI_MODEL_ID,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": transcript}
+                {"role": "user", "content": user_prompt}
             ],
             "temperature": 0.1,  # Low temperature for consistency
-            "max_tokens": 300
+            "max_tokens": 500  # Lower limit for K2 Turbo Preview (non-reasoning)
         }
 
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=10)
+            response = requests.post(url, headers=headers, json=payload, timeout=30)  # Increased for Kimi K2 reasoning
 
             if response.status_code != 200:
                 raise Exception(f"Kimi API error: {response.status_code}")
@@ -285,18 +439,8 @@ Only include fields that are mentioned in the transcript."""
             result = response.json()
             content = result['choices'][0]['message']['content']
 
-            # Parse JSON response (handle cases where Kimi adds extra text)
-            try:
-                # First try direct parsing
-                parsed_data = json.loads(content)
-            except json.JSONDecodeError:
-                # If that fails, try to extract JSON from the response
-                import re
-                json_match = re.search(r'\{.*\}', content, re.DOTALL)
-                if json_match:
-                    parsed_data = json.loads(json_match.group(0))
-                else:
-                    raise Exception("No valid JSON found in Kimi response")
+            # Parse JSON response (handles markdown code blocks)
+            parsed_data = extract_json_from_response(content)
 
             # Fix: Sometimes returns 'weight_value' instead of 'weight'
             if 'weight_value' in parsed_data and 'weight' not in parsed_data:

@@ -187,7 +187,38 @@ QUESTIONNAIRE:
 KNOWLEDGE BASE CONTEXT:
 {knowledge_context}
 
-Generate the complete 12-week program in JSON format."""
+Generate the complete 12-week program in JSON format with this EXACT structure:
+
+{{
+  "program": {{
+    "name": "Program Name",
+    "description": "Brief description",
+    "weeks": [
+      {{
+        "week": 1,
+        "phase": "Phase name (e.g., Hypertrophy, Strength, Peaking)",
+        "days": [
+          {{
+            "day": 1,
+            "focus": "Day focus (e.g., Upper Body, Lower Body)",
+            "exercises": [
+              {{
+                "name": "Exercise name",
+                "sets": 4,
+                "reps": "5" or "8-10",
+                "rpe": 7,
+                "rest": "3-5 min",
+                "notes": "Optional notes"
+              }}
+            ]
+          }}
+        ]
+      }}
+    ]
+  }}
+}}
+
+CRITICAL: Return ONLY this JSON structure. Include ALL 12 weeks with complete exercise details."""
 
         return prompt
 
