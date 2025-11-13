@@ -46,6 +46,8 @@ from models import (
     ChatClassifyResponse,
     OnboardingExtractRequest,
     OnboardingExtractResponse,
+    OnboardingConversationalRequest,
+    OnboardingConversationalResponse,
     BadgeUnlockRequest,
     BadgeUnlockResponse
 )
@@ -496,6 +498,49 @@ async def extract_onboarding_data(
             detail=f"Failed to extract onboarding data: {str(e)}"
         )
 
+
+@app.post("/api/onboarding/conversational", response_model=OnboardingConversationalResponse)
+async def generate_conversational_response(
+    request: OnboardingConversationalRequest,
+    onboarding_service: OnboardingService = Depends(get_onboarding_service),
+    user: dict = Depends(verify_token)
+):
+    """
+    Generate personalized, conversational onboarding responses.
+
+    Uses PersonalityEngine with Grok 4 Fast Reasoning to create natural,
+    engaging conversations that adapt to the user's experience level.
+
+    Features:
+    - Acknowledges user's previous answer with specific details
+    - Adapts tone based on experience level (beginner/intermediate/advanced)
+    - References user's goals, injuries, and context
+    - Feels like talking to a real coach, not filling out a form
+
+    Args:
+        request: OnboardingConversationalRequest with current_step, user_context, and previous_answer
+        onboarding_service: OnboardingService instance (injected)
+        user: Authenticated user (injected)
+
+    Returns:
+        OnboardingConversationalResponse with personalized message
+    """
+    try:
+        # Generate conversational response
+        message = onboarding_service.generate_conversational_response(
+            current_step=request.current_step,
+            user_context=request.user_context,
+            previous_answer=request.previous_answer
+        )
+
+        return OnboardingConversationalResponse(message=message)
+
+    except Exception as e:
+        print(f"Error generating conversational response: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate conversational response: {str(e)}"
+        )
 
 
 # ============================================================================

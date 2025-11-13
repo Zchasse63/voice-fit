@@ -13,12 +13,42 @@ Extracts:
 """
 
 import os
+import re
 import json
 import requests
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
+from personality_engine import PersonalityEngine
 
 load_dotenv()
+
+
+def extract_json_from_response(content: str) -> dict:
+    """
+    Extract JSON from Kimi K2 response, handling markdown code blocks.
+
+    Kimi K2 often wraps JSON in markdown code blocks like:
+    ```json
+    {"key": "value"}
+    ```
+
+    This function handles both plain JSON and markdown-wrapped JSON.
+    """
+    # Try direct parsing first
+    try:
+        return json.loads(content)
+    except json.JSONDecodeError:
+        # Extract from markdown code block (```json ... ```)
+        json_match = re.search(r'```json\s*\n(.*?)\n```', content, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group(1))
+
+        # Try extracting any JSON object
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group(0))
+
+        raise ValueError(f"No valid JSON found in response: {content[:100]}...")
 
 KIMI_API_KEY = os.getenv("KIMI_API_KEY")
 KIMI_BASE_URL = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
@@ -33,6 +63,7 @@ class OnboardingService:
         self.kimi_api_key = KIMI_API_KEY
         self.kimi_base_url = KIMI_BASE_URL
         self.model_id = KIMI_MODEL_ID
+        self.personality_engine = PersonalityEngine()
 
         if not all([self.kimi_api_key, self.model_id]):
             raise ValueError("Missing required environment variables for Onboarding service")
@@ -86,22 +117,22 @@ class OnboardingService:
             "model": self.model_id,
             "messages": messages,
             "temperature": 0.3,  # Low temperature for consistent extraction
-            "max_tokens": 500,
+            "max_tokens": 1500,  # High limit for Kimi K2 reasoning + final JSON answer
             "response_format": {"type": "json_object"}  # Force JSON output
         }
         
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
-            
+
             result = response.json()
             content = result['choices'][0]['message']['content']
-            
-            # Parse JSON response
-            extracted_data = json.loads(content)
-            
+
+            # Parse JSON response (handles markdown code blocks)
+            extracted_data = extract_json_from_response(content)
+
             return extracted_data
-            
+
         except Exception as e:
             print(f"Error extracting onboarding data: {e}")
             return {
@@ -202,4 +233,43 @@ Example JSON response:
 
 Return ONLY valid JSON, no other text.
 """
+
+    def generate_conversational_response(
+        self,
+        current_step: str,
+        user_context: Dict[str, Any],
+        previous_answer: Optional[str] = None
+    ) -> str:
+        """
+        Generate a personalized, conversational response for the next onboarding question.
+
+        Args:
+            current_step: Current onboarding step
+            user_context: User's context (experience_level, goals, injuries, etc.)
+            previous_answer: User's previous response (to acknowledge)
+
+        Returns:
+            Personalized conversational response
+        """
+        # Define base questions for each step
+        base_questions = {
+            "welcome": "Let's get started! How long have you been training?",
+            "experience_level": "How long have you been training?",
+            "training_goals": "What are your main training goals?",
+            "available_equipment": "What equipment do you have access to?",
+            "training_frequency": "How many days per week can you train?",
+            "injury_history": "Do you have any current or past injuries I should know about?"
+        }
+
+        base_question = base_questions.get(current_step, "Tell me more about your training.")
+
+        # Use PersonalityEngine to generate conversational response
+        response = self.personality_engine.generate_response(
+            base_question=base_question,
+            user_context=user_context,
+            previous_answer=previous_answer,
+            conversation_type="onboarding"
+        )
+
+        return response
 

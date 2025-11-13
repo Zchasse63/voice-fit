@@ -692,6 +692,37 @@ class OnboardingExtractResponse(BaseModel):
         }
 
 
+class OnboardingConversationalRequest(BaseModel):
+    """Request model for generating conversational onboarding responses"""
+    current_step: str = Field(..., description="Current onboarding step")
+    user_context: Dict[str, Any] = Field(..., description="User's context (experience_level, goals, etc.)")
+    previous_answer: Optional[str] = Field(None, description="User's previous response to acknowledge")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "current_step": "training_goals",
+                "user_context": {
+                    "experience_level": "intermediate",
+                    "user_name": "John"
+                },
+                "previous_answer": "I've been lifting for about 2 years"
+            }
+        }
+
+
+class OnboardingConversationalResponse(BaseModel):
+    """Response model for conversational onboarding responses"""
+    message: str = Field(..., description="Personalized conversational response")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "message": "Nice! Two years is that sweet spot where you know the basics but there's still tons of room to grow. What are you mainly trying to achieve right now - get stronger, build muscle, or maybe both?"
+            }
+        }
+
+
 # ============================================================================
 # BADGE MODELS
 # ============================================================================

@@ -2,7 +2,7 @@
 Integrated Voice Parser with Session Management
 
 This class integrates voice parsing with workout session management and database logging.
-Uses Kimi K2 Thinking model for voice parsing.
+Uses Kimi K2 Turbo Preview for voice parsing with RAG (Retrieval Augmented Generation).
 
 Features:
 - Session-aware parsing (tracks current exercise, previous sets)
@@ -11,12 +11,14 @@ Features:
 - Exercise name matching via Upstash Search (452 exercises)
 - Session summaries and statistics
 - Edge case detection and handling
+- Personality-driven confirmation messages (conversational, encouraging)
 """
 
 import os
 import re
 import json
 import time
+import random
 import requests
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -77,6 +79,140 @@ UPSTASH_SEARCH_TOKEN = os.getenv("UPSTASH_SEARCH_REST_TOKEN")
 # Confidence thresholds
 CONFIDENCE_THRESHOLD_HIGH = 0.85  # Auto-accept
 CONFIDENCE_THRESHOLD_LOW = 0.70   # Require confirmation
+
+
+def _generate_confirmation_message(
+    parsed_data: Dict[str, Any],
+    is_pr: bool = False,
+    set_number: int = 1,
+    user_name: Optional[str] = None
+) -> str:
+    """
+    Generate a conversational, encouraging confirmation message.
+
+    Personality traits:
+    - Brief (user is mid-workout)
+    - Encouraging and supportive
+    - Celebrates PRs immediately
+    - Uses contractions and casual language
+    - Occasionally uses user's name
+
+    Args:
+        parsed_data: Parsed workout data (exercise, weight, reps, RPE)
+        is_pr: Whether this is a personal record
+        set_number: Current set number in session
+        user_name: User's first name (optional)
+
+    Returns:
+        Conversational confirmation message
+    """
+    exercise = parsed_data.get("exercise_name", "Exercise")
+    weight = parsed_data.get("weight")
+    reps = parsed_data.get("reps")
+    rpe = parsed_data.get("rpe")
+
+    # Build base confirmation
+    parts = [exercise]
+    if weight:
+        unit = parsed_data.get("weight_unit", "lbs")
+        parts.append(f"{weight} {unit}")
+    if reps:
+        parts.append(f"× {reps}")
+    if rpe:
+        parts.append(f"@ RPE {rpe}")
+
+    base_confirmation = ": ".join([parts[0], " ".join(parts[1:])])
+
+    # PR celebration (highest priority)
+    if is_pr:
+        celebrations = [
+            f"🎉 PR! {base_confirmation}. That's what I'm talking about!",
+            f"New PR! 🚨 {base_confirmation}. You're getting stronger!",
+            f"Boom! PR on {exercise}: {weight} {parsed_data.get('weight_unit', 'lbs')} × {reps}. Keep crushing it! 💪",
+            f"🔥 PR ALERT! {base_confirmation}. Nice work!",
+        ]
+        return random.choice(celebrations)
+
+    # Regular confirmations (encouraging but brief)
+    # First set - more enthusiastic
+    if set_number == 1:
+        confirmations = [
+            f"Logged! {base_confirmation}. Let's go! 💪",
+            f"Got it! {base_confirmation}. Strong start!",
+            f"Logged! {base_confirmation}. Nice!",
+            f"✓ {base_confirmation}. Looking good!",
+        ]
+    # Subsequent sets - brief and efficient
+    else:
+        confirmations = [
+            f"Logged! {base_confirmation}.",
+            f"✓ {base_confirmation}. Nice work!",
+            f"Got it! {base_confirmation}.",
+            f"Logged! {base_confirmation}. Keep it up!",
+        ]
+
+    # Occasionally add user's name (10% of the time)
+    if user_name and random.random() < 0.1:
+        message = random.choice(confirmations)
+        # Add name at the end
+        message = message.rstrip('.!') + f", {user_name}!"
+        return message
+
+    return random.choice(confirmations)
+
+
+def _check_if_pr(
+    supabase_client: Client,
+    user_id: str,
+    exercise_name: str,
+    weight: Optional[float],
+    reps: Optional[int]
+) -> bool:
+    """
+    Check if this set is a personal record (PR).
+
+    Simple PR detection:
+    - Compare weight × reps to user's previous sets for this exercise
+    - If higher, it's a PR
+
+    Args:
+        supabase_client: Supabase client
+        user_id: User ID
+        exercise_name: Exercise name
+        weight: Weight lifted
+        reps: Reps completed
+
+    Returns:
+        True if this is a PR, False otherwise
+    """
+    if not weight or not reps:
+        return False
+
+    try:
+        # Get user's previous sets for this exercise
+        response = supabase_client.table('workout_sets').select('weight, reps').eq('user_id', user_id).ilike('exercise_name', f'%{exercise_name}%').order('created_at', desc=True).limit(50).execute()
+
+        if not response.data:
+            # First time doing this exercise = PR!
+            return True
+
+        # Calculate current volume (weight × reps)
+        current_volume = weight * reps
+
+        # Check if current volume is higher than any previous set
+        for prev_set in response.data:
+            prev_weight = prev_set.get('weight', 0)
+            prev_reps = prev_set.get('reps', 0)
+            prev_volume = prev_weight * prev_reps
+
+            if current_volume > prev_volume:
+                return True
+
+        return False
+
+    except Exception as e:
+        print(f"Error checking PR: {e}")
+        return False
 
 
 class IntegratedVoiceParser:
@@ -189,9 +325,28 @@ class IntegratedVoiceParser:
             except Exception as e:
                 save_error = str(e)
         
+        # Check if this is a PR (only if we have weight and reps)
+        is_pr = False
+        if parsed_data.get('weight') and parsed_data.get('reps'):
+            is_pr = _check_if_pr(
+                self.supabase,
+                user_id,
+                parsed_data.get('exercise_name', ''),
+                parsed_data.get('weight'),
+                parsed_data.get('reps')
+            )
+
+        # Generate conversational confirmation message
+        confirmation_message = _generate_confirmation_message(
+            parsed_data=parsed_data,
+            is_pr=is_pr,
+            set_number=session_context.get('set_number', 1),
+            user_name=None  # TODO: Get user's first name from auth context
+        )
+
         # Calculate latency
         latency_ms = int((time.time() - start_time) * 1000)
-        
+
         return {
             'success': True,
             'action': action,
@@ -201,7 +356,7 @@ class IntegratedVoiceParser:
             'same_weight_detected': same_weight_detected,
             'session_context': session_context,
             'edge_case': None,
-            'message': f"Parsed with {confidence:.0%} confidence",
+            'message': confirmation_message,  # Personality-driven confirmation
             'saved': saved,
             'save_error': save_error,
             'latency_ms': latency_ms
