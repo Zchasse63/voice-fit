@@ -11,6 +11,7 @@ import {
   Target,
   Clock,
   Award,
+  User,
 } from "lucide-react-native";
 import {
   MetricCard,
@@ -22,7 +23,7 @@ import WorkoutLog from "../services/database/watermelon/models/WorkoutLog";
 import Set from "../services/database/watermelon/models/Set";
 import { Q } from "@nozbe/watermelondb";
 
-export default function HomeScreen() {
+export default function HomeScreen({ navigation }: any) {
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const user = useAuthStore((state) => state.user);
@@ -140,30 +141,70 @@ export default function HomeScreen() {
       }}
     >
       <View style={{ padding: tokens.spacing.lg }}>
-        {/* Header */}
-        <View style={{ marginBottom: tokens.spacing.xl }}>
-          <Text
-            style={{
-              fontSize: tokens.typography.fontSize["3xl"],
-              fontWeight: tokens.typography.fontWeight.bold,
-              color: colors.text.primary,
-              marginBottom: tokens.spacing.xs,
-            }}
-          >
-            {getCurrentGreeting()}, {user?.name?.split(" ")[0] || "Athlete"}
-          </Text>
-          <Text
-            style={{
-              fontSize: tokens.typography.fontSize.base,
-              color: colors.text.secondary,
-            }}
-          >
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
+        {/* Header with Avatar */}
+        <View
+          style={{
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            marginBottom: tokens.spacing.xl,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize["3xl"],
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+                marginBottom: tokens.spacing.xs,
+              }}
+            >
+              {getCurrentGreeting()}, {user?.name?.split(" ")[0] || "Athlete"}
+            </Text>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.base,
+                color: colors.text.secondary,
+              }}
+            >
+              {new Date().toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "long",
+                day: "numeric",
+              })}
+            </Text>
+          </View>
+
+          {/* Avatar Button */}
+          <Pressable
+            onPress={() => navigation.navigate("Profile")}
+            style={({ pressed }) => ({
+              opacity: pressed ? 0.7 : 1,
             })}
-          </Text>
+          >
+            <View
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 20,
+                backgroundColor: colors.accent.blue,
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: "white",
+                }}
+              >
+                {user?.name?.charAt(0).toUpperCase() ||
+                  user?.email?.charAt(0).toUpperCase() ||
+                  "?"}
+              </Text>
+            </View>
+          </Pressable>
         </View>
 
         {/* Active Workout Banner */}

@@ -44,12 +44,12 @@ import { useTheme } from "../theme/ThemeContext";
 import { useAuthStore } from "../store/auth.store";
 
 interface ProfileScreenRedesignProps {
-  onClose?: () => void;
+  navigation?: any;
   onNavigateToWearables?: () => void;
 }
 
 export default function ProfileScreenRedesign({
-  onClose,
+  navigation,
   onNavigateToWearables,
 }: ProfileScreenRedesignProps = {}) {
   const { isDark, setTheme, theme } = useTheme();
@@ -276,7 +276,7 @@ export default function ProfileScreenRedesign({
           Profile
         </Text>
         <Pressable
-          onPress={onClose}
+          onPress={() => navigation?.goBack()}
           style={({ pressed }) => ({
             padding: tokens.spacing.sm,
             opacity: pressed ? 0.6 : 1,
