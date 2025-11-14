@@ -1,366 +1,472 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Modal } from 'react-native';
-import { useAuthStore } from '../store/auth.store';
-import { useWorkoutStore } from '../store/workout.store';
-import { useTheme } from '../theme/ThemeContext';
-import { Dumbbell, TrendingUp, Calendar, BookOpen, Settings, BarChart2 } from 'lucide-react-native';
-import LoadingSpinner from '../components/common/LoadingSpinner';
-import ErrorMessage from '../components/common/ErrorMessage';
-import SyncStatus from '../components/common/SyncStatus';
-import CalendarView from '../components/calendar/CalendarView';
-import ReadinessCheckCard from '../components/readiness/ReadinessCheckCard';
-import ActiveInjuryBanner from '../components/injury/ActiveInjuryBanner';
-import RecoveryCheckInModal from '../components/injury/RecoveryCheckInModal';
-import ExerciseLibraryScreen from './ExerciseLibraryScreen';
-import AnalyticsScreen from './AnalyticsScreen';
-import InjuryLoggingService from '../services/injury/InjuryLoggingService';
-import InjuryLog from '../services/database/watermelon/models/InjuryLog';
-import SettingsScreen from './SettingsScreen';
-import { database } from '../services/database/watermelon/database';
-import WorkoutLog from '../services/database/watermelon/models/WorkoutLog';
-import Set from '../services/database/watermelon/models/Set';
-import { Q } from '@nozbe/watermelondb';
+import React, { useEffect, useState } from "react";
+import { View, Text, ScrollView, Pressable } from "react-native";
+import { useAuthStore } from "../store/auth.store";
+import { useWorkoutStore } from "../store/workout.store";
+import { useTheme } from "../theme/ThemeContext";
+import { tokens } from "../theme/tokens";
+import {
+  Dumbbell,
+  Activity,
+  Zap,
+  Target,
+  Clock,
+  Award,
+} from "lucide-react-native";
+import {
+  MetricCard,
+  TimelineItem,
+  StatsOverview,
+} from "../components/dashboard";
+import { database } from "../services/database/watermelon/database";
+import WorkoutLog from "../services/database/watermelon/models/WorkoutLog";
+import Set from "../services/database/watermelon/models/Set";
+import { Q } from "@nozbe/watermelondb";
 
 export default function HomeScreen() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const user = useAuthStore((state) => state.user);
   const activeWorkout = useWorkoutStore((state) => state.activeWorkout);
   const startWorkout = useWorkoutStore((state) => state.startWorkout);
 
-  const [weeklyStats, setWeeklyStats] = useState({ workoutCount: 0, totalVolume: 0 });
-  const [isLoading, setIsLoading] = useState(true);
-  const [showExerciseLibrary, setShowExerciseLibrary] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-
-  // Injury tracking state
-  const [activeInjuries, setActiveInjuries] = useState<InjuryLog[]>([]);
-  const [injuriesNeedingCheckIn, setInjuriesNeedingCheckIn] = useState<InjuryLog[]>([]);
-  const [showCheckInModal, setShowCheckInModal] = useState(false);
-  const [currentCheckInInjury, setCurrentCheckInInjury] = useState<InjuryLog | null>(null);
+  const [weeklyStats, setWeeklyStats] = useState({
+    workoutCount: 0,
+    totalVolume: 0,
+    totalSets: 0,
+    totalTime: 0,
+  });
+  const [recentWorkouts, setRecentWorkouts] = useState<WorkoutLog[]>([]);
 
   useEffect(() => {
-    loadWeeklyStats();
-    loadActiveInjuries();
+    loadDashboardData();
   }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      await Promise.all([loadWeeklyStats(), loadRecentWorkouts()]);
+    } catch (error) {
+      console.error("Failed to load dashboard data:", error);
+    }
+  };
 
   const loadWeeklyStats = async () => {
     try {
-      setIsLoading(true);
       const oneWeekAgo = new Date();
       oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-      // Get workouts from last 7 days
       const workouts = await database
-        .get<WorkoutLog>('workout_logs')
-        .query(Q.where('start_time', Q.gte(oneWeekAgo.getTime())))
+        .get<WorkoutLog>("workout_logs")
+        .query(Q.where("start_time", Q.gte(oneWeekAgo.getTime())))
         .fetch();
 
-      // Get all sets from those workouts
       const workoutIds = workouts.map((w) => w.id);
       const sets = await database
-        .get<Set>('sets')
-        .query(Q.where('workout_log_id', Q.oneOf(workoutIds)))
+        .get<Set>("sets")
+        .query(Q.where("workout_log_id", Q.oneOf(workoutIds)))
         .fetch();
 
-      // Calculate total volume (weight * reps)
-      const totalVolume = sets.reduce((sum, set) => sum + set.weight * set.reps, 0);
+      const totalVolume = sets.reduce(
+        (sum, set) => sum + set.weight * set.reps,
+        0,
+      );
+      const totalTime = workouts.reduce((sum, workout) => {
+        if (workout.endTime) {
+          const duration =
+            workout.endTime.getTime() - workout.startTime.getTime();
+          return sum + duration;
+        }
+        return sum;
+      }, 0);
 
       setWeeklyStats({
         workoutCount: workouts.length,
         totalVolume: Math.round(totalVolume),
+        totalSets: sets.length,
+        totalTime: Math.round(totalTime / 60000), // Convert to minutes
       });
-      setIsLoading(false);
     } catch (error) {
-      console.error('Failed to load weekly stats:', error);
-      setIsLoading(false);
+      console.error("Failed to load weekly stats:", error);
     }
   };
 
-  const loadActiveInjuries = async () => {
+  const loadRecentWorkouts = async () => {
     try {
-      // Get active injuries
-      const injuries = await InjuryLoggingService.getActiveInjuries();
-      setActiveInjuries(injuries);
+      const workouts = await database
+        .get<WorkoutLog>("workout_logs")
+        .query(Q.sortBy("start_time", Q.desc), Q.take(5))
+        .fetch();
 
-      // Check which injuries need weekly check-in (7+ days since last check-in)
-      const needingCheckIn = await InjuryLoggingService.getInjuriesNeedingCheckIn();
-      setInjuriesNeedingCheckIn(needingCheckIn);
-
-      // Auto-show check-in modal if any injuries need check-in
-      if (needingCheckIn.length > 0) {
-        setCurrentCheckInInjury(needingCheckIn[0]);
-        setShowCheckInModal(true);
-      }
+      setRecentWorkouts(workouts);
     } catch (error) {
-      console.error('Failed to load active injuries:', error);
+      console.error("Failed to load recent workouts:", error);
     }
   };
 
-  const handleCheckInComplete = async () => {
-    setShowCheckInModal(false);
-    setCurrentCheckInInjury(null);
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffDays = Math.floor(
+      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
-    // Reload injuries after check-in
-    await loadActiveInjuries();
+    if (diffDays === 0) return "Today";
+    if (diffDays === 1) return "Yesterday";
+    if (diffDays < 7) return `${diffDays} days ago`;
+
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   };
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
+  const formatDuration = (startTime: number, endTime?: number) => {
+    if (!endTime) return "In progress";
+    const minutes = Math.floor((endTime - startTime) / 60000);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    const mins = minutes % 60;
+    return `${hours}h ${mins}m`;
   };
 
-  if (isLoading) {
-    return <LoadingSpinner message="Loading your workout data..." fullScreen />;
-  }
+  const getCurrentGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
 
   return (
-    <ScrollView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-background-light'}`}>
-      <View className="p-6">
+    <ScrollView
+      style={{
+        flex: 1,
+        backgroundColor: colors.background.primary,
+      }}
+    >
+      <View style={{ padding: tokens.spacing.lg }}>
         {/* Header */}
-        <View className="flex-row justify-between items-start mb-2">
-          <View className="flex-1">
-            <Text className={`text-3xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
-              Welcome back, {user?.name || 'Athlete'}!
-            </Text>
-            <Text className={`text-base mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-              {new Date().toLocaleDateString('en-US', {
-                weekday: 'long',
-                month: 'long',
-                day: 'numeric',
-              })}
-            </Text>
-          </View>
-          <SyncStatus />
+        <View style={{ marginBottom: tokens.spacing.xl }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize["3xl"],
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: colors.text.primary,
+              marginBottom: tokens.spacing.xs,
+            }}
+          >
+            {getCurrentGreeting()}, {user?.name?.split(" ")[0] || "Athlete"}
+          </Text>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.base,
+              color: colors.text.secondary,
+            }}
+          >
+            {new Date().toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "long",
+              day: "numeric",
+            })}
+          </Text>
         </View>
 
-        {/* Active Workout Card */}
+        {/* Active Workout Banner */}
         {activeWorkout && (
-          <View className={`mt-6 p-4 rounded-xl ${isDark ? 'bg-warning-dark' : 'bg-warning-light'}`}>
-            <Text className="text-lg font-bold text-white">Active Workout</Text>
-            <Text className="text-base text-white mt-1">
-              {activeWorkout.name}
-            </Text>
-            <Text className="text-sm text-white/80 mt-1">
-              Started {formatTime(activeWorkout.startTime)}
-            </Text>
-          </View>
+          <Pressable
+            style={{
+              backgroundColor: colors.accent.orange,
+              borderRadius: tokens.borderRadius.lg,
+              padding: tokens.spacing.lg,
+              marginBottom: tokens.spacing.xl,
+              ...tokens.shadows.md,
+            }}
+            onPress={() => {
+              // Navigate to workout in progress
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: "white",
+                    opacity: 0.9,
+                    marginBottom: 4,
+                  }}
+                >
+                  WORKOUT IN PROGRESS
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.lg,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: "white",
+                  }}
+                >
+                  {activeWorkout.name}
+                </Text>
+              </View>
+              <Activity color="white" size={32} strokeWidth={2.5} />
+            </View>
+          </Pressable>
         )}
 
-        {/* Active Injury Banner */}
-        {activeInjuries.length > 0 && (
-          <View className="mt-6">
-            <ActiveInjuryBanner
-              injuries={activeInjuries.map(injury => ({
-                id: injury.id,
-                bodyPart: injury.bodyPart,
-                severity: injury.severity as 'mild' | 'moderate' | 'severe',
-                description: injury.description,
-                status: injury.status as 'active' | 'recovering' | 'resolved',
-                reportedAt: injury.reportedAt,
-                lastCheckInAt: injury.lastCheckInAt,
-              }))}
-              onCheckInPress={(injuryId) => {
-                const injury = activeInjuries.find(inj => inj.id === injuryId);
-                if (injury) {
-                  setCurrentCheckInInjury(injury);
-                  setShowCheckInModal(true);
-                }
-              }}
+        {/* Weekly Stats Overview */}
+        <StatsOverview
+          title="This Week"
+          variant="row"
+          stats={[
+            {
+              label: "Workouts",
+              value: weeklyStats.workoutCount,
+              color: colors.accent.blue,
+            },
+            {
+              label: "Total Volume",
+              value:
+                weeklyStats.totalVolume >= 1000
+                  ? `${(weeklyStats.totalVolume / 1000).toFixed(1)}k`
+                  : weeklyStats.totalVolume,
+              unit: "lbs",
+              color: colors.accent.green,
+            },
+            {
+              label: "Total Sets",
+              value: weeklyStats.totalSets,
+              color: colors.accent.purple,
+            },
+            {
+              label: "Training Time",
+              value: weeklyStats.totalTime,
+              unit: "min",
+              color: colors.accent.coral,
+            },
+          ]}
+        />
+
+        {/* Quick Action - Start Workout */}
+        <Pressable
+          style={{
+            backgroundColor: colors.accent.blue,
+            borderRadius: tokens.borderRadius.lg,
+            padding: tokens.spacing.lg,
+            marginTop: tokens.spacing.xl,
+            marginBottom: tokens.spacing.lg,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            ...tokens.shadows.md,
+          }}
+          onPress={() => startWorkout("Quick Workout")}
+          accessibilityLabel="Start Workout"
+          accessibilityRole="button"
+        >
+          <Dumbbell color="white" size={24} strokeWidth={2.5} />
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.lg,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: "white",
+              marginLeft: tokens.spacing.md,
+            }}
+          >
+            Start Workout
+          </Text>
+        </Pressable>
+
+        {/* Metric Cards Grid */}
+        <View
+          style={{
+            flexDirection: "row",
+            gap: tokens.spacing.md,
+            marginBottom: tokens.spacing.xl,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <MetricCard
+              title="Weekly Goal"
+              value="4/5"
+              subtitle="workouts"
+              icon={Target}
+              iconColor={colors.accent.green}
+              trend="up"
+              trendValue="+1"
+              variant="compact"
             />
           </View>
-        )}
-
-        {/* Readiness Check Card */}
-        <View className="mt-6">
-          <ReadinessCheckCard />
-        </View>
-
-        {/* Quick Actions */}
-        <View className="mt-6">
-          <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-            Quick Actions
-          </Text>
-
-          <Pressable
-            className={`flex-row items-center p-4 rounded-xl mb-3 active:opacity-80 min-h-[60px] ${
-              isDark ? 'bg-primaryDark' : 'bg-primary-500'
-            }`}
-            onPress={() => startWorkout('Quick Workout')}
-            accessibilityLabel="Start Workout"
-            accessibilityHint="Begins a new workout session"
-            accessibilityRole="button"
-          >
-            <Dumbbell color="white" size={24} />
-            <Text className="text-base font-body-semibold text-white ml-3">
-              Start Workout
-            </Text>
-          </Pressable>
-
-          <Pressable
-            className={`flex-row items-center p-4 rounded-xl mb-3 active:opacity-80 min-h-[60px] ${isDark ? 'bg-info-dark' : 'bg-info-light'}`}
-            onPress={() => setShowAnalytics(true)}
-            accessibilityLabel="View Analytics"
-            accessibilityHint="View volume, fatigue, and deload analytics"
-            accessibilityRole="button"
-          >
-            <BarChart2 color="white" size={24} />
-            <Text className="text-base font-body-semibold text-white ml-3">
-              View Analytics
-            </Text>
-          </Pressable>
-
-          <Pressable
-            className={`flex-row items-center p-4 rounded-xl mb-3 active:opacity-80 min-h-[60px] ${isDark ? 'bg-warning-dark' : 'bg-warning-light'}`}
-            accessibilityLabel="Today's Program"
-            accessibilityHint="View today's workout program"
-            accessibilityRole="button"
-          >
-            <Calendar color="white" size={24} />
-            <Text className="text-base font-body-semibold text-white ml-3">
-              Today's Program
-            </Text>
-          </Pressable>
-
-          <Pressable
-            className={`flex-row items-center p-4 rounded-xl mb-3 active:opacity-80 min-h-[60px] ${isDark ? 'bg-accent-600' : 'bg-accent-500'}`}
-            onPress={() => setShowExerciseLibrary(true)}
-            accessibilityLabel="Exercise Library"
-            accessibilityHint="Browse exercise library"
-            accessibilityRole="button"
-          >
-            <BookOpen color="white" size={24} />
-            <Text className="text-base font-body-semibold text-white ml-3">
-              Exercise Library
-            </Text>
-          </Pressable>
-
-          <Pressable
-            className={`flex-row items-center p-4 rounded-xl active:opacity-80 min-h-[60px] ${isDark ? 'bg-gray-600' : 'bg-gray-700'}`}
-            onPress={() => setShowSettings(true)}
-            accessibilityLabel="Settings"
-            accessibilityHint="Open settings"
-            accessibilityRole="button"
-          >
-            <Settings color="white" size={24} />
-            <Text className="text-base font-body-semibold text-white ml-3">
-              Settings
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* Stats Summary */}
-        <View className="mt-6">
-          <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-            This Week
-          </Text>
-          <View className="flex-row justify-between">
-            <View className={`flex-1 p-4 rounded-xl mr-2 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-              <Text className={`text-3xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
-                {weeklyStats.workoutCount}
-              </Text>
-              <Text className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Workouts</Text>
-            </View>
-            <View className={`flex-1 p-4 rounded-xl ml-2 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-              <Text className={`text-3xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
-                {weeklyStats.totalVolume >= 1000
-                  ? `${(weeklyStats.totalVolume / 1000).toFixed(1)}k`
-                  : weeklyStats.totalVolume}
-              </Text>
-              <Text className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>lbs Volume</Text>
-            </View>
+          <View style={{ flex: 1 }}>
+            <MetricCard
+              title="Streak"
+              value="12"
+              subtitle="days"
+              icon={Zap}
+              iconColor={colors.accent.orange}
+              variant="compact"
+            />
           </View>
         </View>
 
-        {/* Calendar View */}
-        <View className="mt-6">
-          <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-            Training Calendar
+        {/* Today's Program Card */}
+        <View style={{ marginBottom: tokens.spacing.xl }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.lg,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: colors.text.primary,
+              marginBottom: tokens.spacing.md,
+            }}
+          >
+            Today's Program
           </Text>
-          <CalendarView />
+          <Pressable
+            style={{
+              backgroundColor: colors.background.secondary,
+              borderRadius: tokens.borderRadius.lg,
+              padding: tokens.spacing.lg,
+              ...tokens.shadows.sm,
+            }}
+            onPress={() => {
+              // Navigate to today's program
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
+              <Dumbbell color={colors.accent.blue} size={20} />
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                  marginLeft: tokens.spacing.sm,
+                }}
+              >
+                Push Day
+              </Text>
+            </View>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.base,
+                color: colors.text.secondary,
+                marginBottom: tokens.spacing.xs,
+              }}
+            >
+              Chest, Shoulders, Triceps
+            </Text>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
+              <Clock color={colors.text.tertiary} size={16} />
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.tertiary,
+                  marginLeft: 4,
+                }}
+              >
+                Estimated 1h 15m • 6 exercises
+              </Text>
+            </View>
+          </Pressable>
+        </View>
+
+        {/* Recent Activity Timeline */}
+        {recentWorkouts.length > 0 && (
+          <View style={{ marginBottom: tokens.spacing.xl }}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.lg,
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+                marginBottom: tokens.spacing.md,
+              }}
+            >
+              Recent Activity
+            </Text>
+            <View
+              style={{
+                backgroundColor: colors.background.secondary,
+                borderRadius: tokens.borderRadius.lg,
+                padding: tokens.spacing.md,
+                ...tokens.shadows.sm,
+              }}
+            >
+              {recentWorkouts.map((workout, index) => (
+                <TimelineItem
+                  key={workout.id}
+                  title={workout.workoutName || "Workout"}
+                  subtitle={formatDuration(
+                    workout.startTime.getTime(),
+                    workout.endTime?.getTime(),
+                  )}
+                  time={formatDate(workout.startTime.getTime())}
+                  icon={Dumbbell}
+                  iconColor={colors.accent.blue}
+                  iconBackgroundColor={colors.accent.blue + "20"}
+                  isLast={index === recentWorkouts.length - 1}
+                  onPress={() => {
+                    // Navigate to workout detail
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Personal Records */}
+        <View style={{ marginBottom: tokens.spacing.xl }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: tokens.spacing.md,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.lg,
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
+              Personal Records
+            </Text>
+            <Pressable
+              onPress={() => {
+                // Navigate to PRs screen
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  color: colors.accent.blue,
+                }}
+              >
+                View All
+              </Text>
+            </Pressable>
+          </View>
+          <MetricCard
+            title="Recent PR"
+            value="225 lbs"
+            subtitle="Bench Press • 3 days ago"
+            icon={Award}
+            iconColor={colors.accent.coral}
+            trend="up"
+            trendValue="+10 lbs"
+            onPress={() => {
+              // Navigate to PRs
+            }}
+          />
         </View>
       </View>
-
-      {/* Exercise Library Modal */}
-      <Modal
-        visible={showExerciseLibrary}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowExerciseLibrary(false)}
-      >
-        <ExerciseLibraryScreen />
-        <Pressable
-          className={`absolute top-12 right-6 w-10 h-10 rounded-full items-center justify-center ${
-            isDark ? 'bg-gray-800' : 'bg-white'
-          }`}
-          onPress={() => setShowExerciseLibrary(false)}
-          accessibilityLabel="Close Exercise Library"
-          accessibilityRole="button"
-        >
-          <Text className={`text-2xl ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>×</Text>
-        </Pressable>
-      </Modal>
-
-      {/* Analytics Modal */}
-      <Modal
-        visible={showAnalytics}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowAnalytics(false)}
-      >
-        <AnalyticsScreen />
-        <Pressable
-          className={`absolute top-12 right-6 w-10 h-10 rounded-full items-center justify-center ${
-            isDark ? 'bg-gray-800' : 'bg-white'
-          }`}
-          onPress={() => setShowAnalytics(false)}
-          accessibilityLabel="Close Analytics"
-          accessibilityRole="button"
-        >
-          <Text className={`text-2xl ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>×</Text>
-        </Pressable>
-      </Modal>
-
-      {/* Settings Modal */}
-      <Modal
-        visible={showSettings}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowSettings(false)}
-      >
-        <SettingsScreen />
-        <Pressable
-          className={`absolute top-12 right-6 w-10 h-10 rounded-full items-center justify-center ${
-            isDark ? 'bg-gray-800' : 'bg-white'
-          }`}
-          onPress={() => setShowSettings(false)}
-          accessibilityLabel="Close Settings"
-          accessibilityRole="button"
-        >
-          <Text className={`text-2xl ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>×</Text>
-        </Pressable>
-      </Modal>
-
-      {/* Recovery Check-In Modal */}
-      {currentCheckInInjury && (
-        <RecoveryCheckInModal
-          visible={showCheckInModal}
-          onClose={() => setShowCheckInModal(false)}
-          injury={{
-            id: currentCheckInInjury.id,
-            bodyPart: currentCheckInInjury.bodyPart,
-            severity: currentCheckInInjury.severity as 'mild' | 'moderate' | 'severe',
-            description: currentCheckInInjury.description,
-            status: currentCheckInInjury.status as 'active' | 'recovering' | 'resolved',
-            reportedAt: currentCheckInInjury.reportedAt,
-            lastCheckInAt: currentCheckInInjury.lastCheckInAt,
-          }}
-          onCheckInComplete={handleCheckInComplete}
-        />
-      )}
     </ScrollView>
   );
 }
-

@@ -1,15 +1,15 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, Pressable, Alert, Platform } from 'react-native';
-import MapView, { Polyline, PROVIDER_DEFAULT } from 'react-native-maps';
-import { useTheme } from '../theme/ThemeContext';
-import { useRunStore } from '../store/run.store';
-import { Play, Pause, Square, MapPin } from 'lucide-react-native';
-import LoadingSpinner from '../components/common/LoadingSpinner';
+import React, { useEffect, useRef } from "react";
+import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
+import MapView, { Polyline, PROVIDER_DEFAULT } from "react-native-maps";
+import { useTheme } from "../theme/ThemeContext";
+import { tokens } from "../theme/tokens";
+import { useRunStore } from "../store/run.store";
+import { Play, Pause, Square, MapPin } from "lucide-react-native";
 
 export default function RunScreen() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const mapRef = useRef<MapView>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   const {
     isTracking,
@@ -31,7 +31,6 @@ export default function RunScreen() {
   }, []);
 
   useEffect(() => {
-    // Center map on latest coordinate
     if (coordinates.length > 0 && mapRef.current) {
       const latestCoord = coordinates[coordinates.length - 1];
       mapRef.current.animateToRegion({
@@ -46,26 +45,23 @@ export default function RunScreen() {
   const initializePermissions = async () => {
     try {
       await requestPermissions();
-      setIsLoading(false);
     } catch (err) {
-      console.error('Failed to initialize permissions:', err);
-      setIsLoading(false);
+      console.error("Failed to initialize permissions:", err);
     }
   };
 
   const handleStart = async () => {
     if (!hasPermission) {
       Alert.alert(
-        'Location Permission Required',
-        'Voice Fit needs access to your location to track your runs.',
+        "Location Permission Required",
+        "VoiceFit needs access to your location to track your runs.",
         [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Grant Permission', onPress: () => requestPermissions() },
-        ]
+          { text: "Cancel", style: "cancel" },
+          { text: "Grant Permission", onPress: () => requestPermissions() },
+        ],
       );
       return;
     }
-
     await startRun();
   };
 
@@ -79,22 +75,21 @@ export default function RunScreen() {
 
   const handleStop = () => {
     Alert.alert(
-      'Stop Run',
-      'Are you sure you want to stop this run? Your progress will be saved.',
+      "Stop Run",
+      "Are you sure you want to stop this run? Your progress will be saved.",
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: "Cancel", style: "cancel" },
         {
-          text: 'Stop',
-          style: 'destructive',
+          text: "Stop",
+          style: "destructive",
           onPress: async () => {
             await stopRun();
-            // TODO: Save run to WatermelonDB
-            Alert.alert('Run Saved', 'Your run has been saved successfully!', [
-              { text: 'OK', onPress: () => reset() },
+            Alert.alert("Run Saved", "Your run has been saved successfully!", [
+              { text: "OK", onPress: () => reset() },
             ]);
           },
         },
-      ]
+      ],
     );
   };
 
@@ -109,204 +104,400 @@ export default function RunScreen() {
     const secs = Math.floor(seconds % 60);
 
     if (hours > 0) {
-      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+      return `${hours}:${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
     }
-    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
   const formatPace = (pace: number): string => {
-    if (pace === 0 || !isFinite(pace)) return '--:--';
+    if (pace === 0 || !isFinite(pace)) return "--:--";
     const minutes = Math.floor(pace);
     const seconds = Math.floor((pace - minutes) * 60);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
-
-  const formatTerrain = (difficulty: string): string => {
-    const terrainMap: { [key: string]: string } = {
-      flat: 'Flat',
-      rolling: 'Rolling',
-      moderate_uphill: 'Moderate ↗',
-      steep_uphill: 'Steep ↗',
-      very_steep_uphill: 'Very Steep ↗',
-      moderate_downhill: 'Moderate ↘',
-      steep_downhill: 'Steep ↘',
-    };
-    return terrainMap[difficulty] || 'Flat';
-  };
-
-  if (isLoading) {
-    return <LoadingSpinner message="Initializing GPS..." fullScreen />;
-  }
 
   if (!hasPermission) {
     return (
-      <View className={`flex-1 items-center justify-center p-6 ${isDark ? 'bg-gray-900' : 'bg-background-light'}`}>
-        <MapPin color={isDark ? '#4A9B6F' : '#2C5F3D'} size={64} />
-        <Text className={`text-2xl font-bold mt-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.background.primary,
+          alignItems: "center",
+          justifyContent: "center",
+          padding: tokens.spacing.xl,
+        }}
+      >
+        <MapPin color={colors.accent.blue} size={64} strokeWidth={2} />
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize["2xl"],
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+            marginTop: tokens.spacing.lg,
+            textAlign: "center",
+          }}
+        >
           Location Permission Required
         </Text>
-        <Text className={`text-base text-center mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          Voice Fit needs access to your location to track your runs and outdoor workouts.
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.base,
+            color: colors.text.secondary,
+            marginTop: tokens.spacing.md,
+            textAlign: "center",
+          }}
+        >
+          VoiceFit needs access to your location to track your runs and outdoor
+          workouts.
         </Text>
         <Pressable
-          className="mt-6 px-6 py-3 bg-primary-500 rounded-xl active:opacity-80"
+          style={{
+            backgroundColor: colors.accent.blue,
+            borderRadius: tokens.borderRadius.lg,
+            paddingVertical: tokens.spacing.md,
+            paddingHorizontal: tokens.spacing.xl,
+            marginTop: tokens.spacing.xl,
+          }}
           onPress={requestPermissions}
           accessibilityLabel="Grant Location Permission"
           accessibilityRole="button"
         >
-          <Text className="text-base font-bold text-white">Grant Permission</Text>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.base,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: "white",
+            }}
+          >
+            Grant Permission
+          </Text>
         </Pressable>
       </View>
     );
   }
 
   return (
-    <View className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-background-light'}`}>
-      {/* Map */}
-      <View className="flex-1">
-        <MapView
-          ref={mapRef}
-          provider={PROVIDER_DEFAULT}
-          style={{ flex: 1 }}
-          showsUserLocation
-          showsMyLocationButton
-          followsUserLocation={isTracking}
-          initialRegion={{
-            latitude: 37.78825,
-            longitude: -122.4324,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
+    <View style={{ flex: 1 }}>
+      {/* Full-Screen Map */}
+      <MapView
+        ref={mapRef}
+        provider={PROVIDER_DEFAULT}
+        style={StyleSheet.absoluteFillObject}
+        showsUserLocation
+        showsMyLocationButton={false}
+        followsUserLocation={isTracking}
+        initialRegion={{
+          latitude: 37.78825,
+          longitude: -122.4324,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
+      >
+        {coordinates.length > 1 && (
+          <Polyline
+            coordinates={coordinates.map((coord) => ({
+              latitude: coord.latitude,
+              longitude: coord.longitude,
+            }))}
+            strokeColor={colors.accent.blue}
+            strokeWidth={5}
+          />
+        )}
+      </MapView>
+
+      {/* Stats Overlay - Runna Style */}
+      {isTracking && (
+        <View
+          style={{
+            position: "absolute",
+            top: 60,
+            left: tokens.spacing.lg,
+            right: tokens.spacing.lg,
+            backgroundColor: isDark
+              ? "rgba(30, 30, 30, 0.95)"
+              : "rgba(255, 255, 255, 0.95)",
+            borderRadius: tokens.borderRadius.xl,
+            padding: tokens.spacing.lg,
+            ...tokens.shadows.lg,
           }}
         >
-          {coordinates.length > 1 && (
-            <Polyline
-              coordinates={coordinates.map((coord) => ({
-                latitude: coord.latitude,
-                longitude: coord.longitude,
-              }))}
-              strokeColor={isDark ? '#4A9B6F' : '#2C5F3D'}
-              strokeWidth={4}
-            />
+          {/* Primary Stats - Large Display */}
+          <View style={{ marginBottom: tokens.spacing.md }}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize["3xl"],
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+                textAlign: "center",
+              }}
+            >
+              {formatDistance(stats.distance)}
+            </Text>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+                textAlign: "center",
+                marginTop: 4,
+              }}
+            >
+              MILES
+            </Text>
+          </View>
+
+          {/* Secondary Stats - Row */}
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-around",
+              paddingTop: tokens.spacing.md,
+              borderTopWidth: 1,
+              borderTopColor: colors.border.light,
+            }}
+          >
+            <View style={{ alignItems: "center" }}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
+                {formatDuration(stats.duration)}
+              </Text>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                  marginTop: 4,
+                }}
+              >
+                TIME
+              </Text>
+            </View>
+
+            <View style={{ alignItems: "center" }}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
+                {formatPace(stats.pace)}
+              </Text>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                  marginTop: 4,
+                }}
+              >
+                PACE /MI
+              </Text>
+            </View>
+
+            <View style={{ alignItems: "center" }}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
+                {stats.calories}
+              </Text>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                  marginTop: 4,
+                }}
+              >
+                CALORIES
+              </Text>
+            </View>
+          </View>
+
+          {/* Elevation Stats (if available) */}
+          {(stats.elevationGain > 0 || stats.elevationLoss > 0) && (
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-around",
+                paddingTop: tokens.spacing.md,
+                marginTop: tokens.spacing.md,
+                borderTopWidth: 1,
+                borderTopColor: colors.border.light,
+              }}
+            >
+              <View style={{ alignItems: "center" }}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.accent.green,
+                  }}
+                >
+                  +{Math.round(stats.elevationGain)}m
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                    marginTop: 4,
+                  }}
+                >
+                  ELEVATION ↑
+                </Text>
+              </View>
+
+              <View style={{ alignItems: "center" }}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.accent.coral,
+                  }}
+                >
+                  -{Math.round(stats.elevationLoss)}m
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                    marginTop: 4,
+                  }}
+                >
+                  ELEVATION ↓
+                </Text>
+              </View>
+            </View>
           )}
-        </MapView>
-      </View>
-
-      {/* Stats Overlay */}
-      <View className={`absolute top-12 left-4 right-4 p-4 rounded-xl ${isDark ? 'bg-gray-800/90' : 'bg-white/90'}`}>
-        <View className="flex-row justify-between">
-          <View className="flex-1">
-            <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Distance</Text>
-            <Text className={`text-2xl font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-              {formatDistance(stats.distance)} mi
-            </Text>
-          </View>
-          <View className="flex-1">
-            <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Duration</Text>
-            <Text className={`text-2xl font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-              {formatDuration(stats.duration)}
-            </Text>
-          </View>
-          <View className="flex-1">
-            <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Pace</Text>
-            <Text className={`text-2xl font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-              {formatPace(stats.pace)}
-            </Text>
-          </View>
         </View>
-      </View>
+      )}
 
-      {/* Control Buttons */}
-      <View className={`p-6 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+      {/* Control Buttons - Bottom Fixed */}
+      <View
+        style={{
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: isDark
+            ? "rgba(30, 30, 30, 0.95)"
+            : "rgba(255, 255, 255, 0.95)",
+          paddingTop: tokens.spacing.lg,
+          paddingBottom: tokens.spacing.xl + 20,
+          paddingHorizontal: tokens.spacing.xl,
+          borderTopLeftRadius: tokens.borderRadius.xl,
+          borderTopRightRadius: tokens.borderRadius.xl,
+          ...tokens.shadows.xl,
+        }}
+      >
         {error && (
-          <Text className="text-sm text-red-500 mb-4 text-center">{error}</Text>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.accent.coral,
+              textAlign: "center",
+              marginBottom: tokens.spacing.md,
+            }}
+          >
+            {error}
+          </Text>
         )}
 
-        <View className="flex-row justify-center items-center space-x-4">
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: tokens.spacing.lg,
+          }}
+        >
           {!isTracking ? (
+            // Start Button - Large and centered
             <Pressable
-              className="w-20 h-20 bg-primary-500 rounded-full items-center justify-center active:opacity-80"
+              style={({ pressed }) => ({
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: colors.accent.green,
+                alignItems: "center",
+                justifyContent: "center",
+                opacity: pressed ? 0.8 : 1,
+                ...tokens.shadows.lg,
+              })}
               onPress={handleStart}
               accessibilityLabel="Start Run"
               accessibilityRole="button"
             >
-              <Play color="white" size={32} fill="white" />
+              <Play color="white" size={36} fill="white" strokeWidth={2} />
             </Pressable>
           ) : (
             <>
+              {/* Pause/Resume Button */}
               <Pressable
-                className={`w-16 h-16 rounded-full items-center justify-center active:opacity-80 ${
-                  isPaused ? 'bg-primary-500' : 'bg-secondary-500'
-                }`}
+                style={({ pressed }) => ({
+                  width: 70,
+                  height: 70,
+                  borderRadius: 35,
+                  backgroundColor: isPaused
+                    ? colors.accent.green
+                    : colors.accent.orange,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.8 : 1,
+                  ...tokens.shadows.md,
+                })}
                 onPress={isPaused ? handleResume : handlePause}
-                accessibilityLabel={isPaused ? 'Resume Run' : 'Pause Run'}
+                accessibilityLabel={isPaused ? "Resume Run" : "Pause Run"}
                 accessibilityRole="button"
               >
                 {isPaused ? (
-                  <Play color="white" size={24} fill="white" />
+                  <Play color="white" size={30} fill="white" strokeWidth={2} />
                 ) : (
-                  <Pause color="white" size={24} fill="white" />
+                  <Pause color="white" size={30} fill="white" strokeWidth={2} />
                 )}
               </Pressable>
 
+              {/* Stop Button */}
               <Pressable
-                className="w-16 h-16 bg-red-500 rounded-full items-center justify-center active:opacity-80"
+                style={({ pressed }) => ({
+                  width: 70,
+                  height: 70,
+                  borderRadius: 35,
+                  backgroundColor: colors.accent.coral,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  opacity: pressed ? 0.8 : 1,
+                  ...tokens.shadows.md,
+                })}
                 onPress={handleStop}
                 accessibilityLabel="Stop Run"
                 accessibilityRole="button"
               >
-                <Square color="white" size={24} fill="white" />
+                <Square color="white" size={28} fill="white" strokeWidth={2} />
               </Pressable>
             </>
           )}
         </View>
 
-        {/* Additional Stats */}
-        {isTracking && (
-          <>
-            <View className="flex-row justify-around mt-6">
-              <View className="items-center">
-                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Avg Speed</Text>
-                <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                  {stats.avgSpeed.toFixed(1)} mph
-                </Text>
-              </View>
-              <View className="items-center">
-                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Calories</Text>
-                <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                  {stats.calories}
-                </Text>
-              </View>
-            </View>
-
-            {/* Elevation & GAP Stats */}
-            {(stats.elevationGain > 0 || stats.elevationLoss > 0) && (
-              <View className="flex-row justify-around mt-4 pt-4 border-t border-gray-700">
-                <View className="items-center">
-                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Elevation</Text>
-                  <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                    +{Math.round(stats.elevationGain)}m / -{Math.round(stats.elevationLoss)}m
-                  </Text>
-                </View>
-                {stats.gradeAdjustedPace && (
-                  <View className="items-center">
-                    <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>GAP</Text>
-                    <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                      {formatPace(stats.gradeAdjustedPace)}/mi
-                    </Text>
-                  </View>
-                )}
-                <View className="items-center">
-                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Terrain</Text>
-                  <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
-                    {formatTerrain(stats.terrainDifficulty)}
-                  </Text>
-                </View>
-              </View>
-            )}
-          </>
+        {/* Instructions */}
+        {!isTracking && (
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+              textAlign: "center",
+              marginTop: tokens.spacing.md,
+            }}
+          >
+            Tap to start tracking your run
+          </Text>
         )}
       </View>
     </View>
   );
 }
-

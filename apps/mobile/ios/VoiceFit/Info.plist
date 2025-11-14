@@ -44,10 +44,20 @@
       <key>NSAllowsLocalNetworking</key>
       <true/>
     </dict>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <string>Allow Voice Fit to access your location to track your runs and outdoor workouts.</string>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <string>Allow Voice Fit to access your location in the background to track your runs.</string>
+    <key>NSLocationWhenInUseUsageDescription</key>
+    <string>Allow Voice Fit to access your location while using the app to track your runs.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow Voice Fit to use your microphone for voice logging.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Allow Voice Fit to recognize your speech for workout logging.</string>
+    <key>UIBackgroundModes</key>
+    <array>
+      <string>location</string>
+    </array>
     <key>UILaunchStoryboardName</key>
     <string>SplashScreen</string>
     <key>UIRequiredDeviceCapabilities</key>
