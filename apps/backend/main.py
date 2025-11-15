@@ -58,6 +58,8 @@ from models import (
     DeloadRecommendationResponse,
     EndSessionResponse,
     ErrorResponse,
+    ExerciseSwapRequest,
+    ExerciseSwapResponse,
     FatigueAnalyticsResponse,
     HealthCheckResponse,
     OnboardingConversationalRequest,
@@ -396,7 +398,7 @@ async def end_session(
 
 
 # ============================================================================
-# CHAT CLASSIFICATION ENDPOINT (UI Redesign)
+# CHAT ENDPOINTS (UI Redesign)
 # ============================================================================
 
 
@@ -535,6 +537,123 @@ async def generate_conversational_response(
         raise HTTPException(
             status_code=500,
             detail=f"Failed to generate conversational response: {str(e)}",
+        )
+
+
+@app.post("/api/chat/swap-exercise", response_model=ExerciseSwapResponse)
+async def swap_exercise_via_chat(
+    request: ExerciseSwapRequest,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Handle exercise swap request from chat interface.
+
+    Returns top 3-5 exercise substitutes formatted for interactive chat display.
+    Each substitute includes:
+    - Exercise name and similarity score
+    - Why it's recommended (scientific reasoning)
+    - Reduced stress areas (if applicable)
+    - Quick action data for one-tap selection
+
+    Args:
+        request: ExerciseSwapRequest with exercise_name and optional reason/injured_body_part
+        supabase: Supabase client (injected)
+        user: Authenticated user (injected)
+
+    Returns:
+        ExerciseSwapResponse with original_exercise, substitutes list, and swap instructions
+    """
+    try:
+        exercise_name = request.exercise_name
+        injured_body_part = request.injured_body_part
+        reason = request.reason
+        min_similarity = 0.70  # Higher threshold for chat recommendations
+        max_results = 3 if not request.show_more else 5
+
+        # Query exercise substitutions
+        query = (
+            supabase.table("exercise_substitutions")
+            .select("*")
+            .eq("exercise_name", exercise_name)
+            .gte("similarity_score", min_similarity)
+            .order("similarity_score", desc=True)
+        )
+
+        # If injured body part specified, filter by reduced stress
+        if injured_body_part:
+            query = query.eq("reduced_stress_area", injured_body_part)
+
+        result = query.limit(max_results).execute()
+
+        if not result.data:
+            # No substitutes found - return empty response
+            return ExerciseSwapResponse(
+                original_exercise=exercise_name,
+                substitutes=[],
+                total_found=0,
+                reason_for_swap=reason,
+                message=f"I couldn't find substitutes for {exercise_name}. Let me suggest some alternatives based on the movement pattern.",
+            )
+
+        # Format substitutes for chat display
+        substitutes = []
+        for row in result.data:
+            # Build "why recommended" text
+            why_recommended = f"{int(row['similarity_score'] * 100)}% similar"
+            if row.get("reduced_stress_area"):
+                why_recommended += f" • Reduces {row['reduced_stress_area']} stress"
+            if reason and "pain" in reason.lower():
+                why_recommended += " • Better for recovery"
+
+            # Build subtitle with key info
+            subtitle = row.get("movement_pattern", "")
+            if row.get("equipment_required"):
+                subtitle += f" • {row['equipment_required']}"
+
+            substitutes.append(
+                {
+                    "id": row["id"],
+                    "substitute_name": row["substitute_name"],
+                    "similarity_score": row["similarity_score"],
+                    "why_recommended": why_recommended,
+                    "subtitle": subtitle,
+                    "movement_pattern": row.get("movement_pattern", ""),
+                    "primary_muscles": row.get("primary_muscles", ""),
+                    "equipment_required": row.get("equipment_required", ""),
+                    "difficulty_level": row.get("difficulty_level", ""),
+                    "reduced_stress_area": row.get("reduced_stress_area", ""),
+                    "notes": row.get("notes", ""),
+                }
+            )
+
+        # Build contextual message
+        if injured_body_part:
+            message = f"Here are {len(substitutes)} alternatives that reduce stress on your {injured_body_part}:"
+        elif reason:
+            message = f"Here are {len(substitutes)} alternatives to {exercise_name}:"
+        else:
+            message = (
+                f"Here are {len(substitutes)} similar exercises to {exercise_name}:"
+            )
+
+        return ExerciseSwapResponse(
+            original_exercise=exercise_name,
+            substitutes=substitutes,
+            total_found=len(result.data),
+            reason_for_swap=reason,
+            injured_body_part=injured_body_part,
+            message=message,
+            show_more_available=(len(result.data) > 3 and not request.show_more),
+        )
+
+    except Exception as e:
+        print(f"Error handling exercise swap: {e}")
+        import traceback
+
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get exercise substitutes: {str(e)}"
         )
 
 

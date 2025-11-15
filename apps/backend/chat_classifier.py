@@ -10,11 +10,12 @@ Classifies user messages in the unified chat interface to determine intent:
 Uses Kimi K2 Thinking model for accurate classification.
 """
 
+import json
 import os
 import re
-import json
+from typing import Any, Dict, List, Optional, Tuple
+
 import requests
-from typing import Dict, Any, List, Optional, Tuple
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,7 +39,7 @@ def extract_json_from_response(content: str) -> dict:
         pass
 
     # Extract from markdown code block (```json ... ```)
-    json_match = re.search(r'```json\s*\n(.*?)\n```', content, re.DOTALL)
+    json_match = re.search(r"```json\s*\n(.*?)\n```", content, re.DOTALL)
     if json_match:
         try:
             return json.loads(json_match.group(1))
@@ -46,7 +47,7 @@ def extract_json_from_response(content: str) -> dict:
             pass
 
     # Try extracting any JSON object
-    json_match = re.search(r'\{.*\}', content, re.DOTALL)
+    json_match = re.search(r"\{.*\}", content, re.DOTALL)
     if json_match:
         try:
             return json.loads(json_match.group(0))
@@ -72,25 +73,25 @@ class ChatClassifier:
 
         if not self.xai_api_key:
             raise ValueError("XAI_API_KEY environment variable is required")
-    
+
     def classify(
         self,
         message: str,
         user_id: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
     ) -> Tuple[str, float, str, str]:
         """
         Classify a chat message to determine user intent.
-        
+
         Args:
             message: User's chat message
             user_id: User ID for context
             conversation_history: Recent conversation history
-        
+
         Returns:
             Tuple of (message_type, confidence, reasoning, suggested_action)
         """
-        
+
         # Build system message
         system_message = """You are a chat message classifier for VoiceFit, a voice-first fitness app.
 
@@ -99,48 +100,58 @@ Your job is to classify user messages into one of these categories:
 1. **workout_log**: User is logging a workout set
    - Examples: "185 for 8", "bench press 225 pounds 5 reps", "same weight for 10"
    - Indicators: Numbers (weight/reps), exercise names, workout-related terms
-   
-2. **question**: User is asking the AI Coach a question
+
+2. **exercise_swap**: User wants to swap/replace an exercise
+   - Examples: "Swap bench press", "Replace deadlift with something else", "Give me alternative to squat", "Can't do bench press", "What else can I do instead of overhead press"
+   - Indicators: swap, replace, substitute, alternative, instead of, can't do + exercise name
+
+3. **question**: User is asking the AI Coach a question
    - Examples: "How do I improve my bench press?", "What's a good program for beginners?"
-   - Indicators: Question words (how, what, why, when), seeking advice/information
-   
-3. **onboarding**: User is responding to onboarding questions
+   - Indicators: Question words (how, what, why, when), seeking advice/information (NOT about swapping)
+
+4. **onboarding**: User is responding to onboarding questions
    - Examples: "I want to build muscle", "I have dumbbells and a barbell", "3-4 times per week"
    - Indicators: Answering questions about goals, equipment, schedule, experience
-   
-4. **general**: General conversation or unclear intent
+
+5. **general**: General conversation or unclear intent
    - Examples: "Thanks!", "Sounds good", "Let's do it"
    - Indicators: Acknowledgments, greetings, unclear messages
 
 Respond with a JSON object:
 {
-  "message_type": "workout_log" | "question" | "onboarding" | "general",
+  "message_type": "workout_log" | "exercise_swap" | "question" | "onboarding" | "general",
   "confidence": 0.0-1.0,
   "reasoning": "Brief explanation of classification",
-  "suggested_action": "parse_with_llama" | "call_ai_coach" | "continue_onboarding" | "acknowledge"
+  "suggested_action": "parse_with_llama" | "show_exercise_swaps" | "call_ai_coach" | "continue_onboarding" | "acknowledge",
+  "extracted_data": {
+    "exercise_name": "extracted exercise name if exercise_swap, else null",
+    "reason": "optional reason for swap (injury, pain, equipment) if mentioned"
+  }
 }
 
-Be conservative with workout_log classification - only classify as workout_log if you're confident the user is logging a set."""
+Be conservative with workout_log classification - only classify as workout_log if you're confident the user is logging a set.
+For exercise_swap, extract the exercise name from the message."""
 
         # Build conversation context
         messages = [{"role": "system", "content": system_message}]
-        
+
         # Add conversation history if provided
         if conversation_history:
             for msg in conversation_history[-5:]:  # Last 5 messages for context
-                messages.append({
-                    "role": msg.get("role", "user"),
-                    "content": msg.get("content", "")
-                })
-        
+                messages.append(
+                    {"role": msg.get("role", "user"), "content": msg.get("content", "")}
+                )
+
         # Add current message
-        messages.append({"role": "user", "content": f"Classify this message: \"{message}\""})
+        messages.append(
+            {"role": "user", "content": f'Classify this message: "{message}"'}
+        )
 
         # Call Grok API
         url = f"{self.xai_base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.xai_api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         payload = {
@@ -148,7 +159,7 @@ Be conservative with workout_log classification - only classify as workout_log i
             "messages": messages,
             "temperature": 0.3,  # Lower temperature for more consistent classification
             "max_tokens": 200,  # Lower limit for Grok (no reasoning content in response)
-            "response_format": {"type": "json_object"}  # Force JSON response
+            "response_format": {"type": "json_object"},  # Force JSON response
         }
 
         try:
@@ -176,33 +187,86 @@ Be conservative with workout_log classification - only classify as workout_log i
     def _fallback_classify(self, message: str) -> Tuple[str, float, str, str]:
         """
         Fallback rule-based classification if Kimi API fails.
-        
+
         Args:
             message: User's chat message
-        
+
         Returns:
             Tuple of (message_type, confidence, reasoning, suggested_action)
         """
         message_lower = message.lower()
-        
+
+        # Check for exercise swap intent
+        swap_keywords = [
+            "swap",
+            "replace",
+            "substitute",
+            "alternative",
+            "instead of",
+            "can't do",
+            "cant do",
+            "change",
+        ]
+        has_swap_keyword = any(keyword in message_lower for keyword in swap_keywords)
+
+        if has_swap_keyword:
+            return (
+                "exercise_swap",
+                0.7,
+                "Contains exercise swap keywords",
+                "show_exercise_swaps",
+            )
+
         # Check for workout logging patterns
         workout_keywords = ["reps", "pounds", "lbs", "kg", "kilos", "for", "x", "sets"]
         has_numbers = any(char.isdigit() for char in message)
-        has_workout_keyword = any(keyword in message_lower for keyword in workout_keywords)
-        
+        has_workout_keyword = any(
+            keyword in message_lower for keyword in workout_keywords
+        )
+
         if has_numbers and has_workout_keyword:
-            return "workout_log", 0.7, "Contains numbers and workout keywords", "parse_with_llama"
-        
+            return (
+                "workout_log",
+                0.7,
+                "Contains numbers and workout keywords",
+                "parse_with_llama",
+            )
+
         # Check for questions
-        question_words = ["how", "what", "why", "when", "where", "should", "can", "is", "are", "?"]
+        question_words = [
+            "how",
+            "what",
+            "why",
+            "when",
+            "where",
+            "should",
+            "can",
+            "is",
+            "are",
+            "?",
+        ]
         if any(word in message_lower for word in question_words):
             return "question", 0.6, "Contains question words", "call_ai_coach"
-        
+
         # Check for onboarding responses
-        onboarding_keywords = ["goal", "muscle", "strength", "lose weight", "equipment", "dumbbells", "barbell", "times per week"]
+        onboarding_keywords = [
+            "goal",
+            "muscle",
+            "strength",
+            "lose weight",
+            "equipment",
+            "dumbbells",
+            "barbell",
+            "times per week",
+        ]
         if any(keyword in message_lower for keyword in onboarding_keywords):
-            return "onboarding", 0.6, "Contains onboarding-related keywords", "continue_onboarding"
-        
+            return (
+                "onboarding",
+                0.6,
+                "Contains onboarding-related keywords",
+                "continue_onboarding",
+            )
+
         # Default to general
         return "general", 0.5, "No clear classification pattern", "acknowledge"
 
@@ -210,21 +274,25 @@ Be conservative with workout_log classification - only classify as workout_log i
 # Example usage
 if __name__ == "__main__":
     classifier = ChatClassifier()
-    
+
     # Test cases
     test_messages = [
         "185 for 8",
+        "Swap bench press",
+        "Replace deadlift with something else",
         "How do I improve my bench press?",
         "I want to build muscle and lose fat",
         "Thanks!",
         "bench press 225 pounds 5 reps",
         "What's a good program for beginners?",
+        "Can't do squats, give me alternative",
     ]
-    
+
     for msg in test_messages:
-        message_type, confidence, reasoning, action = classifier.classify(msg, "test_user")
+        message_type, confidence, reasoning, action = classifier.classify(
+            msg, "test_user"
+        )
         print(f"\nMessage: {msg}")
         print(f"Type: {message_type} (confidence: {confidence:.2f})")
         print(f"Reasoning: {reasoning}")
         print(f"Action: {action}")
-
