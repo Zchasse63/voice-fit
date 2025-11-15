@@ -26,7 +26,9 @@ from ai_coach_service import AICoachService
 from badge_service import BadgeService
 from chat_classifier import ChatClassifier
 from deload_recommendation_service import DeloadRecommendationService
+from exercise_swap_service import ExerciseSwapService, get_exercise_swap_service
 from fatigue_monitoring_service import FatigueMonitoringService
+from feature_flags import get_feature_flags
 from gap_calculator import GAPCalculator
 from injury_detection_rag_service import get_injury_detection_service
 from injury_models import (
@@ -652,6 +654,84 @@ async def swap_exercise_via_chat(
         import traceback
 
         traceback.print_exc()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get exercise substitutes: {str(e)}"
+        )
+
+
+@app.post("/api/chat/swap-exercise-enhanced", response_model=ExerciseSwapResponse)
+async def swap_exercise_enhanced(
+    request: ExerciseSwapRequest,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Context-aware exercise swap with RAG fuzzy matching + AI re-ranking.
+
+    This enhanced endpoint leverages:
+    1. User context (equipment, program, injuries, session)
+    2. RAG fuzzy matching (handles typos, synonyms)
+    3. Database filtering (equipment, injury, difficulty)
+    4. AI re-ranking (Grok 4 for personalization - premium feature)
+
+    Feature flag controlled for gradual rollout.
+
+    Args:
+        request: ExerciseSwapRequest with exercise_name and optional filters
+        supabase: Supabase client (injected)
+        user: Authenticated user (injected)
+
+    Returns:
+        ExerciseSwapResponse with personalized substitutes and context metadata
+    """
+    try:
+        user_id = user["id"]
+
+        # Check if enhanced swap is enabled for this user
+        feature_flags = get_feature_flags(supabase)
+
+        # Get user context for premium check
+        user_context = {"subscription_tier": user.get("subscription_tier", "free")}
+
+        if not feature_flags.is_enabled(
+            "enhanced_exercise_swap", user_id, user_context
+        ):
+            # Feature not enabled - route to legacy endpoint
+            return await swap_exercise_via_chat(request, supabase, user)
+
+        # Check if AI re-ranking is enabled
+        ai_enabled = feature_flags.is_enabled("ai_reranking", user_id, user_context)
+
+        # Get exercise swap service
+        swap_service = get_exercise_swap_service(supabase)
+
+        # Get context-aware substitutes
+        result = await swap_service.get_context_aware_substitutes(
+            user_id=user_id,
+            exercise_name=request.exercise_name,
+            injured_body_part=request.injured_body_part,
+            reason=request.reason,
+            include_ai_ranking=ai_enabled,  # Enable AI re-ranking if flag is on
+        )
+
+        if not result["success"]:
+            raise HTTPException(status_code=500, detail="Failed to get substitutes")
+
+        # Format response
+        return ExerciseSwapResponse(
+            original_exercise=result["original_exercise"],
+            substitutes=result["substitutes"],
+            total_found=result["total_found"],
+            reason_for_swap=request.reason,
+            injured_body_part=request.injured_body_part,
+            message=result["message"],
+            show_more_available=result["total_found"] > 3 and not request.show_more,
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error in enhanced exercise swap: {e}", exc_info=True)
         raise HTTPException(
             status_code=500, detail=f"Failed to get exercise substitutes: {str(e)}"
         )
