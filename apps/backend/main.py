@@ -2,82 +2,87 @@
 FastAPI application for Voice Fit voice parsing API
 """
 
+import json
 import os
 import sys
-from typing import Optional, List, Dict, Any
-from fastapi import FastAPI, HTTPException, Depends, Header, Request
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
-import jwt  # PHASE 7 TASK 7.4: JWT authentication
-from supabase import create_client, Client
-from openai import OpenAI  # Phase 3: AI injury analysis
-import json
 from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional
+
+import jwt  # PHASE 7 TASK 7.4: JWT authentication
+from dotenv import load_dotenv
+from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from openai import (
+    OpenAI,  # Phase 3: AI injury analysis (DEPRECATED - now using Grok + RAG)
+)
+
+from supabase import Client, create_client
 
 # Add parent directory to path to import our modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from integrated_voice_parser import IntegratedVoiceParser
-from models import (
-    VoiceParseRequest,
-    VoiceParseResponse,
-    SessionSummaryResponse,
-    EndSessionResponse,
-    HealthCheckResponse,
-    ErrorResponse,
-    CoachQuestionRequest,
-    CoachQuestionResponse,
-    ProgramGenerationRequest,
-    ProgramGenerationResponse,
-    RunningParseRequest,
-    RunningParseResponse,
-    RunningAnalyzeRequest,
-    RunningAnalyzeResponse,
-    WorkoutInsightsRequest,
-    WorkoutInsightsResponse,
-    VolumeAnalyticsResponse,
-    FatigueAnalyticsResponse,
-    DeloadRecommendationResponse,
-    AdherenceCheckInRequest,
-    AdherenceCheckInResponse,
-    AdherenceReportResponse,
-    ChatClassifyRequest,
-    ChatClassifyResponse,
-    OnboardingExtractRequest,
-    OnboardingExtractResponse,
-    OnboardingConversationalRequest,
-    OnboardingConversationalResponse,
-    BadgeUnlockRequest,
-    BadgeUnlockResponse
-)
+from ai_coach_service import AICoachService
+from badge_service import BadgeService
+from chat_classifier import ChatClassifier
+from deload_recommendation_service import DeloadRecommendationService
+from fatigue_monitoring_service import FatigueMonitoringService
+from gap_calculator import GAPCalculator
+from injury_detection_rag_service import get_injury_detection_service
 from injury_models import (
-    InjuryAnalyzeRequest,
-    InjuryAnalyzeResponse,
-    InjuryLogRequest,
-    InjuryLogResponse,
     ActiveInjuryResponse,
-    InjuryCheckInRequest,
-    RecoveryCheckInResponse,
-    ExerciseSubstitutionRequest,
+    ExerciseExplanationResponse,
     ExerciseSubstitution,
+    ExerciseSubstitutionRequest,
     ExerciseSubstitutionResponse,
     ExplanationContext,
     ExplanationSections,
-    ExerciseExplanationResponse
+    InjuryAnalyzeRequest,
+    InjuryAnalyzeResponse,
+    InjuryCheckInRequest,
+    InjuryLogRequest,
+    InjuryLogResponse,
+    RecoveryCheckInResponse,
 )
-from badge_service import BadgeService
-from ai_coach_service import AICoachService
+from integrated_voice_parser import IntegratedVoiceParser
+from models import (
+    AdherenceCheckInRequest,
+    AdherenceCheckInResponse,
+    AdherenceReportResponse,
+    BadgeUnlockRequest,
+    BadgeUnlockResponse,
+    ChatClassifyRequest,
+    ChatClassifyResponse,
+    CoachQuestionRequest,
+    CoachQuestionResponse,
+    DeloadRecommendationResponse,
+    EndSessionResponse,
+    ErrorResponse,
+    FatigueAnalyticsResponse,
+    HealthCheckResponse,
+    OnboardingConversationalRequest,
+    OnboardingConversationalResponse,
+    OnboardingExtractRequest,
+    OnboardingExtractResponse,
+    ProgramGenerationRequest,
+    ProgramGenerationResponse,
+    RunningAnalyzeRequest,
+    RunningAnalyzeResponse,
+    RunningParseRequest,
+    RunningParseResponse,
+    SessionSummaryResponse,
+    VoiceParseRequest,
+    VoiceParseResponse,
+    VolumeAnalyticsResponse,
+    WorkoutInsightsRequest,
+    WorkoutInsightsResponse,
+)
+from onboarding_service import OnboardingService
+from program_adherence_monitor import ProgramAdherenceMonitor
 from program_generation_service import ProgramGenerationService
 from user_context_builder import UserContextBuilder
-from weather_service import WeatherService
-from gap_calculator import GAPCalculator
 from volume_tracking_service import VolumeTrackingService
-from fatigue_monitoring_service import FatigueMonitoringService
-from deload_recommendation_service import DeloadRecommendationService
-from program_adherence_monitor import ProgramAdherenceMonitor
-from chat_classifier import ChatClassifier
-from onboarding_service import OnboardingService
+from weather_service import WeatherService
 
 # Load environment variables
 load_dotenv()
@@ -88,14 +93,16 @@ app = FastAPI(
     description="API for parsing voice commands into structured workout data using fine-tuned GPT-4o-mini",
     version="2.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # PHASE 7 TASK 7.5: CORS middleware - configured for production
 # For development, allow localhost. For production, allow all origins for mobile app.
 # Mobile apps don't send Origin headers, so we need to allow all origins.
 ALLOWED_ORIGINS_STR = os.getenv("ALLOWED_ORIGINS", "*")
-ALLOWED_ORIGINS = ALLOWED_ORIGINS_STR.split(",") if ALLOWED_ORIGINS_STR != "*" else ["*"]
+ALLOWED_ORIGINS = (
+    ALLOWED_ORIGINS_STR.split(",") if ALLOWED_ORIGINS_STR != "*" else ["*"]
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -126,8 +133,7 @@ def get_supabase_client() -> Client:
 
         if not supabase_url or not supabase_key:
             raise HTTPException(
-                status_code=500,
-                detail="Supabase configuration missing"
+                status_code=500, detail="Supabase configuration missing"
             )
 
         supabase_client = create_client(supabase_url, supabase_key)
@@ -256,7 +262,7 @@ async def verify_token(authorization: str = Header(None)) -> dict:
     if not authorization:
         raise HTTPException(
             status_code=401,
-            detail="Missing authorization header. Include 'Authorization: Bearer <token>'"
+            detail="Missing authorization header. Include 'Authorization: Bearer <token>'",
         )
 
     try:
@@ -265,10 +271,7 @@ async def verify_token(authorization: str = Header(None)) -> dict:
 
         # Decode and verify JWT
         payload = jwt.decode(
-            token,
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated"
+            token, SUPABASE_JWT_SECRET, algorithms=["HS256"], audience="authenticated"
         )
 
         return payload
@@ -283,14 +286,14 @@ async def verify_token(authorization: str = Header(None)) -> dict:
 async def startup_event():
     """Initialize services on startup"""
     print("🚀 Starting Voice Fit API...")
-    
+
     # Initialize Supabase client
     try:
         get_supabase_client()
         print("✅ Supabase connected")
     except Exception as e:
         print(f"⚠️  Supabase connection failed: {e}")
-    
+
     # Initialize voice parser
     try:
         get_voice_parser()
@@ -298,7 +301,7 @@ async def startup_event():
         print(f"✅ Model: {os.getenv('VOICE_MODEL_ID')}")
     except Exception as e:
         print(f"⚠️  Voice parser initialization failed: {e}")
-    
+
     print("✅ Voice Fit API ready!")
 
 
@@ -311,22 +314,22 @@ async def root():
 @app.get("/health", response_model=HealthCheckResponse)
 async def health_check():
     """Health check endpoint"""
-    
+
     # Check Supabase connection
     supabase_connected = False
     try:
         supabase = get_supabase_client()
         # Try a simple query
-        supabase.table('exercises').select('id').limit(1).execute()
+        supabase.table("exercises").select("id").limit(1).execute()
         supabase_connected = True
     except Exception as e:
         print(f"Supabase health check failed: {e}")
-    
+
     return HealthCheckResponse(
         status="healthy" if supabase_connected else "degraded",
         version="2.0.0",
         model_id=os.getenv("VOICE_MODEL_ID", "not_configured"),
-        supabase_connected=supabase_connected
+        supabase_connected=supabase_connected,
     )
 
 
@@ -334,7 +337,7 @@ async def health_check():
 async def parse_voice_command(
     request: VoiceParseRequest,
     parser: IntegratedVoiceParser = Depends(get_voice_parser),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Parse a voice command into structured workout data.
@@ -345,7 +348,7 @@ async def parse_voice_command(
         result = parser.parse_and_log_set(
             transcript=request.transcript,
             user_id=request.user_id,
-            auto_save=request.auto_save
+            auto_save=request.auto_save,
         )
 
         return VoiceParseResponse(**result)
@@ -353,15 +356,13 @@ async def parse_voice_command(
     except Exception as e:
         print(f"Error parsing voice command: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to parse voice command: {str(e)}"
+            status_code=500, detail=f"Failed to parse voice command: {str(e)}"
         )
 
 
 @app.get("/api/session/{user_id}/summary", response_model=SessionSummaryResponse)
 async def get_session_summary(
-    user_id: str,
-    parser: IntegratedVoiceParser = Depends(get_voice_parser)
+    user_id: str, parser: IntegratedVoiceParser = Depends(get_voice_parser)
 ):
     """Get current session summary for a user."""
     try:
@@ -370,25 +371,20 @@ async def get_session_summary(
     except Exception as e:
         print(f"Error getting session summary: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get session summary: {str(e)}"
+            status_code=500, detail=f"Failed to get session summary: {str(e)}"
         )
 
 
 @app.post("/api/session/{user_id}/end", response_model=EndSessionResponse)
 async def end_session(
-    user_id: str,
-    parser: IntegratedVoiceParser = Depends(get_voice_parser)
+    user_id: str, parser: IntegratedVoiceParser = Depends(get_voice_parser)
 ):
     """End the current workout session for a user."""
     try:
         final_summary = parser.end_session(user_id)
 
-        if 'error' in final_summary:
-            raise HTTPException(
-                status_code=404,
-                detail=final_summary['error']
-            )
+        if "error" in final_summary:
+            raise HTTPException(status_code=404, detail=final_summary["error"])
 
         return EndSessionResponse(**final_summary)
 
@@ -396,21 +392,19 @@ async def end_session(
         raise
     except Exception as e:
         print(f"Error ending session: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to end session: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to end session: {str(e)}")
 
 
 # ============================================================================
 # CHAT CLASSIFICATION ENDPOINT (UI Redesign)
 # ============================================================================
 
+
 @app.post("/api/chat/classify", response_model=ChatClassifyResponse)
 async def classify_chat_message(
     request: ChatClassifyRequest,
     classifier: ChatClassifier = Depends(get_chat_classifier),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Classify a chat message to determine user intent.
@@ -435,21 +429,20 @@ async def classify_chat_message(
         message_type, confidence, reasoning, suggested_action = classifier.classify(
             message=request.message,
             user_id=request.user_id,
-            conversation_history=request.conversation_history
+            conversation_history=request.conversation_history,
         )
 
         return ChatClassifyResponse(
             message_type=message_type,
             confidence=confidence,
             reasoning=reasoning,
-            suggested_action=suggested_action
+            suggested_action=suggested_action,
         )
 
     except Exception as e:
         print(f"Error classifying chat message: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to classify message: {str(e)}"
+            status_code=500, detail=f"Failed to classify message: {str(e)}"
         )
 
 
@@ -457,11 +450,12 @@ async def classify_chat_message(
 # ONBOARDING ENDPOINT (UI Redesign)
 # ============================================================================
 
+
 @app.post("/api/onboarding/extract", response_model=OnboardingExtractResponse)
 async def extract_onboarding_data(
     request: OnboardingExtractRequest,
     onboarding_service: OnboardingService = Depends(get_onboarding_service),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Extract structured onboarding data from conversational chat.
@@ -486,7 +480,7 @@ async def extract_onboarding_data(
         extracted_data = onboarding_service.extract_onboarding_data(
             message=request.message,
             current_step=request.current_step,
-            conversation_history=request.conversation_history
+            conversation_history=request.conversation_history,
         )
 
         return OnboardingExtractResponse(**extracted_data)
@@ -494,16 +488,17 @@ async def extract_onboarding_data(
     except Exception as e:
         print(f"Error extracting onboarding data: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to extract onboarding data: {str(e)}"
+            status_code=500, detail=f"Failed to extract onboarding data: {str(e)}"
         )
 
 
-@app.post("/api/onboarding/conversational", response_model=OnboardingConversationalResponse)
+@app.post(
+    "/api/onboarding/conversational", response_model=OnboardingConversationalResponse
+)
 async def generate_conversational_response(
     request: OnboardingConversationalRequest,
     onboarding_service: OnboardingService = Depends(get_onboarding_service),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Generate personalized, conversational onboarding responses.
@@ -530,7 +525,7 @@ async def generate_conversational_response(
         message = onboarding_service.generate_conversational_response(
             current_step=request.current_step,
             user_context=request.user_context,
-            previous_answer=request.previous_answer
+            previous_answer=request.previous_answer,
         )
 
         return OnboardingConversationalResponse(message=message)
@@ -539,7 +534,7 @@ async def generate_conversational_response(
         print(f"Error generating conversational response: {e}")
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to generate conversational response: {str(e)}"
+            detail=f"Failed to generate conversational response: {str(e)}",
         )
 
 
@@ -547,12 +542,13 @@ async def generate_conversational_response(
 # AI COACH ENDPOINT
 # ============================================================================
 
+
 @app.post("/api/coach/ask", response_model=CoachQuestionResponse)
 async def coach_ask(
     request: CoachQuestionRequest,
     coach_service: AICoachService = Depends(get_ai_coach_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     AI Coach Q&A endpoint with RAG (Retrieval-Augmented Generation) and full user context.
@@ -578,21 +574,20 @@ async def coach_ask(
         result = coach_service.ask(
             question=request.question,
             conversation_history=request.conversation_history,
-            user_context=user_context
+            user_context=user_context,
         )
 
         return CoachQuestionResponse(
             answer=result["answer"],
             confidence=result["confidence"],
             sources=result["sources"],
-            latency_ms=result["latency_ms"]
+            latency_ms=result["latency_ms"],
         )
 
     except Exception as e:
         print(f"Error in AI Coach: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get AI Coach response: {str(e)}"
+            status_code=500, detail=f"Failed to get AI Coach response: {str(e)}"
         )
 
 
@@ -600,12 +595,13 @@ async def coach_ask(
 # PROGRAM GENERATION ENDPOINTS - Strength & Running
 # ============================================================================
 
+
 @app.post("/api/program/generate/strength", response_model=ProgramGenerationResponse)
 async def generate_strength_program(
     request: ProgramGenerationRequest,
     program_service: ProgramGenerationService = Depends(get_program_generation_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     AI-powered custom STRENGTH program generation with RAG and full user context.
@@ -629,9 +625,11 @@ async def generate_strength_program(
 
     try:
         # Extract user_id from questionnaire
-        user_id = request.questionnaire.get('user_id')
+        user_id = request.questionnaire.get("user_id")
         if not user_id:
-            raise HTTPException(status_code=400, detail="user_id is required in questionnaire")
+            raise HTTPException(
+                status_code=400, detail="user_id is required in questionnaire"
+            )
 
         # Build comprehensive user context
         user_context = await context_builder.build_context(user_id)
@@ -643,14 +641,13 @@ async def generate_strength_program(
             program=result["program"],
             cost=result["cost"],
             stats=result["stats"],
-            generation_time_seconds=result["generation_time_seconds"]
+            generation_time_seconds=result["generation_time_seconds"],
         )
 
     except Exception as e:
         print(f"Error generating strength program: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate strength program: {str(e)}"
+            status_code=500, detail=f"Failed to generate strength program: {str(e)}"
         )
 
 
@@ -659,7 +656,7 @@ async def generate_running_program(
     request: ProgramGenerationRequest,
     program_service: ProgramGenerationService = Depends(get_program_generation_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     AI-powered custom RUNNING program generation with RAG and full user context.
@@ -683,17 +680,21 @@ async def generate_running_program(
 
     try:
         # Extract user_id from questionnaire
-        user_id = request.questionnaire.get('user_id')
+        user_id = request.questionnaire.get("user_id")
         if not user_id:
-            raise HTTPException(status_code=400, detail="user_id is required in questionnaire")
+            raise HTTPException(
+                status_code=400, detail="user_id is required in questionnaire"
+            )
 
         # Build comprehensive user context
         user_context = await context_builder.build_context(user_id)
 
         # Modify questionnaire to indicate running program
         running_questionnaire = request.questionnaire.copy()
-        running_questionnaire['program_type'] = 'running'
-        running_questionnaire['primary_goal'] = running_questionnaire.get('primary_goal', 'endurance')
+        running_questionnaire["program_type"] = "running"
+        running_questionnaire["primary_goal"] = running_questionnaire.get(
+            "primary_goal", "endurance"
+        )
 
         # Generate running program with user context
         # Note: This uses the same service but with running-specific questionnaire
@@ -704,14 +705,13 @@ async def generate_running_program(
             program=result["program"],
             cost=result["cost"],
             stats=result["stats"],
-            generation_time_seconds=result["generation_time_seconds"]
+            generation_time_seconds=result["generation_time_seconds"],
         )
 
     except Exception as e:
         print(f"Error generating running program: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate running program: {str(e)}"
+            status_code=500, detail=f"Failed to generate running program: {str(e)}"
         )
 
 
@@ -721,25 +721,28 @@ async def generate_program_legacy(
     request: ProgramGenerationRequest,
     program_service: ProgramGenerationService = Depends(get_program_generation_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Legacy endpoint - redirects to strength program generation.
     Use /api/program/generate/strength or /api/program/generate/running instead.
     """
     # Default to strength program for backward compatibility
-    return await generate_strength_program(request, program_service, context_builder, user)
+    return await generate_strength_program(
+        request, program_service, context_builder, user
+    )
 
 
 # ============================================================================
 # RUNNING ENDPOINTS - Weather & GAP Integration
 # ============================================================================
 
+
 @app.post("/api/running/parse", response_model=RunningParseResponse)
 async def parse_running_workout(
     request: RunningParseRequest,
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Parse and log a running workout with weather and GAP calculation.
@@ -752,7 +755,11 @@ async def parse_running_workout(
     """
     try:
         # Calculate pace
-        distance_km = request.distance if request.distance_unit == "km" else request.distance * 1.60934
+        distance_km = (
+            request.distance
+            if request.distance_unit == "km"
+            else request.distance * 1.60934
+        )
         duration_minutes = request.duration_seconds / 60
         pace_min_per_km = duration_minutes / distance_km if distance_km > 0 else 0
 
@@ -764,7 +771,7 @@ async def parse_running_workout(
                 weather_data = weather_service.get_weather_for_run(
                     latitude=request.latitude,
                     longitude=request.longitude,
-                    timestamp=None  # Current time
+                    timestamp=None,  # Current time
                 )
             except Exception as e:
                 print(f"Weather fetch failed: {e}")
@@ -781,7 +788,7 @@ async def parse_running_workout(
                 elevation_gain=request.elevation_gain,
                 elevation_loss=request.elevation_loss,
                 distance=distance_km,
-                pace_unit="min_per_km"
+                pace_unit="min_per_km",
             )
             gap_value = gap_data["gap"]
             gap_formatted = GAPCalculator.format_pace(gap_value, "min_per_km")
@@ -790,11 +797,15 @@ async def parse_running_workout(
         run_data = {
             "user_id": request.user_id,
             "start_time": datetime.utcnow().isoformat(),
-            "end_time": (datetime.utcnow() + timedelta(seconds=request.duration_seconds)).isoformat(),
+            "end_time": (
+                datetime.utcnow() + timedelta(seconds=request.duration_seconds)
+            ).isoformat(),
             "distance": distance_km,
             "duration": request.duration_seconds,
             "pace": pace_min_per_km,
-            "avg_speed": (distance_km / (request.duration_seconds / 3600)) if request.duration_seconds > 0 else 0,
+            "avg_speed": (distance_km / (request.duration_seconds / 3600))
+            if request.duration_seconds > 0
+            else 0,
             "calories": int(distance_km * 100),  # Rough estimate
             "route": request.route,
             "weather_data": weather_data,
@@ -802,22 +813,24 @@ async def parse_running_workout(
             "elevation_loss": request.elevation_loss,
             "grade_adjusted_pace": gap_value,
             "notes": request.notes,
-            "created_at": datetime.utcnow().isoformat()
+            "created_at": datetime.utcnow().isoformat(),
         }
 
-        result = supabase.table('runs').insert(run_data).execute()
+        result = supabase.table("runs").insert(run_data).execute()
 
         if not result.data:
             raise HTTPException(status_code=500, detail="Failed to save run")
 
-        run_id = result.data[0]['id']
+        run_id = result.data[0]["id"]
 
         # Format pace
         pace_formatted = GAPCalculator.format_pace(pace_min_per_km, "min_per_km")
 
         # Build confirmation message
         distance_str = f"{request.distance} {request.distance_unit}"
-        duration_str = f"{request.duration_seconds // 60}:{request.duration_seconds % 60:02d}"
+        duration_str = (
+            f"{request.duration_seconds // 60}:{request.duration_seconds % 60:02d}"
+        )
 
         message = f"Run logged! {distance_str} in {duration_str} ({pace_formatted} pace"
 
@@ -840,7 +853,7 @@ async def parse_running_workout(
             gap_formatted=gap_formatted,
             weather_data=weather_data,
             elevation_data=gap_data,
-            message=message
+            message=message,
         )
 
     except HTTPException:
@@ -848,8 +861,7 @@ async def parse_running_workout(
     except Exception as e:
         print(f"Error parsing running workout: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to parse running workout: {str(e)}"
+            status_code=500, detail=f"Failed to parse running workout: {str(e)}"
         )
 
 
@@ -859,7 +871,7 @@ async def analyze_running_workout(
     supabase: Client = Depends(get_supabase_client),
     coach_service: AICoachService = Depends(get_ai_coach_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Analyze a completed run with weather/elevation adjustments.
@@ -872,11 +884,13 @@ async def analyze_running_workout(
     """
     try:
         # Fetch run from database
-        run_result = supabase.table('runs')\
-            .select('*')\
-            .eq('id', request.run_id)\
-            .single()\
+        run_result = (
+            supabase.table("runs")
+            .select("*")
+            .eq("id", request.run_id)
+            .single()
             .execute()
+        )
 
         if not run_result.data:
             raise HTTPException(status_code=404, detail="Run not found")
@@ -890,7 +904,7 @@ async def analyze_running_workout(
             "pace": run_data.get("pace", 0),
             "gap": run_data.get("grade_adjusted_pace"),
             "elevation_gain": run_data.get("elevation_gain", 0),
-            "elevation_loss": run_data.get("elevation_loss", 0)
+            "elevation_loss": run_data.get("elevation_loss", 0),
         }
 
         # Analyze weather impact
@@ -904,7 +918,10 @@ async def analyze_running_workout(
         # Analyze elevation/GAP
         elevation_analysis = {}
 
-        if run_data.get("elevation_gain", 0) > 0 or run_data.get("elevation_loss", 0) > 0:
+        if (
+            run_data.get("elevation_gain", 0) > 0
+            or run_data.get("elevation_loss", 0) > 0
+        ):
             elevation_analysis = GAPCalculator.calculate_gap_from_run_data(run_data)
 
         # Get user context for AI insights
@@ -914,12 +931,12 @@ async def analyze_running_workout(
         prompt = f"""Analyze this running workout and provide performance insights:
 
 Run Data:
-- Distance: {run_summary['distance']:.2f} km
-- Duration: {run_summary['duration'] // 60}:{run_summary['duration'] % 60:02d}
-- Pace: {GAPCalculator.format_pace(run_summary['pace'], 'min_per_km')}
+- Distance: {run_summary["distance"]:.2f} km
+- Duration: {run_summary["duration"] // 60}:{run_summary["duration"] % 60:02d}
+- Pace: {GAPCalculator.format_pace(run_summary["pace"], "min_per_km")}
 """
 
-        if run_summary.get('gap'):
+        if run_summary.get("gap"):
             prompt += f"- Grade-Adjusted Pace: {GAPCalculator.format_pace(run_summary['gap'], 'min_per_km')}\n"
             prompt += f"- Elevation Gain: {run_summary['elevation_gain']:.0f}m\n"
             prompt += f"- Terrain: {elevation_analysis.get('difficulty', 'flat')}\n"
@@ -937,9 +954,7 @@ Run Data:
 
         # Get AI insights
         ai_result = coach_service.ask(
-            question=prompt,
-            conversation_history=None,
-            user_context=user_context
+            question=prompt, conversation_history=None, user_context=user_context
         )
 
         performance_insights = ai_result.get("answer", "Great run!")
@@ -950,31 +965,42 @@ Run Data:
         if weather_impact:
             recommendations.extend(weather_impact.get("recommendations", []))
 
-        if elevation_analysis.get("difficulty") in ["steep_uphill", "very_steep_uphill"]:
+        if elevation_analysis.get("difficulty") in [
+            "steep_uphill",
+            "very_steep_uphill",
+        ]:
             recommendations.append("Excellent hill work - builds strength and power")
 
         # Fetch recent runs for comparison
-        recent_runs_result = supabase.table('runs')\
-            .select('*')\
-            .eq('user_id', request.user_id)\
-            .neq('id', request.run_id)\
-            .order('created_at', desc=True)\
-            .limit(5)\
+        recent_runs_result = (
+            supabase.table("runs")
+            .select("*")
+            .eq("user_id", request.user_id)
+            .neq("id", request.run_id)
+            .order("created_at", desc=True)
+            .limit(5)
             .execute()
+        )
 
         comparison_to_recent_runs = None
 
         if recent_runs_result.data and len(recent_runs_result.data) > 0:
             recent_runs = recent_runs_result.data
-            avg_pace = sum(r.get('pace', 0) for r in recent_runs) / len(recent_runs)
-            avg_gap = sum(r.get('grade_adjusted_pace', 0) for r in recent_runs if r.get('grade_adjusted_pace')) / max(1, len([r for r in recent_runs if r.get('grade_adjusted_pace')]))
+            avg_pace = sum(r.get("pace", 0) for r in recent_runs) / len(recent_runs)
+            avg_gap = sum(
+                r.get("grade_adjusted_pace", 0)
+                for r in recent_runs
+                if r.get("grade_adjusted_pace")
+            ) / max(1, len([r for r in recent_runs if r.get("grade_adjusted_pace")]))
 
             comparison_to_recent_runs = {
                 "recent_runs_count": len(recent_runs),
                 "avg_pace_recent": avg_pace,
                 "avg_gap_recent": avg_gap,
-                "pace_vs_avg": run_summary['pace'] - avg_pace,
-                "gap_vs_avg": (run_summary.get('gap', 0) - avg_gap) if run_summary.get('gap') else None
+                "pace_vs_avg": run_summary["pace"] - avg_pace,
+                "gap_vs_avg": (run_summary.get("gap", 0) - avg_gap)
+                if run_summary.get("gap")
+                else None,
             }
 
         return RunningAnalyzeResponse(
@@ -983,22 +1009,20 @@ Run Data:
             elevation_analysis=elevation_analysis,
             performance_insights=performance_insights,
             recommendations=recommendations,
-            comparison_to_recent_runs=comparison_to_recent_runs
+            comparison_to_recent_runs=comparison_to_recent_runs,
         )
 
     except HTTPException:
         raise
     except Exception as e:
         print(f"Error analyzing run: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to analyze run: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to analyze run: {str(e)}")
 
 
 # ============================================================================
 # WORKOUT INSIGHTS ENDPOINT - Post-Workout Analysis
 # ============================================================================
+
 
 @app.post("/api/workout/insights", response_model=WorkoutInsightsResponse)
 async def get_workout_insights(
@@ -1006,7 +1030,7 @@ async def get_workout_insights(
     supabase: Client = Depends(get_supabase_client),
     coach_service: AICoachService = Depends(get_ai_coach_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Analyze a completed workout with AI-powered insights.
@@ -1021,11 +1045,13 @@ async def get_workout_insights(
     """
     try:
         # Fetch workout from database
-        workout_result = supabase.table('workouts')\
-            .select('*')\
-            .eq('id', request.workout_id)\
-            .single()\
+        workout_result = (
+            supabase.table("workouts")
+            .select("*")
+            .eq("id", request.workout_id)
+            .single()
             .execute()
+        )
 
         if not workout_result.data:
             raise HTTPException(status_code=404, detail="Workout not found")
@@ -1033,66 +1059,78 @@ async def get_workout_insights(
         workout_data = workout_result.data
 
         # Fetch workout exercises/sets
-        sets_result = supabase.table('workout_logs')\
-            .select('*, exercises(*)')\
-            .eq('workout_id', request.workout_id)\
+        sets_result = (
+            supabase.table("workout_logs")
+            .select("*, exercises(*)")
+            .eq("workout_id", request.workout_id)
             .execute()
+        )
 
         sets_data = sets_result.data if sets_result.data else []
 
         # Build workout summary
         total_sets = len(sets_data)
-        unique_exercises = len(set(s['exercise_id'] for s in sets_data if s.get('exercise_id')))
+        unique_exercises = len(
+            set(s["exercise_id"] for s in sets_data if s.get("exercise_id"))
+        )
 
         # Calculate duration
-        start_time = datetime.fromisoformat(workout_data['start_time'].replace('Z', '+00:00'))
-        end_time = datetime.fromisoformat(workout_data['end_time'].replace('Z', '+00:00'))
+        start_time = datetime.fromisoformat(
+            workout_data["start_time"].replace("Z", "+00:00")
+        )
+        end_time = datetime.fromisoformat(
+            workout_data["end_time"].replace("Z", "+00:00")
+        )
         duration_minutes = int((end_time - start_time).total_seconds() / 60)
 
         # Calculate average RPE
-        rpe_values = [s['rpe'] for s in sets_data if s.get('rpe')]
+        rpe_values = [s["rpe"] for s in sets_data if s.get("rpe")]
         avg_rpe = sum(rpe_values) / len(rpe_values) if rpe_values else 0
 
         workout_summary = {
             "total_sets": total_sets,
             "total_exercises": unique_exercises,
             "duration_minutes": duration_minutes,
-            "avg_rpe": round(avg_rpe, 1)
+            "avg_rpe": round(avg_rpe, 1),
         }
 
         # Volume analysis by muscle group
         volume_by_muscle = {}
         for set_data in sets_data:
-            exercise = set_data.get('exercises')
+            exercise = set_data.get("exercises")
             if not exercise:
                 continue
 
-            primary_muscle = exercise.get('primary_muscle_group', 'unknown')
+            primary_muscle = exercise.get("primary_muscle_group", "unknown")
 
             if primary_muscle not in volume_by_muscle:
                 volume_by_muscle[primary_muscle] = {"sets": 0, "total_reps": 0}
 
             volume_by_muscle[primary_muscle]["sets"] += 1
-            volume_by_muscle[primary_muscle]["total_reps"] += set_data.get('reps', 0)
+            volume_by_muscle[primary_muscle]["total_reps"] += set_data.get("reps", 0)
 
         # Intensity analysis
-        high_intensity_sets = len([s for s in sets_data if s.get('rpe', 0) >= 8])
-        working_sets = len([s for s in sets_data if s.get('rpe', 0) >= 6])
+        high_intensity_sets = len([s for s in sets_data if s.get("rpe", 0) >= 8])
+        working_sets = len([s for s in sets_data if s.get("rpe", 0) >= 6])
         warmup_sets = total_sets - working_sets
 
         intensity_analysis = {
             "avg_rpe": round(avg_rpe, 1),
             "high_intensity_sets": high_intensity_sets,
             "working_sets": working_sets,
-            "warmup_sets": warmup_sets
+            "warmup_sets": warmup_sets,
         }
 
         # Muscle group balance
-        push_muscles = ['chest', 'shoulders', 'triceps']
-        pull_muscles = ['back', 'biceps']
+        push_muscles = ["chest", "shoulders", "triceps"]
+        pull_muscles = ["back", "biceps"]
 
-        push_sets = sum(volume_by_muscle.get(m, {}).get('sets', 0) for m in push_muscles)
-        pull_sets = sum(volume_by_muscle.get(m, {}).get('sets', 0) for m in pull_muscles)
+        push_sets = sum(
+            volume_by_muscle.get(m, {}).get("sets", 0) for m in push_muscles
+        )
+        pull_sets = sum(
+            volume_by_muscle.get(m, {}).get("sets", 0) for m in pull_muscles
+        )
 
         push_pull_ratio = push_sets / pull_sets if pull_sets > 0 else 0
         balanced = 0.7 <= push_pull_ratio <= 1.3
@@ -1101,11 +1139,13 @@ async def get_workout_insights(
             "push_pull_ratio": round(push_pull_ratio, 2),
             "push_sets": push_sets,
             "pull_sets": pull_sets,
-            "balanced": balanced
+            "balanced": balanced,
         }
 
         # Fatigue indicators
-        high_rpe_percentage = (high_intensity_sets / total_sets * 100) if total_sets > 0 else 0
+        high_rpe_percentage = (
+            (high_intensity_sets / total_sets * 100) if total_sets > 0 else 0
+        )
 
         if high_rpe_percentage > 50:
             fatigue_level = "high"
@@ -1120,7 +1160,7 @@ async def get_workout_insights(
         fatigue_indicators = {
             "high_rpe_percentage": round(high_rpe_percentage, 0),
             "estimated_fatigue_level": fatigue_level,
-            "recovery_recommendation": recovery_rec
+            "recovery_recommendation": recovery_rec,
         }
 
         # Get user context for AI insights
@@ -1148,7 +1188,7 @@ Intensity Analysis:
 - Warmup Sets: {warmup_sets}
 
 Muscle Group Balance:
-- Push/Pull Ratio: {push_pull_ratio:.2f} ({'Balanced' if balanced else 'Imbalanced'})
+- Push/Pull Ratio: {push_pull_ratio:.2f} ({"Balanced" if balanced else "Imbalanced"})
 - Push Sets: {push_sets}
 - Pull Sets: {pull_sets}
 
@@ -1163,9 +1203,7 @@ Provide brief insights on:
 
         # Get AI insights
         ai_result = coach_service.ask(
-            question=prompt,
-            conversation_history=None,
-            user_context=user_context
+            question=prompt, conversation_history=None, user_context=user_context
         )
 
         performance_insights = ai_result.get("answer", "Great workout!")
@@ -1175,24 +1213,34 @@ Provide brief insights on:
 
         if not balanced:
             if push_pull_ratio > 1.3:
-                recommendations.append("Consider adding more pulling exercises to balance push/pull ratio")
+                recommendations.append(
+                    "Consider adding more pulling exercises to balance push/pull ratio"
+                )
             else:
-                recommendations.append("Consider adding more pushing exercises to balance push/pull ratio")
+                recommendations.append(
+                    "Consider adding more pushing exercises to balance push/pull ratio"
+                )
 
         if high_rpe_percentage > 50:
-            recommendations.append("High intensity session - ensure adequate recovery before next workout")
+            recommendations.append(
+                "High intensity session - ensure adequate recovery before next workout"
+            )
 
         if duration_minutes > 90:
-            recommendations.append("Long workout duration - consider splitting into two sessions for better recovery")
+            recommendations.append(
+                "Long workout duration - consider splitting into two sessions for better recovery"
+            )
 
         # Fetch recent workouts for comparison
-        recent_workouts_result = supabase.table('workouts')\
-            .select('id, start_time, end_time')\
-            .eq('user_id', request.user_id)\
-            .neq('id', request.workout_id)\
-            .order('start_time', desc=True)\
-            .limit(5)\
+        recent_workouts_result = (
+            supabase.table("workouts")
+            .select("id, start_time, end_time")
+            .eq("user_id", request.user_id)
+            .neq("id", request.workout_id)
+            .order("start_time", desc=True)
+            .limit(5)
             .execute()
+        )
 
         comparison_to_recent_workouts = None
 
@@ -1202,18 +1250,22 @@ Provide brief insights on:
             # Calculate average sets from recent workouts
             total_recent_sets = 0
             for rw in recent_workouts:
-                rw_sets = supabase.table('workout_logs')\
-                    .select('id', count='exact')\
-                    .eq('workout_id', rw['id'])\
+                rw_sets = (
+                    supabase.table("workout_logs")
+                    .select("id", count="exact")
+                    .eq("workout_id", rw["id"])
                     .execute()
+                )
                 total_recent_sets += rw_sets.count if rw_sets.count else 0
 
-            avg_recent_sets = total_recent_sets / len(recent_workouts) if recent_workouts else 0
+            avg_recent_sets = (
+                total_recent_sets / len(recent_workouts) if recent_workouts else 0
+            )
 
             comparison_to_recent_workouts = {
                 "recent_workouts_count": len(recent_workouts),
                 "avg_sets_recent": round(avg_recent_sets, 1),
-                "sets_vs_avg": total_sets - avg_recent_sets
+                "sets_vs_avg": total_sets - avg_recent_sets,
             }
 
         return WorkoutInsightsResponse(
@@ -1224,7 +1276,7 @@ Provide brief insights on:
             fatigue_indicators=fatigue_indicators,
             performance_insights=performance_insights,
             recommendations=recommendations,
-            comparison_to_recent_workouts=comparison_to_recent_workouts
+            comparison_to_recent_workouts=comparison_to_recent_workouts,
         )
 
     except HTTPException:
@@ -1232,8 +1284,7 @@ Provide brief insights on:
     except Exception as e:
         print(f"Error analyzing workout: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to analyze workout: {str(e)}"
+            status_code=500, detail=f"Failed to analyze workout: {str(e)}"
         )
 
 
@@ -1241,11 +1292,12 @@ Provide brief insights on:
 # ANALYTICS ENDPOINTS - Volume, Fatigue, Deload
 # ============================================================================
 
+
 @app.get("/api/analytics/volume/{user_id}", response_model=VolumeAnalyticsResponse)
 async def get_volume_analytics(
     user_id: str,
     volume_service: VolumeTrackingService = Depends(get_volume_tracking_service),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get volume analytics for a user.
@@ -1270,14 +1322,13 @@ async def get_volume_analytics(
         return VolumeAnalyticsResponse(
             weekly_volume=weekly_volume,
             monthly_volume=monthly_volume,
-            volume_trend=volume_trend
+            volume_trend=volume_trend,
         )
 
     except Exception as e:
         print(f"Error getting volume analytics: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get volume analytics: {str(e)}"
+            status_code=500, detail=f"Failed to get volume analytics: {str(e)}"
         )
 
 
@@ -1285,7 +1336,7 @@ async def get_volume_analytics(
 async def get_fatigue_analytics(
     user_id: str,
     fatigue_service: FatigueMonitoringService = Depends(get_fatigue_monitoring_service),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get fatigue analytics for a user.
@@ -1305,15 +1356,13 @@ async def get_fatigue_analytics(
         fatigue_history = fatigue_service.get_fatigue_history(user_id, weeks=4)
 
         return FatigueAnalyticsResponse(
-            current_fatigue=current_fatigue,
-            fatigue_history=fatigue_history
+            current_fatigue=current_fatigue, fatigue_history=fatigue_history
         )
 
     except Exception as e:
         print(f"Error getting fatigue analytics: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get fatigue analytics: {str(e)}"
+            status_code=500, detail=f"Failed to get fatigue analytics: {str(e)}"
         )
 
 
@@ -1321,8 +1370,10 @@ async def get_fatigue_analytics(
 async def get_deload_recommendation(
     user_id: str,
     program_id: Optional[str] = None,
-    deload_service: DeloadRecommendationService = Depends(get_deload_recommendation_service),
-    user: dict = Depends(verify_token)
+    deload_service: DeloadRecommendationService = Depends(
+        get_deload_recommendation_service
+    ),
+    user: dict = Depends(verify_token),
 ):
     """
     Get deload recommendation for a user.
@@ -1345,119 +1396,219 @@ async def get_deload_recommendation(
             confidence=recommendation["confidence"],
             requires_approval=recommendation["requires_approval"],
             indicators=recommendation.get("indicators", {}),
-            recommendation=recommendation.get("recommendation")
+            recommendation=recommendation.get("recommendation"),
         )
 
     except Exception as e:
         print(f"Error getting deload recommendation: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get deload recommendation: {str(e)}"
+            status_code=500, detail=f"Failed to get deload recommendation: {str(e)}"
         )
 
 
 # ============================================================================
-# PHASE 3: INJURY DETECTION & MANAGEMENT ENDPOINTS
+# INJURY LOGGING ENDPOINTS
 # ============================================================================
+
+
+@app.post("/api/injury/confidence-feedback")
+async def record_injury_confidence_feedback(
+    request: dict,
+    user: dict = Depends(verify_token),
+):
+    """
+    Record feedback on injury prediction accuracy for confidence calibration.
+
+    This endpoint allows users or the system to report whether an injury prediction
+    was accurate, helping to calibrate future confidence scores.
+
+    Request body:
+    {
+        "predicted_confidence": 0.85,
+        "was_accurate": true,
+        "injury_id": "optional-injury-id",
+        "notes": "optional feedback notes"
+    }
+    """
+    try:
+        from injury_detection_rag_service import record_confidence_feedback
+
+        predicted_confidence = request.get("predicted_confidence")
+        was_accurate = request.get("was_accurate")
+
+        if predicted_confidence is None or was_accurate is None:
+            raise HTTPException(
+                status_code=400,
+                detail="predicted_confidence and was_accurate are required",
+            )
+
+        # Record the feedback and get calibrated score
+        calibrated_confidence = record_confidence_feedback(
+            predicted_confidence=float(predicted_confidence),
+            was_accurate=bool(was_accurate),
+        )
+
+        return {
+            "success": True,
+            "message": "Confidence feedback recorded",
+            "calibrated_confidence": calibrated_confidence,
+            "feedback_recorded": {
+                "predicted": predicted_confidence,
+                "accurate": was_accurate,
+            },
+        }
+
+    except Exception as e:
+        print(f"Error recording confidence feedback: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to record confidence feedback: {str(e)}",
+        )
+
 
 @app.post("/api/injury/analyze", response_model=InjuryAnalyzeResponse)
 async def analyze_injury(
     request: InjuryAnalyzeRequest,
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
-    user: dict = Depends(verify_token)
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
 ):
     """
-    AI-powered injury analysis with full user context (Premium tier only).
+    AI-powered injury analysis with RAG (Premium tier only).
 
-    Uses OpenAI GPT-4o Mini to analyze user notes and detect potential injuries.
-    Returns structured injury assessment with personalized recommendations.
+    Uses Grok 4 Fast Reasoning + Upstash Search to analyze user notes and detect potential injuries.
+    RAG retrieves relevant research from injury knowledge base for evidence-based analysis.
+
+    Enhanced features:
+    - Injury history tracking for better context
+    - Training load data integration for overtraining detection
+    - Multi-injury detection (multiple injuries in one note)
+    - Sports-specific injury analysis
+    - Confidence calibration based on historical accuracy
+    - Follow-up question generation for ambiguous cases
 
     Premium feature - requires tier validation.
     """
 
     # Validate Premium tier
-    if request.user_tier.lower() != 'premium':
+    if request.user_tier.lower() != "premium":
         raise HTTPException(
             status_code=403,
-            detail="AI injury analysis is a Premium feature. Upgrade to access this functionality."
+            detail="AI injury analysis is a Premium feature. Upgrade to access this functionality.",
         )
 
     try:
         # Build comprehensive user context
-        user_context = await context_builder.build_context(request.user_id)
+        user_context_str = await context_builder.build_context(request.user_id)
 
-        # Initialize OpenAI client
-        openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        # Build user context dict for RAG service with recent exercises for sport detection
+        user_context_dict = {
+            "experience_level": request.training_context
+            if request.training_context
+            else "unknown",
+            "recent_exercises": request.recent_exercises
+            if request.recent_exercises
+            else [],
+            "recent_workouts": request.recent_exercises
+            if request.recent_exercises
+            else "N/A",
+            "previous_injuries": "Check user history",
+            "recovery_week": None,
+            "pain_level": None,
+        }
 
-        # Load AI prompt template from research
-        # For now, using inline prompt - in production, load from ai_prompts.md
-        system_message = f"""You are a sports medicine AI assistant specializing in strength training injury analysis. Your role is to analyze user-reported symptoms and classify potential injuries with high accuracy.
+        # Initialize RAG service with Supabase client for injury history and training load
+        injury_service = get_injury_detection_service(supabase)
 
-{user_context}
-
-CRITICAL RULES:
-1. Output ONLY valid JSON matching the exact schema provided
-2. Be conservative - when uncertain, indicate lower confidence
-3. Detect red flags requiring immediate medical attention
-4. Distinguish between normal training soreness (DOMS) and actual injury
-5. Never provide definitive diagnoses - only assessments and recommendations
-6. Consider the user's training history, recent workouts, and injury history when analyzing
-
-SCOPE LIMITATIONS:
-- You assess musculoskeletal training-related issues only
-- You do NOT diagnose medical conditions
-- You do NOT replace professional medical evaluation
-- You recommend medical consultation for serious concerns"""
-
-        user_message = f"""Analyze the following injury report from a strength training athlete and provide a structured assessment.
-
-USER INPUT:
-"{request.user_notes}"
-
-ADDITIONAL CONTEXT:
-- User tier: {request.user_tier}
-- Recent exercises: {request.recent_exercises or 'Not provided'}
-- Training history: {request.training_context or 'Not provided'}
-
-OUTPUT REQUIREMENTS:
-Return a JSON object with this exact structure:
-{{
-  "injury_detected": boolean,
-  "confidence": number (0.0-1.0),
-  "body_part": string or null,
-  "severity": "mild" | "moderate" | "severe" | null,
-  "injury_type": string or null,
-  "description": string,
-  "red_flags": string[],
-  "recommendations": string[],
-  "requires_medical_attention": boolean,
-  "differential_diagnoses": string[]
-}}
-
-Now analyze the user input and provide your assessment."""
-
-        # Call OpenAI API
-        response = openai_client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": user_message}
-            ],
-            temperature=0.4,
-            max_tokens=500,
-            response_format={"type": "json_object"}
+        # Analyze injury with RAG (Grok + Upstash) + enhanced features
+        # This now includes: injury history, training load, multi-injury detection,
+        # sport-specific namespaces, and follow-up questions
+        analysis_result, metadata = await injury_service.analyze_injury(
+            notes=request.user_notes,
+            user_id=request.user_id,
+            user_context=user_context_dict,
         )
 
-        # Parse response
-        analysis = json.loads(response.choices[0].message.content)
+        # Check if multiple injuries were detected
+        if metadata.get("multiple_injuries_detected", False):
+            # Handle multiple injuries - return first one with a note
+            injuries_list = analysis_result.get("injuries", [])
+            if injuries_list:
+                primary_injury = injuries_list[0]
+                analysis_json = {
+                    "injury_detected": primary_injury.get("injury_detected", False),
+                    "confidence": primary_injury.get("confidence", 0.0),
+                    "body_part": primary_injury.get("body_part"),
+                    "severity": primary_injury.get("severity"),
+                    "injury_type": primary_injury.get("injury_type"),
+                    "description": primary_injury.get("description", "")
+                    + f"\n\nNote: {len(injuries_list)} distinct injuries detected. Showing primary injury.",
+                    "red_flags": primary_injury.get("red_flags", []),
+                    "recommendations": primary_injury.get("recommendations", []),
+                    "requires_medical_attention": primary_injury.get(
+                        "should_see_doctor", False
+                    ),
+                    "differential_diagnoses": [],
+                    "follow_up_questions": primary_injury.get(
+                        "follow_up_questions", []
+                    ),
+                    "metadata": {
+                        **metadata,
+                        "all_injuries": injuries_list,
+                    },
+                }
+            else:
+                # Fallback if no injuries in list
+                analysis_json = {
+                    "injury_detected": False,
+                    "confidence": 0.0,
+                    "body_part": None,
+                    "severity": None,
+                    "injury_type": None,
+                    "description": "Error processing multiple injuries",
+                    "red_flags": [],
+                    "recommendations": [],
+                    "requires_medical_attention": False,
+                    "differential_diagnoses": [],
+                    "follow_up_questions": [],
+                    "metadata": metadata,
+                }
+        else:
+            # Single injury - standard response
+            analysis_json = {
+                "injury_detected": analysis_result.get("injury_detected", False),
+                "confidence": analysis_result.get("confidence", 0.0),
+                "body_part": analysis_result.get("body_part"),
+                "severity": analysis_result.get("severity"),
+                "injury_type": analysis_result.get("injury_type"),
+                "description": analysis_result.get("description", ""),
+                "red_flags": analysis_result.get("red_flags", []),
+                "recommendations": analysis_result.get("recommendations", []),
+                "requires_medical_attention": analysis_result.get(
+                    "should_see_doctor", False
+                ),
+                "differential_diagnoses": [],
+                "follow_up_questions": analysis_result.get("follow_up_questions", []),
+                "metadata": {
+                    **metadata,
+                    "related_to_previous_injury": analysis_result.get(
+                        "related_to_previous_injury", False
+                    ),
+                    "overtraining_indicator": analysis_result.get(
+                        "overtraining_indicator", False
+                    ),
+                },
+            }
 
-        return InjuryAnalyzeResponse(**analysis)
+        return InjuryAnalyzeResponse(**analysis_json)
 
     except Exception as e:
         print(f"Error analyzing injury: {e}")
+        import traceback
+
+        traceback.print_exc()
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to analyze injury: {str(e)}"
+            status_code=500, detail=f"Failed to analyze injury: {str(e)}"
         )
 
 
@@ -1465,7 +1616,7 @@ Now analyze the user input and provide your assessment."""
 async def log_injury(
     request: InjuryLogRequest,
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Create a new injury log in Supabase.
@@ -1485,10 +1636,10 @@ async def log_injury(
             "status": request.status or "active",
             "reported_at": now,
             "created_at": now,
-            "updated_at": now
+            "updated_at": now,
         }
 
-        result = supabase.table('injury_logs').insert(injury_data).execute()
+        result = supabase.table("injury_logs").insert(injury_data).execute()
 
         if not result.data:
             raise HTTPException(status_code=500, detail="Failed to create injury log")
@@ -1496,34 +1647,31 @@ async def log_injury(
         injury_log = result.data[0]
 
         return InjuryLogResponse(
-            id=injury_log['id'],
-            user_id=injury_log['user_id'],
-            body_part=injury_log['body_part'],
-            severity=injury_log['severity'],
-            description=injury_log.get('description'),
-            status=injury_log['status'],
-            reported_at=injury_log['reported_at'],
-            resolved_at=injury_log.get('resolved_at'),
-            last_check_in_at=injury_log.get('last_check_in_at'),
-            created_at=injury_log['created_at'],
-            updated_at=injury_log['updated_at']
+            id=injury_log["id"],
+            user_id=injury_log["user_id"],
+            body_part=injury_log["body_part"],
+            severity=injury_log["severity"],
+            description=injury_log.get("description"),
+            status=injury_log["status"],
+            reported_at=injury_log["reported_at"],
+            resolved_at=injury_log.get("resolved_at"),
+            last_check_in_at=injury_log.get("last_check_in_at"),
+            created_at=injury_log["created_at"],
+            updated_at=injury_log["updated_at"],
         )
 
     except HTTPException:
         raise
     except Exception as e:
         print(f"Error logging injury: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to log injury: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to log injury: {str(e)}")
 
 
 @app.get("/api/injury/active/{user_id}", response_model=ActiveInjuryResponse)
 async def get_active_injuries(
     user_id: str,
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get all active (unresolved) injuries for a user.
@@ -1534,61 +1682,64 @@ async def get_active_injuries(
 
     try:
         # Query active injuries from Supabase
-        result = supabase.table('injury_logs')\
-            .select('*')\
-            .eq('user_id', user_id)\
-            .in_('status', ['active', 'recovering'])\
-            .order('reported_at', desc=True)\
+        result = (
+            supabase.table("injury_logs")
+            .select("*")
+            .eq("user_id", user_id)
+            .in_("status", ["active", "recovering"])
+            .order("reported_at", desc=True)
             .execute()
+        )
 
         injuries = []
         needs_check_in = []
 
         for injury_data in result.data:
             injury = InjuryLogResponse(
-                id=injury_data['id'],
-                user_id=injury_data['user_id'],
-                body_part=injury_data['body_part'],
-                severity=injury_data['severity'],
-                description=injury_data.get('description'),
-                status=injury_data['status'],
-                reported_at=injury_data['reported_at'],
-                resolved_at=injury_data.get('resolved_at'),
-                last_check_in_at=injury_data.get('last_check_in_at'),
-                created_at=injury_data['created_at'],
-                updated_at=injury_data['updated_at']
+                id=injury_data["id"],
+                user_id=injury_data["user_id"],
+                body_part=injury_data["body_part"],
+                severity=injury_data["severity"],
+                description=injury_data.get("description"),
+                status=injury_data["status"],
+                reported_at=injury_data["reported_at"],
+                resolved_at=injury_data.get("resolved_at"),
+                last_check_in_at=injury_data.get("last_check_in_at"),
+                created_at=injury_data["created_at"],
+                updated_at=injury_data["updated_at"],
             )
             injuries.append(injury)
 
             # Check if needs weekly check-in (7+ days)
-            last_check_in = injury_data.get('last_check_in_at') or injury_data['reported_at']
+            last_check_in = (
+                injury_data.get("last_check_in_at") or injury_data["reported_at"]
+            )
             # Handle timestamps with varying microsecond precision
-            last_check_in_str = last_check_in.replace('Z', '+00:00')
+            last_check_in_str = last_check_in.replace("Z", "+00:00")
             # Pad microseconds to 6 digits if needed
-            if '+' in last_check_in_str and '.' in last_check_in_str:
-                parts = last_check_in_str.split('.')
-                microseconds = parts[1].split('+')[0]
+            if "+" in last_check_in_str and "." in last_check_in_str:
+                parts = last_check_in_str.split(".")
+                microseconds = parts[1].split("+")[0]
                 if len(microseconds) < 6:
-                    microseconds = microseconds.ljust(6, '0')
-                    last_check_in_str = f"{parts[0]}.{microseconds}+{parts[1].split('+')[1]}"
+                    microseconds = microseconds.ljust(6, "0")
+                    last_check_in_str = (
+                        f"{parts[0]}.{microseconds}+{parts[1].split('+')[1]}"
+                    )
             last_check_in_date = datetime.fromisoformat(last_check_in_str)
             now_aware = datetime.now(last_check_in_date.tzinfo)
             days_since_check_in = (now_aware - last_check_in_date).days
 
             if days_since_check_in >= 7:
-                needs_check_in.append(injury_data['id'])
+                needs_check_in.append(injury_data["id"])
 
         return ActiveInjuryResponse(
-            injuries=injuries,
-            count=len(injuries),
-            needs_check_in=needs_check_in
+            injuries=injuries, count=len(injuries), needs_check_in=needs_check_in
         )
 
     except Exception as e:
         print(f"Error getting active injuries: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get active injuries: {str(e)}"
+            status_code=500, detail=f"Failed to get active injuries: {str(e)}"
         )
 
 
@@ -1597,7 +1748,7 @@ async def injury_check_in(
     injury_id: str,
     request: InjuryCheckInRequest,
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Process a weekly recovery check-in for an injury.
@@ -1609,11 +1760,13 @@ async def injury_check_in(
     try:
         # Get injury from Supabase
         try:
-            injury_result = supabase.table('injury_logs')\
-                .select('*')\
-                .eq('id', injury_id)\
-                .single()\
+            injury_result = (
+                supabase.table("injury_logs")
+                .select("*")
+                .eq("id", injury_id)
+                .single()
                 .execute()
+            )
 
             if not injury_result.data:
                 raise HTTPException(status_code=404, detail="Injury not found")
@@ -1626,89 +1779,120 @@ async def injury_check_in(
             raise
 
         # Calculate days in recovery
-        reported_at = datetime.fromisoformat(injury_data['reported_at'].replace('Z', '+00:00'))
+        reported_at = datetime.fromisoformat(
+            injury_data["reported_at"].replace("Z", "+00:00")
+        )
         now_aware = datetime.now(reported_at.tzinfo)
         days_in_recovery = (now_aware - reported_at).days
 
         # Calculate progress score (simplified version of RecoveryCheckInService logic)
-        initial_pain = 9 if injury_data['severity'] == 'severe' else (7 if injury_data['severity'] == 'moderate' else 5)
+        initial_pain = (
+            9
+            if injury_data["severity"] == "severe"
+            else (7 if injury_data["severity"] == "moderate" else 5)
+        )
         pain_reduction = max(0, (initial_pain - request.pain_level) / initial_pain)
-        rom_improvement = 1.0 if request.rom_quality == 'better' else (0.5 if request.rom_quality == 'same' else 0.0)
-        activity_tolerance = 1.0 if request.activity_tolerance == 'improving' else (0.5 if request.activity_tolerance == 'plateau' else 0.0)
+        rom_improvement = (
+            1.0
+            if request.rom_quality == "better"
+            else (0.5 if request.rom_quality == "same" else 0.0)
+        )
+        activity_tolerance = (
+            1.0
+            if request.activity_tolerance == "improving"
+            else (0.5 if request.activity_tolerance == "plateau" else 0.0)
+        )
 
-        expected_recovery_days = 60 if injury_data['severity'] == 'severe' else (21 if injury_data['severity'] == 'moderate' else 7)
+        expected_recovery_days = (
+            60
+            if injury_data["severity"] == "severe"
+            else (21 if injury_data["severity"] == "moderate" else 7)
+        )
         time_progress = min(1.0, days_in_recovery / expected_recovery_days)
 
         progress_score = (
-            pain_reduction * 0.4 +
-            rom_improvement * 0.3 +
-            activity_tolerance * 0.2 +
-            time_progress * 0.1
+            pain_reduction * 0.4
+            + rom_improvement * 0.3
+            + activity_tolerance * 0.2
+            + time_progress * 0.1
         )
 
         # Determine recovery status
-        if request.pain_level <= 1 and request.rom_quality == 'better' and request.activity_tolerance == 'improving':
-            status = 'resolved'
-        elif request.rom_quality == 'worse' or request.activity_tolerance == 'declining':
-            status = 'worsening'
+        if (
+            request.pain_level <= 1
+            and request.rom_quality == "better"
+            and request.activity_tolerance == "improving"
+        ):
+            status = "resolved"
+        elif (
+            request.rom_quality == "worse" or request.activity_tolerance == "declining"
+        ):
+            status = "worsening"
         elif progress_score < 0.3 and days_in_recovery >= 14:
-            status = 'plateau'
+            status = "plateau"
         else:
-            status = 'improving'
+            status = "improving"
 
         # Check if medical attention required
         requires_medical_attention = (
-            request.pain_level >= 8 or
-            status == 'worsening' or
-            (status == 'plateau' and days_in_recovery >= 21) or
-            (injury_data['severity'] == 'severe' and days_in_recovery >= 14 and status != 'improving') or
-            (injury_data['severity'] == 'moderate' and days_in_recovery >= 28 and status != 'improving')
+            request.pain_level >= 8
+            or status == "worsening"
+            or (status == "plateau" and days_in_recovery >= 21)
+            or (
+                injury_data["severity"] == "severe"
+                and days_in_recovery >= 14
+                and status != "improving"
+            )
+            or (
+                injury_data["severity"] == "moderate"
+                and days_in_recovery >= 28
+                and status != "improving"
+            )
         )
 
         # Generate recommendation
         if requires_medical_attention:
             recommendation = "Your symptoms suggest you should consult a healthcare provider (physician, physical therapist, or sports medicine specialist) for proper evaluation."
-        elif status == 'resolved':
+        elif status == "resolved":
             recommendation = "Great progress! Your injury appears to be resolved. You can gradually return to full training. Monitor for any symptom recurrence."
-        elif status == 'improving':
+        elif status == "improving":
             recommendation = "You're making good progress! Continue your current recovery approach and gradually increase activity as tolerated."
-        elif status == 'plateau':
+        elif status == "plateau":
             recommendation = "Your recovery has plateaued. Consider consulting a physical therapist for guidance on progression strategies."
         else:
             recommendation = "Your symptoms are worsening. Reduce activity level and consult a healthcare provider if symptoms don't improve within 48 hours."
 
         # Update injury in Supabase
         now = datetime.utcnow().isoformat()
-        update_data = {
-            "last_check_in_at": now,
-            "updated_at": now
-        }
+        update_data = {"last_check_in_at": now, "updated_at": now}
 
-        if status == 'resolved':
+        if status == "resolved":
             update_data["status"] = "resolved"
             update_data["resolved_at"] = now
-        elif status == 'improving':
+        elif status == "improving":
             update_data["status"] = "recovering"
 
-        updated_result = supabase.table('injury_logs')\
-            .update(update_data)\
-            .eq('id', injury_id)\
+        updated_result = (
+            supabase.table("injury_logs")
+            .update(update_data)
+            .eq("id", injury_id)
             .execute()
+        )
 
         updated_injury_data = updated_result.data[0]
 
         updated_injury = InjuryLogResponse(
-            id=updated_injury_data['id'],
-            user_id=updated_injury_data['user_id'],
-            body_part=updated_injury_data['body_part'],
-            severity=updated_injury_data['severity'],
-            description=updated_injury_data.get('description'),
-            status=updated_injury_data['status'],
-            reported_at=updated_injury_data['reported_at'],
-            resolved_at=updated_injury_data.get('resolved_at'),
-            last_check_in_at=updated_injury_data.get('last_check_in_at'),
-            created_at=updated_injury_data['created_at'],
-            updated_at=updated_injury_data['updated_at']
+            id=updated_injury_data["id"],
+            user_id=updated_injury_data["user_id"],
+            body_part=updated_injury_data["body_part"],
+            severity=updated_injury_data["severity"],
+            description=updated_injury_data.get("description"),
+            status=updated_injury_data["status"],
+            reported_at=updated_injury_data["reported_at"],
+            resolved_at=updated_injury_data.get("resolved_at"),
+            last_check_in_at=updated_injury_data.get("last_check_in_at"),
+            created_at=updated_injury_data["created_at"],
+            updated_at=updated_injury_data["updated_at"],
         )
 
         return RecoveryCheckInResponse(
@@ -1717,7 +1901,7 @@ async def injury_check_in(
             recommendation=recommendation,
             requires_medical_attention=requires_medical_attention,
             days_in_recovery=days_in_recovery,
-            updated_injury=updated_injury
+            updated_injury=updated_injury,
         )
 
     except HTTPException:
@@ -1725,14 +1909,14 @@ async def injury_check_in(
     except Exception as e:
         print(f"Error processing check-in: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process check-in: {str(e)}"
+            status_code=500, detail=f"Failed to process check-in: {str(e)}"
         )
 
 
 # ============================================================================
 # Exercise Substitution Endpoints
 # ============================================================================
+
 
 @app.get("/api/exercises/substitutes", response_model=ExerciseSubstitutionResponse)
 async def get_exercise_substitutes(
@@ -1741,7 +1925,7 @@ async def get_exercise_substitutes(
     min_similarity_score: Optional[float] = 0.60,
     max_results: Optional[int] = 5,
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get exercise substitutions for a specific exercise.
@@ -1767,15 +1951,17 @@ async def get_exercise_substitutes(
     """
     try:
         # Build Supabase query
-        query = supabase.table('exercise_substitutions') \
-            .select('*') \
-            .eq('exercise_name', exercise_name) \
-            .gte('similarity_score', min_similarity_score) \
-            .order('similarity_score', desc=True)
+        query = (
+            supabase.table("exercise_substitutions")
+            .select("*")
+            .eq("exercise_name", exercise_name)
+            .gte("similarity_score", min_similarity_score)
+            .order("similarity_score", desc=True)
+        )
 
         # Filter by injured body part (reduced stress area)
-        if injured_body_part and injured_body_part != 'none':
-            query = query.eq('reduced_stress_area', injured_body_part)
+        if injured_body_part and injured_body_part != "none":
+            query = query.eq("reduced_stress_area", injured_body_part)
 
         # Limit results
         query = query.limit(max_results)
@@ -1790,24 +1976,24 @@ async def get_exercise_substitutes(
                 substitutes=[],
                 total_found=0,
                 filters_applied={
-                    'injured_body_part': injured_body_part,
-                    'min_similarity': min_similarity_score,
-                }
+                    "injured_body_part": injured_body_part,
+                    "min_similarity": min_similarity_score,
+                },
             )
 
         # Convert to ExerciseSubstitution models
         substitutes = [
             ExerciseSubstitution(
-                id=row['id'],
-                exercise_name=row['exercise_name'],
-                substitute_name=row['substitute_name'],
-                similarity_score=row['similarity_score'],
-                reduced_stress_area=row['reduced_stress_area'],
-                movement_pattern=row['movement_pattern'],
-                primary_muscles=row['primary_muscles'],
-                equipment_required=row['equipment_required'],
-                difficulty_level=row['difficulty_level'],
-                notes=row['notes']
+                id=row["id"],
+                exercise_name=row["exercise_name"],
+                substitute_name=row["substitute_name"],
+                similarity_score=row["similarity_score"],
+                reduced_stress_area=row["reduced_stress_area"],
+                movement_pattern=row["movement_pattern"],
+                primary_muscles=row["primary_muscles"],
+                equipment_required=row["equipment_required"],
+                difficulty_level=row["difficulty_level"],
+                notes=row["notes"],
             )
             for row in result.data
         ]
@@ -1817,27 +2003,28 @@ async def get_exercise_substitutes(
             substitutes=substitutes,
             total_found=len(substitutes),
             filters_applied={
-                'injured_body_part': injured_body_part,
-                'min_similarity': min_similarity_score,
-            }
+                "injured_body_part": injured_body_part,
+                "min_similarity": min_similarity_score,
+            },
         )
 
     except Exception as e:
         print(f"Error fetching exercise substitutes: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch exercise substitutes: {str(e)}"
+            status_code=500, detail=f"Failed to fetch exercise substitutes: {str(e)}"
         )
 
 
-@app.get("/api/exercises/substitutes/risk-aware", response_model=ExerciseSubstitutionResponse)
+@app.get(
+    "/api/exercises/substitutes/risk-aware", response_model=ExerciseSubstitutionResponse
+)
 async def get_risk_aware_substitutes(
     exercise_name: str,
     injured_body_part: str,
     min_similarity_score: Optional[float] = 0.60,
     max_results: Optional[int] = 5,
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get risk-aware exercise substitutions that minimize stress on injured body part.
@@ -1862,12 +2049,14 @@ async def get_risk_aware_substitutes(
     """
     try:
         # Step 1: Get all substitutions for the exercise
-        subs_result = supabase.table('exercise_substitutions') \
-            .select('*') \
-            .eq('exercise_name', exercise_name) \
-            .gte('similarity_score', min_similarity_score) \
-            .order('similarity_score', desc=True) \
+        subs_result = (
+            supabase.table("exercise_substitutions")
+            .select("*")
+            .eq("exercise_name", exercise_name)
+            .gte("similarity_score", min_similarity_score)
+            .order("similarity_score", desc=True)
             .execute()
+        )
 
         if not subs_result.data:
             return ExerciseSubstitutionResponse(
@@ -1875,55 +2064,59 @@ async def get_risk_aware_substitutes(
                 substitutes=[],
                 total_found=0,
                 filters_applied={
-                    'injured_body_part': injured_body_part,
-                    'min_similarity': min_similarity_score,
-                    'risk_aware': True,
-                }
+                    "injured_body_part": injured_body_part,
+                    "min_similarity": min_similarity_score,
+                    "risk_aware": True,
+                },
             )
 
         # Step 2: Get stress data for all substitute exercises
-        substitute_names = [row['substitute_name'] for row in subs_result.data]
-        stress_result = supabase.table('exercise_body_part_stress') \
-            .select('exercise_name, stress_intensity') \
-            .in_('exercise_name', substitute_names) \
-            .eq('body_part', injured_body_part) \
+        substitute_names = [row["substitute_name"] for row in subs_result.data]
+        stress_result = (
+            supabase.table("exercise_body_part_stress")
+            .select("exercise_name, stress_intensity")
+            .in_("exercise_name", substitute_names)
+            .eq("body_part", injured_body_part)
             .execute()
+        )
 
         # Step 3: Build stress intensity map
         stress_map = {}
         if stress_result.data:
             for row in stress_result.data:
-                stress_map[row['exercise_name']] = row['stress_intensity']
+                stress_map[row["exercise_name"]] = row["stress_intensity"]
 
         # Step 4: Enrich substitutions with stress data
         enriched_subs = []
         for row in subs_result.data:
             sub = ExerciseSubstitution(
-                id=row['id'],
-                exercise_name=row['exercise_name'],
-                substitute_name=row['substitute_name'],
-                similarity_score=row['similarity_score'],
-                reduced_stress_area=row['reduced_stress_area'],
-                movement_pattern=row['movement_pattern'],
-                primary_muscles=row['primary_muscles'],
-                equipment_required=row['equipment_required'],
-                difficulty_level=row['difficulty_level'],
-                notes=row['notes']
+                id=row["id"],
+                exercise_name=row["exercise_name"],
+                substitute_name=row["substitute_name"],
+                similarity_score=row["similarity_score"],
+                reduced_stress_area=row["reduced_stress_area"],
+                movement_pattern=row["movement_pattern"],
+                primary_muscles=row["primary_muscles"],
+                equipment_required=row["equipment_required"],
+                difficulty_level=row["difficulty_level"],
+                notes=row["notes"],
             )
-            stress_on_injured_part = stress_map.get(row['substitute_name'])
-            enriched_subs.append({
-                **sub.dict(),
-                'stress_on_injured_part': stress_on_injured_part
-            })
+            stress_on_injured_part = stress_map.get(row["substitute_name"])
+            enriched_subs.append(
+                {**sub.dict(), "stress_on_injured_part": stress_on_injured_part}
+            )
 
         # Step 5: Sort by stress (lowest first), then similarity (highest first)
         def sort_key(item):
-            stress = item['stress_on_injured_part']
-            similarity = item['similarity_score']
+            stress = item["stress_on_injured_part"]
+            similarity = item["similarity_score"]
 
             # Prioritize exercises with no stress data (likely safer)
             if stress is None:
-                return (0, -similarity)  # 0 = highest priority, negative similarity for descending
+                return (
+                    0,
+                    -similarity,
+                )  # 0 = highest priority, negative similarity for descending
             else:
                 return (stress, -similarity)  # Lower stress = higher priority
 
@@ -1937,21 +2130,22 @@ async def get_risk_aware_substitutes(
             substitutes=enriched_subs,
             total_found=len(enriched_subs),
             filters_applied={
-                'injured_body_part': injured_body_part,
-                'min_similarity': min_similarity_score,
-                'risk_aware': True,
-            }
+                "injured_body_part": injured_body_part,
+                "min_similarity": min_similarity_score,
+                "risk_aware": True,
+            },
         )
 
     except Exception as e:
         print(f"Error fetching risk-aware substitutes: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch risk-aware substitutes: {str(e)}"
+            status_code=500, detail=f"Failed to fetch risk-aware substitutes: {str(e)}"
         )
 
 
-@app.get("/api/exercises/substitutes/explain", response_model=ExerciseExplanationResponse)
+@app.get(
+    "/api/exercises/substitutes/explain", response_model=ExerciseExplanationResponse
+)
 async def get_exercise_explanation(
     exercise_name: str,
     substitute_name: str,
@@ -1961,7 +2155,7 @@ async def get_exercise_explanation(
     pain_level: Optional[int] = None,
     experience_level: Optional[str] = None,
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get a user-friendly explanation for why a specific exercise substitution is recommended.
@@ -1988,28 +2182,30 @@ async def get_exercise_explanation(
     """
     try:
         # Fetch the substitution from database
-        result = supabase.table('exercise_substitutions') \
-            .select('*') \
-            .eq('exercise_name', exercise_name) \
-            .eq('substitute_name', substitute_name) \
-            .limit(1) \
+        result = (
+            supabase.table("exercise_substitutions")
+            .select("*")
+            .eq("exercise_name", exercise_name)
+            .eq("substitute_name", substitute_name)
+            .limit(1)
             .execute()
+        )
 
         if not result.data or len(result.data) == 0:
             raise HTTPException(
                 status_code=404,
-                detail=f"No substitution found for {exercise_name} → {substitute_name}"
+                detail=f"No substitution found for {exercise_name} → {substitute_name}",
             )
 
         sub_data = result.data[0]
 
         # Format explanation using helper functions
         context = {
-            'injured_body_part': injured_body_part,
-            'injury_type': injury_type,
-            'recovery_week': recovery_week,
-            'pain_level': pain_level,
-            'experience_level': experience_level,
+            "injured_body_part": injured_body_part,
+            "injury_type": injury_type,
+            "recovery_week": recovery_week,
+            "pain_level": pain_level,
+            "experience_level": experience_level,
         }
 
         # Build explanation sections
@@ -2023,8 +2219,8 @@ async def get_exercise_explanation(
             substitute_name=substitute_name,
             explanation=full_explanation,
             sections=ExplanationSections(**sections),
-            similarity_score=sub_data['similarity_score'],
-            reduced_stress_area=sub_data['reduced_stress_area']
+            similarity_score=sub_data["similarity_score"],
+            reduced_stress_area=sub_data["reduced_stress_area"],
         )
 
     except HTTPException:
@@ -2032,8 +2228,7 @@ async def get_exercise_explanation(
     except Exception as e:
         print(f"Error generating explanation: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate explanation: {str(e)}"
+            status_code=500, detail=f"Failed to generate explanation: {str(e)}"
         )
 
 
@@ -2044,25 +2239,25 @@ def format_explanation_sections(sub_data: dict, context: dict) -> dict:
     # 1. Why Recommended
     why_text = f"**Why {sub_data['substitute_name']} is recommended:**\n\n"
 
-    if context.get('injured_body_part') and sub_data['reduced_stress_area'] != 'none':
-        body_part_name = format_body_part_name(context['injured_body_part'])
+    if context.get("injured_body_part") and sub_data["reduced_stress_area"] != "none":
+        body_part_name = format_body_part_name(context["injured_body_part"])
         why_text += f"✅ **Reduces {body_part_name} Stress**\n"
         why_text += f"This exercise is specifically designed to reduce stress on your {body_part_name.lower()}, making it ideal for your recovery.\n\n"
 
     why_text += f"🎯 **Similar Movement Pattern**\n"
-    why_text += f"Maintains the same \"{format_movement_pattern(sub_data['movement_pattern'])}\" pattern as {sub_data['exercise_name']}, "
+    why_text += f'Maintains the same "{format_movement_pattern(sub_data["movement_pattern"])}" pattern as {sub_data["exercise_name"]}, '
     why_text += f"so you won't lose the training stimulus.\n\n"
 
-    muscles = format_muscle_list(sub_data['primary_muscles'])
+    muscles = format_muscle_list(sub_data["primary_muscles"])
     why_text += f"💪 **Targets Same Muscles**\n"
     why_text += f"Works: {muscles}\n"
 
-    sections['why_recommended'] = why_text
+    sections["why_recommended"] = why_text
 
     # 2. Scientific Evidence
     sci_text = "**📊 Scientific Evidence:**\n\n"
-    notes = sub_data.get('notes', 'No additional scientific notes available.')
-    note_parts = [part.strip() for part in notes.split(';') if part.strip()]
+    notes = sub_data.get("notes", "No additional scientific notes available.")
+    note_parts = [part.strip() for part in notes.split(";") if part.strip()]
 
     if note_parts:
         for note in note_parts:
@@ -2070,55 +2265,66 @@ def format_explanation_sections(sub_data: dict, context: dict) -> dict:
     else:
         sci_text += notes + "\n"
 
-    sections['scientific_evidence'] = sci_text
+    sections["scientific_evidence"] = sci_text
 
     # 3. Similarity Score
-    score = sub_data['similarity_score']
+    score = sub_data["similarity_score"]
     percentage = round(score * 100)
 
     if score >= 0.85:
-        rating = 'Excellent'
-        description = "This is a highly similar exercise - you won't lose any training gains!"
+        rating = "Excellent"
+        description = (
+            "This is a highly similar exercise - you won't lose any training gains!"
+        )
     elif score >= 0.75:
-        rating = 'Very Good'
+        rating = "Very Good"
         description = "This is a very similar exercise with minimal differences."
     elif score >= 0.65:
-        rating = 'Good'
-        description = "This is a good alternative that maintains most of the training stimulus."
+        rating = "Good"
+        description = (
+            "This is a good alternative that maintains most of the training stimulus."
+        )
     else:
-        rating = 'Moderate'
-        description = "This alternative has some differences but still provides similar benefits."
+        rating = "Moderate"
+        description = (
+            "This alternative has some differences but still provides similar benefits."
+        )
 
     sim_text = f"**⭐ Similarity Score: {percentage}% ({rating})**\n\n"
     sim_text += description + "\n"
 
-    sections['similarity_score'] = sim_text
+    sections["similarity_score"] = sim_text
 
     # 4. How to Use
     how_text = "**🎯 How to Use:**\n\n"
     how_text += f"**Equipment:** {format_equipment(sub_data['equipment_required'])}\n"
     how_text += f"**Difficulty:** {format_difficulty(sub_data['difficulty_level'])}\n\n"
 
-    if context.get('experience_level'):
-        how_text += get_experience_guidance(context['experience_level']) + "\n\n"
+    if context.get("experience_level"):
+        how_text += get_experience_guidance(context["experience_level"]) + "\n\n"
 
     how_text += "**Execution Tips:**\n"
     how_text += "• Focus on controlled movement throughout the full range of motion\n"
     how_text += "• Maintain proper form over heavy weight\n"
     how_text += "• Start with lighter weight to learn the movement pattern\n"
 
-    sections['how_to_use'] = how_text
+    sections["how_to_use"] = how_text
 
     # 5. Recovery Context (if applicable)
-    if context.get('injured_body_part'):
-        body_part_name = format_body_part_name(context['injured_body_part'])
+    if context.get("injured_body_part"):
+        body_part_name = format_body_part_name(context["injured_body_part"])
         rec_text = f"**⚠️ For Your {body_part_name} Recovery:**\n\n"
 
-        if context.get('recovery_week') is not None:
-            rec_text += get_recovery_week_guidance(context['recovery_week'], context.get('pain_level')) + "\n\n"
+        if context.get("recovery_week") is not None:
+            rec_text += (
+                get_recovery_week_guidance(
+                    context["recovery_week"], context.get("pain_level")
+                )
+                + "\n\n"
+            )
 
-        if context.get('pain_level') is not None:
-            rec_text += get_pain_level_guidance(context['pain_level']) + "\n\n"
+        if context.get("pain_level") is not None:
+            rec_text += get_pain_level_guidance(context["pain_level"]) + "\n\n"
 
         rec_text += "**⚠️ Stop Immediately If You Feel:**\n"
         rec_text += "• Sharp pain (vs dull muscle fatigue)\n"
@@ -2126,7 +2332,7 @@ def format_explanation_sections(sub_data: dict, context: dict) -> dict:
         rec_text += "• Pain that persists after the set\n"
         rec_text += "• Numbness or tingling\n"
 
-        sections['recovery_context'] = rec_text
+        sections["recovery_context"] = rec_text
 
     return sections
 
@@ -2135,13 +2341,13 @@ def combine_explanation_sections(sections: dict) -> str:
     """Combine all sections into full explanation"""
     explanation = ""
 
-    explanation += sections['why_recommended'] + "\n\n"
-    explanation += sections['scientific_evidence'] + "\n\n"
-    explanation += sections['similarity_score'] + "\n\n"
-    explanation += sections['how_to_use']
+    explanation += sections["why_recommended"] + "\n\n"
+    explanation += sections["scientific_evidence"] + "\n\n"
+    explanation += sections["similarity_score"] + "\n\n"
+    explanation += sections["how_to_use"]
 
-    if 'recovery_context' in sections:
-        explanation += "\n\n" + sections['recovery_context']
+    if "recovery_context" in sections:
+        explanation += "\n\n" + sections["recovery_context"]
 
     return explanation
 
@@ -2149,15 +2355,15 @@ def combine_explanation_sections(sections: dict) -> str:
 def format_body_part_name(body_part: str) -> str:
     """Format body part name for display"""
     names = {
-        'shoulder': 'Shoulder',
-        'lower_back': 'Lower Back',
-        'knee': 'Knee',
-        'elbow': 'Elbow',
-        'hip': 'Hip',
-        'ankle': 'Ankle',
-        'wrist': 'Wrist',
-        'core': 'Core',
-        'hamstrings': 'Hamstrings',
+        "shoulder": "Shoulder",
+        "lower_back": "Lower Back",
+        "knee": "Knee",
+        "elbow": "Elbow",
+        "hip": "Hip",
+        "ankle": "Ankle",
+        "wrist": "Wrist",
+        "core": "Core",
+        "hamstrings": "Hamstrings",
     }
     return names.get(body_part, body_part)
 
@@ -2165,37 +2371,34 @@ def format_body_part_name(body_part: str) -> str:
 def format_movement_pattern(pattern: str) -> str:
     """Format movement pattern for display"""
     patterns = {
-        'horizontal_push': 'Horizontal Push',
-        'vertical_push': 'Vertical Push',
-        'horizontal_pull': 'Horizontal Pull',
-        'vertical_pull': 'Vertical Pull',
-        'squat': 'Squat',
-        'hinge': 'Hip Hinge',
-        'lunge': 'Lunge',
-        'carry': 'Loaded Carry',
-        'rotation': 'Rotation',
+        "horizontal_push": "Horizontal Push",
+        "vertical_push": "Vertical Push",
+        "horizontal_pull": "Horizontal Pull",
+        "vertical_pull": "Vertical Pull",
+        "squat": "Squat",
+        "hinge": "Hip Hinge",
+        "lunge": "Lunge",
+        "carry": "Loaded Carry",
+        "rotation": "Rotation",
     }
     return patterns.get(pattern, pattern)
 
 
 def format_muscle_list(muscles: str) -> str:
     """Format muscle list for display"""
-    return ', '.join([
-        m.strip().replace('_', ' ').title()
-        for m in muscles.split(',')
-    ])
+    return ", ".join([m.strip().replace("_", " ").title() for m in muscles.split(",")])
 
 
 def format_equipment(equipment: str) -> str:
     """Format equipment name for display"""
     equipment_names = {
-        'barbell': 'Barbell',
-        'dumbbell': 'Dumbbells',
-        'bodyweight': 'Bodyweight (no equipment)',
-        'machine': 'Machine',
-        'cable': 'Cable Machine',
-        'kettlebell': 'Kettlebell',
-        'resistance_band': 'Resistance Bands',
+        "barbell": "Barbell",
+        "dumbbell": "Dumbbells",
+        "bodyweight": "Bodyweight (no equipment)",
+        "machine": "Machine",
+        "cable": "Cable Machine",
+        "kettlebell": "Kettlebell",
+        "resistance_band": "Resistance Bands",
     }
     return equipment_names.get(equipment, equipment)
 
@@ -2203,19 +2406,19 @@ def format_equipment(equipment: str) -> str:
 def format_difficulty(difficulty: str) -> str:
     """Format difficulty level for display"""
     levels = {
-        'beginner': 'Beginner-friendly',
-        'intermediate': 'Intermediate',
-        'intermediate-advanced': 'Intermediate to Advanced',
-        'advanced': 'Advanced',
+        "beginner": "Beginner-friendly",
+        "intermediate": "Intermediate",
+        "intermediate-advanced": "Intermediate to Advanced",
+        "advanced": "Advanced",
     }
     return levels.get(difficulty, difficulty)
 
 
 def get_experience_guidance(experience_level: str) -> str:
     """Get experience-specific guidance"""
-    if experience_level == 'beginner':
+    if experience_level == "beginner":
         return "**For Beginners:** Take extra time to learn proper form. Consider working with a trainer for the first few sessions."
-    elif experience_level == 'intermediate':
+    elif experience_level == "intermediate":
         return "**For Intermediate Lifters:** You should be able to transition to this exercise smoothly. Focus on maintaining the same rep ranges."
     else:
         return "**For Advanced Lifters:** You can likely match or exceed your previous training intensity with this substitute."
@@ -2253,10 +2456,7 @@ async def http_exception_handler(request, exc):
     """Handle HTTP exceptions"""
     return JSONResponse(
         status_code=exc.status_code,
-        content={
-            "detail": exc.detail,
-            "status_code": exc.status_code
-        }
+        content={"detail": exc.detail, "status_code": exc.status_code},
     )
 
 
@@ -2265,11 +2465,7 @@ async def general_exception_handler(request, exc):
     """Handle general exceptions"""
     print(f"Unhandled exception: {exc}")
     return JSONResponse(
-        status_code=500,
-        content={
-            "detail": "Internal server error",
-            "error": str(exc)
-        }
+        status_code=500, content={"detail": "Internal server error", "error": str(exc)}
     )
 
 
@@ -2277,11 +2473,12 @@ async def general_exception_handler(request, exc):
 # BADGE ENDPOINTS
 # ============================================================================
 
+
 @app.get("/api/badges/{user_id}")
 async def get_user_badges(
     user_id: str,
     badge_service: BadgeService = Depends(get_badge_service),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get all badges earned by a user
@@ -2293,25 +2490,18 @@ async def get_user_badges(
     try:
         badges = await badge_service.get_user_badges(user_id)
 
-        return {
-            "user_id": user_id,
-            "total_badges": len(badges),
-            "badges": badges
-        }
+        return {"user_id": user_id, "total_badges": len(badges), "badges": badges}
 
     except Exception as e:
         print(f"Error fetching badges: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch badges: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to fetch badges: {str(e)}")
 
 
 @app.get("/api/badges/{user_id}/progress")
 async def get_badge_progress(
     user_id: str,
     badge_service: BadgeService = Depends(get_badge_service),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get progress toward all unearned badges
@@ -2325,23 +2515,20 @@ async def get_badge_progress(
         progress = await badge_service.get_badge_progress(user_id)
 
         # Sort by percentage (closest to unlocking first)
-        sorted_progress = dict(sorted(
-            progress.items(),
-            key=lambda x: x[1]['percentage'],
-            reverse=True
-        ))
+        sorted_progress = dict(
+            sorted(progress.items(), key=lambda x: x[1]["percentage"], reverse=True)
+        )
 
         return {
             "user_id": user_id,
             "total_unearned": len(sorted_progress),
-            "progress": sorted_progress
+            "progress": sorted_progress,
         }
 
     except Exception as e:
         print(f"Error fetching badge progress: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to fetch badge progress: {str(e)}"
+            status_code=500, detail=f"Failed to fetch badge progress: {str(e)}"
         )
 
 
@@ -2349,7 +2536,7 @@ async def get_badge_progress(
 async def check_workout_badges(
     user_id: str,
     badge_service: BadgeService = Depends(get_badge_service),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Check for newly earned workout-related badges
@@ -2367,24 +2554,25 @@ async def check_workout_badges(
         for badge_type in newly_earned:
             badge_def = badge_service.get_badge_definition(badge_type)
             if badge_def:
-                badge_details.append({
-                    "badge_type": badge_type,
-                    "badge_name": badge_def.badge_name,
-                    "badge_description": badge_def.badge_description,
-                    "category": badge_def.category
-                })
+                badge_details.append(
+                    {
+                        "badge_type": badge_type,
+                        "badge_name": badge_def.badge_name,
+                        "badge_description": badge_def.badge_description,
+                        "category": badge_def.category,
+                    }
+                )
 
         return {
             "user_id": user_id,
             "newly_earned_count": len(newly_earned),
-            "newly_earned": badge_details
+            "newly_earned": badge_details,
         }
 
     except Exception as e:
         print(f"Error checking workout badges: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to check workout badges: {str(e)}"
+            status_code=500, detail=f"Failed to check workout badges: {str(e)}"
         )
 
 
@@ -2392,7 +2580,7 @@ async def check_workout_badges(
 async def check_pr_badges(
     user_id: str,
     badge_service: BadgeService = Depends(get_badge_service),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Check for newly earned PR-related badges
@@ -2410,24 +2598,25 @@ async def check_pr_badges(
         for badge_type in newly_earned:
             badge_def = badge_service.get_badge_definition(badge_type)
             if badge_def:
-                badge_details.append({
-                    "badge_type": badge_type,
-                    "badge_name": badge_def.badge_name,
-                    "badge_description": badge_def.badge_description,
-                    "category": badge_def.category
-                })
+                badge_details.append(
+                    {
+                        "badge_type": badge_type,
+                        "badge_name": badge_def.badge_name,
+                        "badge_description": badge_def.badge_description,
+                        "category": badge_def.category,
+                    }
+                )
 
         return {
             "user_id": user_id,
             "newly_earned_count": len(newly_earned),
-            "newly_earned": badge_details
+            "newly_earned": badge_details,
         }
 
     except Exception as e:
         print(f"Error checking PR badges: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to check PR badges: {str(e)}"
+            status_code=500, detail=f"Failed to check PR badges: {str(e)}"
         )
 
 
@@ -2436,7 +2625,7 @@ async def unlock_badge(
     request: BadgeUnlockRequest,
     badge_service: BadgeService = Depends(get_badge_service),
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Manually unlock a badge for a user.
@@ -2459,13 +2648,14 @@ async def unlock_badge(
 
         if not badge_def:
             raise HTTPException(
-                status_code=404,
-                detail=f"Badge type '{request.badge_type}' not found"
+                status_code=404, detail=f"Badge type '{request.badge_type}' not found"
             )
 
         # Check if badge is already unlocked
         existing_badges = await badge_service.get_user_badges(request.user_id)
-        already_unlocked = any(b['badge_type'] == request.badge_type for b in existing_badges)
+        already_unlocked = any(
+            b["badge_type"] == request.badge_type for b in existing_badges
+        )
 
         if already_unlocked:
             return BadgeUnlockResponse(
@@ -2475,21 +2665,27 @@ async def unlock_badge(
                     "badge_type": request.badge_type,
                     "badge_name": badge_def.badge_name,
                     "badge_description": badge_def.badge_description,
-                    "category": badge_def.category
+                    "category": badge_def.category,
                 },
-                already_unlocked=True
+                already_unlocked=True,
             )
 
         # Unlock the badge
         now = datetime.utcnow().isoformat()
 
-        result = supabase.table("user_badges").insert({
-            "user_id": request.user_id,
-            "badge_type": request.badge_type,
-            "badge_name": badge_def.badge_name,
-            "badge_description": badge_def.badge_description,
-            "earned_at": now
-        }).execute()
+        result = (
+            supabase.table("user_badges")
+            .insert(
+                {
+                    "user_id": request.user_id,
+                    "badge_type": request.badge_type,
+                    "badge_name": badge_def.badge_name,
+                    "badge_description": badge_def.badge_description,
+                    "earned_at": now,
+                }
+            )
+            .execute()
+        )
 
         return BadgeUnlockResponse(
             success=True,
@@ -2499,30 +2695,28 @@ async def unlock_badge(
                 "badge_name": badge_def.badge_name,
                 "badge_description": badge_def.badge_description,
                 "category": badge_def.category,
-                "earned_at": now
+                "earned_at": now,
             },
-            already_unlocked=False
+            already_unlocked=False,
         )
 
     except HTTPException:
         raise
     except Exception as e:
         print(f"Error unlocking badge: {e}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to unlock badge: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Failed to unlock badge: {str(e)}")
 
 
 # ============================================================================
 # ADHERENCE MONITORING ENDPOINTS
 # ============================================================================
 
+
 @app.get("/api/adherence/report/{user_id}", response_model=AdherenceReportResponse)
 async def get_adherence_report(
     user_id: str,
     adherence_monitor: ProgramAdherenceMonitor = Depends(get_adherence_monitor),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Get weekly adherence report for a user.
@@ -2544,8 +2738,7 @@ async def get_adherence_report(
     except Exception as e:
         print(f"Error generating adherence report: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to generate adherence report: {str(e)}"
+            status_code=500, detail=f"Failed to generate adherence report: {str(e)}"
         )
 
 
@@ -2554,7 +2747,7 @@ async def adherence_check_in(
     request: AdherenceCheckInRequest,
     adherence_monitor: ProgramAdherenceMonitor = Depends(get_adherence_monitor),
     supabase: Client = Depends(get_supabase_client),
-    user: dict = Depends(verify_token)
+    user: dict = Depends(verify_token),
 ):
     """
     Process user's response to adherence alert.
@@ -2575,115 +2768,113 @@ async def adherence_check_in(
     """
     try:
         # Get the flag
-        flag_result = supabase.table('program_adherence_flags')\
-            .select('*')\
-            .eq('id', request.flag_id)\
-            .eq('user_id', request.user_id)\
-            .single()\
+        flag_result = (
+            supabase.table("program_adherence_flags")
+            .select("*")
+            .eq("id", request.flag_id)
+            .eq("user_id", request.user_id)
+            .single()
             .execute()
+        )
 
         if not flag_result.data:
             raise HTTPException(status_code=404, detail="Flag not found")
 
         flag = flag_result.data
-        muscle_group = flag['muscle_group']
-        target_sets = flag['target_weekly_sets']
-        actual_sets = flag['actual_weekly_sets']
+        muscle_group = flag["muscle_group"]
+        target_sets = flag["target_weekly_sets"]
+        actual_sets = flag["actual_weekly_sets"]
 
         # Handle different response types
         adjustment_plan = None
         plan_created = False
         message = ""
 
-        if request.response_type == 'injury':
+        if request.response_type == "injury":
             # Create injury log (if injury_details provided)
             if request.injury_details:
                 injury_data = {
-                    'user_id': request.user_id,
-                    'body_part': request.injury_details.get('body_part', muscle_group),
-                    'severity': request.injury_details.get('severity', 'moderate'),
-                    'pain_level': request.injury_details.get('pain_level', 5),
-                    'status': 'active',
-                    'reported_at': datetime.now().isoformat()
+                    "user_id": request.user_id,
+                    "body_part": request.injury_details.get("body_part", muscle_group),
+                    "severity": request.injury_details.get("severity", "moderate"),
+                    "pain_level": request.injury_details.get("pain_level", 5),
+                    "status": "active",
+                    "reported_at": datetime.now().isoformat(),
                 }
-                supabase.table('injury_logs').insert(injury_data).execute()
+                supabase.table("injury_logs").insert(injury_data).execute()
 
             message = f"I've logged your {muscle_group} injury. I'll adjust your program to work around it."
 
             # Update flag to dismissed
-            supabase.table('program_adherence_flags')\
-                .update({'status': 'dismissed', 'dismissed_at': datetime.now().isoformat()})\
-                .eq('id', request.flag_id)\
-                .execute()
+            supabase.table("program_adherence_flags").update(
+                {"status": "dismissed", "dismissed_at": datetime.now().isoformat()}
+            ).eq("id", request.flag_id).execute()
 
-        elif request.response_type in ['time_constraint', 'motivation']:
+        elif request.response_type in ["time_constraint", "motivation"]:
             # Create gradual adjustment plan
             plan = adherence_monitor.create_adjustment_plan(
                 user_id=request.user_id,
                 muscle_group=muscle_group,
                 current_sets=actual_sets,
                 target_sets=target_sets,
-                duration_weeks=4
+                duration_weeks=4,
             )
 
             if plan:
                 adjustment_plan = {
-                    'muscle_group': muscle_group,
-                    'current_weekly_sets': actual_sets,
-                    'target_weekly_sets': target_sets,
-                    'weekly_increment': plan['weekly_increment'],
-                    'duration_weeks': plan['duration_weeks'],
-                    'weekly_targets': [
-                        actual_sets + (plan['weekly_increment'] * (i + 1))
-                        for i in range(plan['duration_weeks'])
-                    ]
+                    "muscle_group": muscle_group,
+                    "current_weekly_sets": actual_sets,
+                    "target_weekly_sets": target_sets,
+                    "weekly_increment": plan["weekly_increment"],
+                    "duration_weeks": plan["duration_weeks"],
+                    "weekly_targets": [
+                        actual_sets + (plan["weekly_increment"] * (i + 1))
+                        for i in range(plan["duration_weeks"])
+                    ],
                 }
                 plan_created = True
                 message = f"I've created a gradual 4-week plan to get your {muscle_group} volume back on track. Week 1: {adjustment_plan['weekly_targets'][0]} sets, Week 2: {adjustment_plan['weekly_targets'][1]} sets, Week 3: {adjustment_plan['weekly_targets'][2]} sets, Week 4: {adjustment_plan['weekly_targets'][3]} sets."
 
             # Update flag to resolved
-            supabase.table('program_adherence_flags')\
-                .update({'status': 'resolved', 'resolved_at': datetime.now().isoformat()})\
-                .eq('id', request.flag_id)\
-                .execute()
+            supabase.table("program_adherence_flags").update(
+                {"status": "resolved", "resolved_at": datetime.now().isoformat()}
+            ).eq("id", request.flag_id).execute()
 
-        elif request.response_type == 'fine':
+        elif request.response_type == "fine":
             message = f"Got it! I'll keep monitoring your {muscle_group} volume."
 
             # Update flag to dismissed
-            supabase.table('program_adherence_flags')\
-                .update({'status': 'dismissed', 'dismissed_at': datetime.now().isoformat()})\
-                .eq('id', request.flag_id)\
-                .execute()
+            supabase.table("program_adherence_flags").update(
+                {"status": "dismissed", "dismissed_at": datetime.now().isoformat()}
+            ).eq("id", request.flag_id).execute()
 
-        elif request.response_type == 'change_program':
+        elif request.response_type == "change_program":
             message = "I understand you want to change your program. Head to the Program Generation screen to create a new custom program."
 
             # Update flag to dismissed
-            supabase.table('program_adherence_flags')\
-                .update({'status': 'dismissed', 'dismissed_at': datetime.now().isoformat()})\
-                .eq('id', request.flag_id)\
-                .execute()
+            supabase.table("program_adherence_flags").update(
+                {"status": "dismissed", "dismissed_at": datetime.now().isoformat()}
+            ).eq("id", request.flag_id).execute()
 
         else:
             message = f"Thanks for the feedback! I'll adjust your {muscle_group} recommendations."
 
         # Save check-in response
         check_in_data = {
-            'user_id': request.user_id,
-            'flag_id': request.flag_id,
-            'response_type': request.response_type,
-            'injury_details': request.injury_details,
-            'adjustment_plan': adjustment_plan,
-            'user_accepted': True
+            "user_id": request.user_id,
+            "flag_id": request.flag_id,
+            "response_type": request.response_type,
+            "injury_details": request.injury_details,
+            "adjustment_plan": adjustment_plan,
+            "user_accepted": True,
         }
-        supabase.table('adherence_check_in_responses').insert(check_in_data).execute()
+        supabase.table("adherence_check_in_responses").insert(check_in_data).execute()
 
         return AdherenceCheckInResponse(
             success=True,
             message=message,
             adjustment_plan=adjustment_plan,
-            plan_created=plan_created
+            plan_created=plan_created,
         )
 
     except HTTPException:
@@ -2691,14 +2882,13 @@ async def adherence_check_in(
     except Exception as e:
         print(f"Error processing adherence check-in: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to process check-in: {str(e)}"
+            status_code=500, detail=f"Failed to process check-in: {str(e)}"
         )
 
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     print("=" * 80)
     print("VOICE FIT API - DEVELOPMENT SERVER")
     print("=" * 80)
@@ -2709,12 +2899,11 @@ if __name__ == "__main__":
     print()
     print("Press Ctrl+C to stop")
     print("=" * 80)
-    
+
     uvicorn.run(
         "api.main:app",
         host="0.0.0.0",
         port=8000,
         reload=True,  # Auto-reload on code changes
-        log_level="info"
+        log_level="info",
     )
-

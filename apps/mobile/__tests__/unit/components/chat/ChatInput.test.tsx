@@ -29,7 +29,7 @@ describe("ChatInput component", () => {
         onChangeText={onChangeText}
         onSend={() => {}}
         placeholder="Type a message..."
-      />
+      />,
     );
 
     const input = getByPlaceholderText("Type a message...");
@@ -42,7 +42,7 @@ describe("ChatInput component", () => {
   it("does not call onSend when value is empty", () => {
     const onSend = jest.fn();
     const { UNSAFE_getByType } = render(
-      <ChatInput value="" onChangeText={() => {}} onSend={onSend} />
+      <ChatInput value="" onChangeText={() => {}} onSend={onSend} />,
     );
 
     const sendButton = UNSAFE_getByType(Pressable);
@@ -53,7 +53,7 @@ describe("ChatInput component", () => {
   it("does not call onSend when value is only whitespace", () => {
     const onSend = jest.fn();
     const { UNSAFE_getByType } = render(
-      <ChatInput value={"   "} onChangeText={() => {}} onSend={onSend} />
+      <ChatInput value={"   "} onChangeText={() => {}} onSend={onSend} />,
     );
 
     const sendButton = UNSAFE_getByType(Pressable);
@@ -64,7 +64,7 @@ describe("ChatInput component", () => {
   it("calls onSend when value is non-empty and not loading/disabled", () => {
     const onSend = jest.fn();
     const { UNSAFE_getByType } = render(
-      <ChatInput value={"Hello"} onChangeText={() => {}} onSend={onSend} />
+      <ChatInput value={"Hello"} onChangeText={() => {}} onSend={onSend} />,
     );
 
     const sendButton = UNSAFE_getByType(Pressable);
@@ -75,21 +75,32 @@ describe("ChatInput component", () => {
   it("send button background uses accent.blue when enabled, secondary when disabled", () => {
     // Enabled state (non-empty value)
     const { UNSAFE_getByType, unmount } = render(
-      <ChatInput value={"Hi"} onChangeText={() => {}} onSend={() => {}} />
+      <ChatInput value={"Hi"} onChangeText={() => {}} onSend={() => {}} />,
     );
     const sendEnabled = UNSAFE_getByType(Pressable);
-    const enabledStyle = flattenStyle(sendEnabled.props.style);
+    // Style is a function, call it with pressed=false to get the actual style
+    const enabledStyleFn = sendEnabled.props.style;
+    const enabledStyle = flattenStyle(
+      typeof enabledStyleFn === "function"
+        ? enabledStyleFn({ pressed: false })
+        : enabledStyleFn,
+    );
     expect(enabledStyle.backgroundColor).toBe(tokens.colors.light.accent.blue);
     unmount();
 
     // Disabled state (empty value)
     const { UNSAFE_getByType: getByTypeDisabled } = render(
-      <ChatInput value={""} onChangeText={() => {}} onSend={() => {}} />
+      <ChatInput value={""} onChangeText={() => {}} onSend={() => {}} />,
     );
     const sendDisabled = getByTypeDisabled(Pressable);
-    const disabledStyle = flattenStyle(sendDisabled.props.style);
+    const disabledStyleFn = sendDisabled.props.style;
+    const disabledStyle = flattenStyle(
+      typeof disabledStyleFn === "function"
+        ? disabledStyleFn({ pressed: false })
+        : disabledStyleFn,
+    );
     expect(disabledStyle.backgroundColor).toBe(
-      tokens.colors.light.background.secondary
+      tokens.colors.light.background.secondary,
     );
   });
 
@@ -102,7 +113,7 @@ describe("ChatInput component", () => {
         onSend={onSend}
         disabled
         placeholder="Type a message..."
-      />
+      />,
     );
 
     const input = getByPlaceholderText("Type a message...");
@@ -117,16 +128,19 @@ describe("ChatInput component", () => {
 
   it("TextInput is not editable, shows ActivityIndicator, and send disabled when loading=true", () => {
     const onSend = jest.fn();
-    const { getByPlaceholderText, UNSAFE_getByType, UNSAFE_getByType: getByType } =
-      render(
-        <ChatInput
-          value={"Hello"}
-          onChangeText={() => {}}
-          onSend={onSend}
-          loading
-          placeholder="Type a message..."
-        />
-      );
+    const {
+      getByPlaceholderText,
+      UNSAFE_getByType,
+      UNSAFE_getByType: getByType,
+    } = render(
+      <ChatInput
+        value={"Hello"}
+        onChangeText={() => {}}
+        onSend={onSend}
+        loading
+        placeholder="Type a message..."
+      />,
+    );
 
     const input = getByPlaceholderText("Type a message...");
     expect((input as any).props.editable).toBe(false);
@@ -150,7 +164,7 @@ describe("ChatInput component", () => {
         onChangeText={onChangeText}
         onSend={() => {}}
         placeholder="Type a message..."
-      />
+      />,
     );
     const input = getByPlaceholderText("Type a message...");
     // Multiline/maxlength assertions using props

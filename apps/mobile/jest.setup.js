@@ -10,6 +10,16 @@
  */
 
 // -----------------------------
+// Environment variables for tests
+// -----------------------------
+process.env.EXPO_PUBLIC_SUPABASE_URL =
+  process.env.EXPO_PUBLIC_SUPABASE_URL || "https://test.supabase.co";
+process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY =
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "test-anon-key";
+process.env.EXPO_PUBLIC_API_URL =
+  process.env.EXPO_PUBLIC_API_URL || "https://test-api.example.com";
+
+// -----------------------------
 // Global console: suppress noise
 // -----------------------------
 global.console = {
@@ -26,16 +36,13 @@ jest.mock("@react-native-async-storage/async-storage", () =>
 );
 
 // -------------------------------------------------
-// Silence RN Animated warnings in test environment
-// -------------------------------------------------
-jest.mock("react-native/Libraries/Animated/NativeAnimatedHelper");
-
-// -------------------------------------------------
 // Mock React Native Reanimated (stable test behavior)
 // -------------------------------------------------
-jest.mock("react-native-reanimated", () =>
-  require("react-native-reanimated/mock"),
-);
+jest.mock("react-native-reanimated", () => {
+  const Reanimated = require("react-native-reanimated/mock");
+  Reanimated.default.call = () => {};
+  return Reanimated;
+});
 
 // -------------------------------------------------
 // Mock React Navigation hooks (unit-test friendly)
@@ -78,38 +85,141 @@ jest.mock("react-native-safe-area-context", () => {
 // Supabase mock via @supabase/supabase-js
 // - We mock createClient so our app's supabase client module receives this stub.
 // - Tests can adjust methods via global.__SUPABASE_AUTH__ if needed.
+// - Uses mockResolvedValue for easy per-test overrides
 // -------------------------------------------------
-const SUPABASE_AUTH_MOCK = {
-  signInWithPassword: jest.fn(),
-  signUp: jest.fn(),
-  signOut: jest.fn(),
-  getSession: jest
-    .fn()
-    .mockResolvedValue({ data: { session: null }, error: null }),
-  signInWithIdToken: jest.fn(),
-  signInWithOAuth: jest.fn(),
-};
-
-Object.defineProperty(global, "__SUPABASE_AUTH__", {
-  value: SUPABASE_AUTH_MOCK,
-  writable: false,
-  enumerable: false,
-  configurable: true,
-});
-
 jest.mock("@supabase/supabase-js", () => {
+  const mockSupabaseAuth = {
+    signInWithPassword: jest.fn().mockResolvedValue({
+      data: {
+        user: {
+          id: "test-user-id",
+          email: "test@example.com",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        session: {
+          access_token: "test-access-token",
+          refresh_token: "test-refresh-token",
+          expires_in: 3600,
+          token_type: "bearer",
+          user: {
+            id: "test-user-id",
+            email: "test@example.com",
+          },
+        },
+      },
+      error: null,
+    }),
+    signUp: jest.fn().mockResolvedValue({
+      data: {
+        user: {
+          id: "new-user-id",
+          email: "new@example.com",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        },
+        session: {
+          access_token: "test-access-token",
+          refresh_token: "test-refresh-token",
+          expires_in: 3600,
+          token_type: "bearer",
+          user: {
+            id: "new-user-id",
+            email: "new@example.com",
+          },
+        },
+      },
+      error: null,
+    }),
+    signOut: jest.fn().mockResolvedValue({ error: null }),
+    getSession: jest.fn().mockResolvedValue({
+      data: { session: null },
+      error: null,
+    }),
+    signInWithIdToken: jest.fn().mockResolvedValue({
+      data: {
+        user: {
+          id: "oauth-user-id",
+          email: "oauth@example.com",
+        },
+        session: {
+          access_token: "oauth-access-token",
+          refresh_token: "oauth-refresh-token",
+          expires_in: 3600,
+          token_type: "bearer",
+        },
+      },
+      error: null,
+    }),
+    signInWithOAuth: jest.fn().mockResolvedValue({
+      data: {
+        provider: "google",
+        url: "https://test-oauth-url.example.com",
+      },
+      error: null,
+    }),
+  };
+
+  // Expose to global for test access
+  if (typeof global !== "undefined") {
+    global.__SUPABASE_AUTH__ = mockSupabaseAuth;
+  }
+
   return {
-    // createClient returns an object that mimics Supabase client shape used in the app
     createClient: jest.fn(() => ({
-      auth: SUPABASE_AUTH_MOCK,
+      auth: mockSupabaseAuth,
     })),
   };
 });
 
 // -------------------------------------------------
-// Optional: mock fetch if tests rely on manual fetch usage
-// (Uncomment if you need a default mock; otherwise tests can stub per-suite)
+// Polyfill for localStorage (needed for Zustand persist)
 // -------------------------------------------------
-// if (typeof global.fetch === 'undefined') {
-//   global.fetch = jest.fn();
-// }
+if (typeof localStorage === "undefined") {
+  global.localStorage = {
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn(),
+    clear: jest.fn(),
+  };
+}
+
+// -------------------------------------------------
+// Mock expo-apple-authentication (not installed yet)
+// -------------------------------------------------
+jest.mock(
+  "expo-apple-authentication",
+  () => ({
+    isAvailableAsync: jest.fn(() => Promise.resolve(false)),
+    signInAsync: jest.fn(),
+    AppleAuthenticationScope: {
+      FULL_NAME: 0,
+      EMAIL: 1,
+    },
+  }),
+  { virtual: true },
+);
+
+// -------------------------------------------------
+// Mock expo-auth-session (not installed yet)
+// -------------------------------------------------
+jest.mock(
+  "expo-auth-session",
+  () => ({
+    useAuthRequest: jest.fn(() => [null, null, jest.fn()]),
+    makeRedirectUri: jest.fn(() => "exp://localhost:8081"),
+  }),
+  { virtual: true },
+);
+
+// -------------------------------------------------
+// Mock expo-web-browser (not installed yet)
+// -------------------------------------------------
+jest.mock(
+  "expo-web-browser",
+  () => ({
+    openBrowserAsync: jest.fn(),
+    maybeCompleteAuthSession: jest.fn(),
+  }),
+  { virtual: true },
+);

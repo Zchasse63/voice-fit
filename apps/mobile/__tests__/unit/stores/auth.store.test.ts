@@ -1,5 +1,3 @@
-import { useAuthStore } from "../../../src/store/auth.store";
-
 // Polyfill localStorage for Zustand persist (createJSONStorage(() => localStorage))
 const createMemoryStorage = () => {
   let store: Record<string, string> = {};
@@ -25,6 +23,7 @@ if (!g.localStorage) {
 }
 
 // Mock Supabase client module used by the auth store
+// IMPORTANT: Must be before imports for Jest hoisting
 jest.mock("../../../src/services/database/supabase.client", () => {
   const auth = {
     signInWithPassword: jest.fn(),
@@ -39,6 +38,8 @@ jest.mock("../../../src/services/database/supabase.client", () => {
   };
 });
 
+// Now import after mock is set up
+import { useAuthStore } from "../../../src/store/auth.store";
 import { supabase } from "../../../src/services/database/supabase.client";
 
 describe("auth.store unit tests", () => {
@@ -93,7 +94,7 @@ describe("auth.store unit tests", () => {
       });
 
       await expect(
-        useAuthStore.getState().signIn("wrong@example.com", "wrong")
+        useAuthStore.getState().signIn("wrong@example.com", "wrong"),
       ).rejects.toThrow();
 
       const state = useAuthStore.getState();
@@ -145,7 +146,7 @@ describe("auth.store unit tests", () => {
       });
 
       await expect(
-        useAuthStore.getState().signUp("bad@example.com", "weak", "Bad User")
+        useAuthStore.getState().signUp("bad@example.com", "weak", "Bad User"),
       ).rejects.toThrow();
 
       const state = useAuthStore.getState();

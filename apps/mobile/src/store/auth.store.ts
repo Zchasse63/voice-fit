@@ -54,7 +54,9 @@ export const useAuthStore = create<AuthState>()(
             set({ user: mapSupabaseUser(data.user), isLoading: false });
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : "Sign in failed";
+              error && typeof error === "object" && "message" in error
+                ? (error as any).message
+                : "Sign in failed";
             set({ error: message, isLoading: false });
             throw error;
           }
@@ -76,7 +78,9 @@ export const useAuthStore = create<AuthState>()(
             set({ user: mapSupabaseUser(data.user), isLoading: false });
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : "Sign up failed";
+              error && typeof error === "object" && "message" in error
+                ? (error as any).message
+                : "Sign up failed";
             set({ error: message, isLoading: false });
             throw error;
           }
@@ -105,7 +109,9 @@ export const useAuthStore = create<AuthState>()(
             }
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : "Apple sign in failed";
+              error && typeof error === "object" && "message" in error
+                ? (error as any).message
+                : "Apple sign in failed";
             set({ error: message, isLoading: false });
             throw error;
           }
@@ -127,7 +133,9 @@ export const useAuthStore = create<AuthState>()(
             set({ isLoading: false });
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : "Google sign in failed";
+              error && typeof error === "object" && "message" in error
+                ? (error as any).message
+                : "Google sign in failed";
             set({ error: message, isLoading: false });
             throw error;
           }
@@ -141,7 +149,9 @@ export const useAuthStore = create<AuthState>()(
             set({ user: null, isLoading: false });
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : "Sign out failed";
+              error && typeof error === "object" && "message" in error
+                ? (error as any).message
+                : "Sign out failed";
             set({ error: message, isLoading: false });
             throw error;
           }
@@ -158,7 +168,9 @@ export const useAuthStore = create<AuthState>()(
             });
           } catch (error) {
             const message =
-              error instanceof Error ? error.message : "Session check failed";
+              error && typeof error === "object" && "message" in error
+                ? (error as any).message
+                : "Session check failed";
             set({ error: message, isLoading: false, user: null });
           }
         },

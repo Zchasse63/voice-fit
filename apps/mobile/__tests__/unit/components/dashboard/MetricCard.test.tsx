@@ -22,14 +22,14 @@ describe("MetricCard component", () => {
 
   it("renders subtitle when provided", () => {
     const { getByText } = render(
-      <MetricCard title="Workouts" value="12" subtitle="this week" />
+      <MetricCard title="Workouts" value="12" subtitle="this week" />,
     );
     expect(getByText("this week")).toBeTruthy();
   });
 
   it("renders icon when provided", () => {
     const { getByTestId } = render(
-      <MetricCard title="Workouts" value="12" icon={DummyIcon} />
+      <MetricCard title="Workouts" value="12" icon={DummyIcon} />,
     );
     expect(getByTestId("metric-icon")).toBeTruthy();
   });
@@ -42,7 +42,7 @@ describe("MetricCard component", () => {
         trend="up"
         trendValue="+2"
         subtitle="this week"
-      />
+      />,
     );
     // Expect the trend arrow '↑' and value to appear together
     expect(getByText(/↑ \+2/)).toBeTruthy();
@@ -56,7 +56,7 @@ describe("MetricCard component", () => {
         trend="down"
         trendValue="-1k"
         subtitle="this month"
-      />
+      />,
     );
     // Expect the trend arrow '↓' and value to appear together
     expect(getByText(/↓ -1k/)).toBeTruthy();
@@ -64,7 +64,7 @@ describe("MetricCard component", () => {
 
   it("does not render trend arrow when no trend is provided", () => {
     const { queryByText } = render(
-      <MetricCard title="Workouts" value="12" trendValue="+2" />
+      <MetricCard title="Workouts" value="12" trendValue="+2" />,
     );
     // No explicit arrow characters should exist without a trend set
     expect(queryByText(/↑/)).toBeNull();
@@ -73,11 +73,11 @@ describe("MetricCard component", () => {
 
   it("calls onPress when pressed (pressable mode)", () => {
     const onPress = jest.fn();
-    const { getByA11yRole } = render(
-      <MetricCard title="Workouts" value="12" onPress={onPress} />
+    const { getByRole } = render(
+      <MetricCard title="Workouts" value="12" onPress={onPress} />,
     );
 
-    const button = getByA11yRole("button");
+    const button = getByRole("button");
     fireEvent.press(button);
     expect(onPress).toHaveBeenCalledTimes(1);
   });
@@ -91,7 +91,7 @@ describe("MetricCard component", () => {
         value="12"
         subtitle="this week"
         onPress={onPress}
-      />
+      />,
     );
 
     expect(getByA11yLabel(a11yLabel)).toBeTruthy();
@@ -99,7 +99,7 @@ describe("MetricCard component", () => {
 
   it("renders compact variant without crashing", () => {
     const { getByText } = render(
-      <MetricCard title="Distance" value="5.2" variant="compact" />
+      <MetricCard title="Distance" value="5.2" variant="compact" />,
     );
     expect(getByText("5.2")).toBeTruthy();
   });

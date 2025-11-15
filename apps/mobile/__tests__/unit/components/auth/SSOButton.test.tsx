@@ -16,7 +16,7 @@ function flattenStyle(style: any): Record<string, any> {
 describe("SSOButton component", () => {
   it("renders Apple label and logo", () => {
     const { getByText } = render(
-      <SSOButton provider="apple" onPress={() => {}} />
+      <SSOButton provider="apple" onPress={() => {}} />,
     );
 
     // Label
@@ -27,7 +27,7 @@ describe("SSOButton component", () => {
 
   it("renders Google label and logo", () => {
     const { getByText } = render(
-      <SSOButton provider="google" onPress={() => {}} />
+      <SSOButton provider="google" onPress={() => {}} />,
     );
 
     // Label
@@ -38,7 +38,9 @@ describe("SSOButton component", () => {
 
   it("calls onPress when pressed (Apple)", () => {
     const onPress = jest.fn();
-    const { getByText } = render(<SSOButton provider="apple" onPress={onPress} />);
+    const { getByText } = render(
+      <SSOButton provider="apple" onPress={onPress} />,
+    );
 
     fireEvent.press(getByText("Sign in with Apple"));
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -46,7 +48,9 @@ describe("SSOButton component", () => {
 
   it("calls onPress when pressed (Google)", () => {
     const onPress = jest.fn();
-    const { getByText } = render(<SSOButton provider="google" onPress={onPress} />);
+    const { getByText } = render(
+      <SSOButton provider="google" onPress={onPress} />,
+    );
 
     fireEvent.press(getByText("Sign in with Google"));
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -54,13 +58,13 @@ describe("SSOButton component", () => {
 
   it("is disabled and shows loading indicator when loading=true (Apple)", () => {
     const onPress = jest.fn();
-    const { toJSON, queryByText } = render(
-      <SSOButton provider="apple" onPress={onPress} loading />
+    const { UNSAFE_getByType, queryByText } = render(
+      <SSOButton provider="apple" onPress={onPress} loading />,
     );
 
-    const tree: any = toJSON();
-    // Root is Pressable; ensure disabled is true
-    expect(tree.props.disabled).toBe(true);
+    const pressable = UNSAFE_getByType(Pressable);
+    // Ensure disabled is true
+    expect(pressable.props.disabled).toBe(true);
 
     // Label should not be rendered while loading
     expect(queryByText("Sign in with Apple")).toBeNull();
@@ -72,18 +76,20 @@ describe("SSOButton component", () => {
 
   it("is disabled and shows loading indicator when loading=true (Google)", () => {
     const onPress = jest.fn();
-    const { toJSON, queryByText } = render(
-      <SSOButton provider="google" onPress={onPress} loading />
+    const { UNSAFE_getByType, queryByText } = render(
+      <SSOButton provider="google" onPress={onPress} loading />,
     );
 
-    const tree: any = toJSON();
-    expect(tree.props.disabled).toBe(true);
+    const pressable = UNSAFE_getByType(Pressable);
+    expect(pressable.props.disabled).toBe(true);
     expect(queryByText("Sign in with Google")).toBeNull();
     expect(onPress).not.toHaveBeenCalled();
   });
 
   it("applies Apple styling: black background and no border", () => {
-    const { toJSON } = render(<SSOButton provider="apple" onPress={() => {}} />);
+    const { toJSON } = render(
+      <SSOButton provider="apple" onPress={() => {}} />,
+    );
     const tree: any = toJSON();
 
     // Root pressable style holds the background/border styles
@@ -93,7 +99,9 @@ describe("SSOButton component", () => {
   });
 
   it("applies Google styling: white background and subtle border", () => {
-    const { toJSON } = render(<SSOButton provider="google" onPress={() => {}} />);
+    const { toJSON } = render(
+      <SSOButton provider="google" onPress={() => {}} />,
+    );
     const tree: any = toJSON();
 
     const style = flattenStyle(tree.props.style);
@@ -103,7 +111,9 @@ describe("SSOButton component", () => {
   });
 
   it("respects pressed/opacity behavior by rendering without crashing (visual assertion not required)", () => {
-    const { toJSON } = render(<SSOButton provider="apple" onPress={() => {}} />);
+    const { toJSON } = render(
+      <SSOButton provider="apple" onPress={() => {}} />,
+    );
     // Presence of the node with style is good enough here
     const tree: any = toJSON();
     expect(tree).toBeTruthy();

@@ -7,7 +7,7 @@
  * - Voice command processing
  */
 
-import { apiClient, APIError, VoiceParseResponse } from './config';
+import { apiClient, APIError, VoiceParseResponse } from "./config";
 
 // ============================================================================
 // Type Definitions
@@ -56,10 +56,10 @@ export class VoiceAPIError extends APIError {
   constructor(
     message: string,
     public statusCode?: number,
-    public details?: any
+    public details?: any,
   ) {
     super(message, statusCode, details);
-    this.name = 'VoiceAPIError';
+    this.name = "VoiceAPIError";
   }
 }
 
@@ -67,7 +67,7 @@ export class VoiceAPIError extends APIError {
 // Voice API Client Class
 // ============================================================================
 
-class VoiceAPIClient {
+export class VoiceAPIClient {
   /**
    * Parse voice input into structured workout data
    */
@@ -75,17 +75,17 @@ class VoiceAPIClient {
     text: string,
     options?: {
       userId?: string;
-      context?: VoiceParseRequest['context'];
-    }
+      context?: VoiceParseRequest["context"];
+    },
   ): Promise<VoiceParseResponse> {
     try {
       const response = await apiClient.post<VoiceParseResponse>(
-        '/api/voice/parse',
+        "/api/voice/parse",
         {
           text,
           user_id: options?.userId,
           context: options?.context,
-        }
+        },
       );
 
       return response;
@@ -93,7 +93,7 @@ class VoiceAPIClient {
       if (error instanceof APIError) {
         throw new VoiceAPIError(error.message, error.statusCode, error.details);
       }
-      throw new VoiceAPIError('Failed to parse voice input', 500, error);
+      throw new VoiceAPIError("Failed to parse voice input", 500, error);
     }
   }
 
@@ -103,8 +103,8 @@ class VoiceAPIClient {
   async logWorkoutVoice(request: VoiceLogRequest): Promise<VoiceLogResponse> {
     try {
       const response = await apiClient.post<VoiceLogResponse>(
-        '/api/voice/log',
-        request
+        "/api/voice/log",
+        request,
       );
 
       return response;
@@ -112,7 +112,7 @@ class VoiceAPIClient {
       if (error instanceof APIError) {
         throw new VoiceAPIError(error.message, error.statusCode, error.details);
       }
-      throw new VoiceAPIError('Failed to log workout via voice', 500, error);
+      throw new VoiceAPIError("Failed to log workout via voice", 500, error);
     }
   }
 
@@ -122,7 +122,7 @@ class VoiceAPIClient {
   async parseAndLog(
     voiceInput: string,
     userId: string,
-    workoutId?: string
+    workoutId?: string,
   ): Promise<VoiceLogResponse> {
     try {
       // First parse the input
@@ -131,7 +131,7 @@ class VoiceAPIClient {
       if (!parseResult.success || !parseResult.data) {
         return {
           success: false,
-          error: parseResult.error || 'Failed to parse voice input',
+          error: parseResult.error || "Failed to parse voice input",
         };
       }
 
@@ -151,7 +151,7 @@ class VoiceAPIClient {
       if (error instanceof APIError) {
         throw new VoiceAPIError(error.message, error.statusCode, error.details);
       }
-      throw new VoiceAPIError('Failed to parse and log workout', 500, error);
+      throw new VoiceAPIError("Failed to parse and log workout", 500, error);
     }
   }
 
@@ -163,21 +163,21 @@ class VoiceAPIClient {
     context?: {
       recentExercises?: string[];
       currentWorkout?: string;
-    }
+    },
   ): Promise<string[]> {
     try {
       const response = await apiClient.post<{ suggestions: string[] }>(
-        '/api/voice/suggestions',
+        "/api/voice/suggestions",
         {
           user_id: userId,
           context,
-        }
+        },
       );
 
       return response.suggestions || [];
     } catch (error) {
       // Suggestions are non-critical, return empty array on error
-      console.warn('Failed to fetch voice command suggestions:', error);
+      console.warn("Failed to fetch voice command suggestions:", error);
       return [];
     }
   }
@@ -191,12 +191,12 @@ class VoiceAPIClient {
     suggestions?: string[];
   }> {
     try {
-      return await apiClient.post('/api/voice/validate', { text });
+      return await apiClient.post("/api/voice/validate", { text });
     } catch (error) {
       // Return validation failed
       return {
         valid: false,
-        issues: ['Unable to validate input'],
+        issues: ["Unable to validate input"],
       };
     }
   }
@@ -211,7 +211,7 @@ class VoiceAPIClient {
       offset?: number;
       startDate?: string;
       endDate?: string;
-    }
+    },
   ): Promise<{
     history: Array<{
       id: string;
@@ -230,7 +230,7 @@ class VoiceAPIClient {
       if (error instanceof APIError) {
         throw new VoiceAPIError(error.message, error.statusCode, error.details);
       }
-      throw new VoiceAPIError('Failed to fetch voice history', 500, error);
+      throw new VoiceAPIError("Failed to fetch voice history", 500, error);
     }
   }
 
@@ -240,10 +240,10 @@ class VoiceAPIClient {
   async retryParse(
     text: string,
     userId: string,
-    additionalContext?: string
+    additionalContext?: string,
   ): Promise<VoiceParseResponse> {
     try {
-      return await apiClient.post<VoiceParseResponse>('/api/voice/retry', {
+      return await apiClient.post<VoiceParseResponse>("/api/voice/retry", {
         text,
         user_id: userId,
         additional_context: additionalContext,
@@ -252,7 +252,7 @@ class VoiceAPIClient {
       if (error instanceof APIError) {
         throw new VoiceAPIError(error.message, error.statusCode, error.details);
       }
-      throw new VoiceAPIError('Failed to retry voice parse', 500, error);
+      throw new VoiceAPIError("Failed to retry voice parse", 500, error);
     }
   }
 }

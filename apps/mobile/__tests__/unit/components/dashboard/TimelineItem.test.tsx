@@ -22,7 +22,11 @@ function flattenStyle(style: any): Record<string, any> {
 describe("TimelineItem component", () => {
   it("renders title, subtitle, and time", () => {
     const { getByText } = render(
-      <TimelineItem title="Bench Press" subtitle="3x10 @ RPE 8" time="Yesterday" />
+      <TimelineItem
+        title="Bench Press"
+        subtitle="3x10 @ RPE 8"
+        time="Yesterday"
+      />,
     );
 
     expect(getByText("Bench Press")).toBeTruthy();
@@ -44,7 +48,7 @@ describe("TimelineItem component", () => {
         time="Today"
         icon={DummyIcon}
         iconColor="#9900ff"
-      />
+      />,
     );
 
     expect(getByTestId("timeline-icon")).toBeTruthy();
@@ -57,7 +61,7 @@ describe("TimelineItem component", () => {
   it("shows vertical connector line when isLast is false (default) and hides it when isLast is true", () => {
     // Default (isLast=false) should render the connector
     const { toJSON, rerender } = render(
-      <TimelineItem title="Workout" subtitle="12 sets" time="Mon" />
+      <TimelineItem title="Workout" subtitle="12 sets" time="Mon" />,
     );
     let tree: any = toJSON();
 
@@ -71,7 +75,9 @@ describe("TimelineItem component", () => {
     expect(column.children.length).toBe(2); // circle + connector
 
     // When isLast=true, connector should be absent
-    rerender(<TimelineItem title="Workout" subtitle="12 sets" time="Mon" isLast />);
+    rerender(
+      <TimelineItem title="Workout" subtitle="12 sets" time="Mon" isLast />,
+    );
     tree = toJSON();
     const lastColumn = tree.children[0];
     expect(Array.isArray(lastColumn.children)).toBe(true);
@@ -85,16 +91,16 @@ describe("TimelineItem component", () => {
     const time = "Tue";
     const a11y = `${title}, ${subtitle}, ${time}`;
 
-    const { getByA11yRole, getByA11yLabel } = render(
+    const { getByRole, getByA11yLabel } = render(
       <TimelineItem
         title={title}
         subtitle={subtitle}
         time={time}
         onPress={onPress}
-      />
+      />,
     );
 
-    const button = getByA11yRole("button");
+    const button = getByRole("button");
     expect(getByA11yLabel(a11y)).toBeTruthy();
 
     fireEvent.press(button);
@@ -112,7 +118,7 @@ describe("TimelineItem component", () => {
         time="Wed"
         icon={DummyIcon}
         iconBackgroundColor={bg}
-      />
+      />,
     );
 
     const tree: any = toJSON();

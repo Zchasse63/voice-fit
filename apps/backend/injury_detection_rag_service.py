@@ -35,7 +35,7 @@ XAI_API_KEY = os.getenv("XAI_API_KEY")
 XAI_BASE_URL = "https://api.x.ai/v1"
 GROK_MODEL_ID = "grok-4-fast-reasoning"
 
-# Injury-specific namespaces for RAG
+# Injury-specific namespaces for RAG (expanded for sports-specific coverage)
 INJURY_NAMESPACES = [
     "injury-analysis",  # Injury detection and diagnosis
     "injury-prevention",  # Prevention strategies
@@ -43,34 +43,203 @@ INJURY_NAMESPACES = [
     "exercise-substitution",  # Safe exercise alternatives
     "mobility-flexibility",  # Mobility work for recovery
     "recovery-and-performance",  # Recovery science
+    "powerlifting-injuries",  # Powerlifting-specific injury patterns
+    "olympic-lifting-injuries",  # Olympic lifting injury patterns
+    "running-injuries",  # Running and endurance sport injuries
+    "crossfit-injuries",  # CrossFit-specific injury patterns
+    "bodybuilding-injuries",  # Bodybuilding and hypertrophy training injuries
 ]
+
+# Confidence calibration history (tracks accuracy over time)
+CONFIDENCE_CALIBRATION_FILE = "injury_confidence_history.json"
 
 
 class InjuryDetectionRAGService:
     """AI-powered injury detection service with RAG capabilities"""
 
-    def __init__(self):
+    def __init__(self, supabase_client: Optional[Any] = None):
         """Initialize Injury Detection RAG service"""
         self.upstash_url = UPSTASH_SEARCH_URL
         self.upstash_token = UPSTASH_SEARCH_TOKEN
         self.xai_api_key = XAI_API_KEY
         self.xai_base_url = XAI_BASE_URL
         self.model_id = GROK_MODEL_ID
+        self.supabase = supabase_client
+        self.confidence_history = self._load_confidence_history()
 
         if not all([self.upstash_url, self.upstash_token, self.xai_api_key]):
             raise ValueError(
                 "Missing required environment variables for Injury Detection RAG service"
             )
 
-    def select_relevant_namespaces(self, notes: str) -> List[str]:
+    def _load_confidence_history(self) -> Dict[str, List[float]]:
+        """Load confidence calibration history from file"""
+        try:
+            if os.path.exists(CONFIDENCE_CALIBRATION_FILE):
+                with open(CONFIDENCE_CALIBRATION_FILE, "r") as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"Error loading confidence history: {e}")
+        return {"predictions": [], "actual_outcomes": []}
+
+    def _save_confidence_history(self):
+        """Save confidence calibration history to file"""
+        try:
+            with open(CONFIDENCE_CALIBRATION_FILE, "w") as f:
+                json.dump(self.confidence_history, f)
+        except Exception as e:
+            print(f"Error saving confidence history: {e}")
+
+    async def fetch_injury_history(self, user_id: str) -> List[Dict[str, Any]]:
         """
-        Select most relevant injury namespaces based on notes content.
+        Fetch user's injury history from Supabase.
+
+        Args:
+            user_id: User ID
+
+        Returns:
+            List of previous injuries with details
+        """
+        if not self.supabase:
+            return []
+
+        try:
+            response = (
+                self.supabase.table("injury_logs")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("created_at", desc=True)
+                .limit(10)
+                .execute()
+            )
+            return response.data if response.data else []
+        except Exception as e:
+            print(f"Error fetching injury history: {e}")
+            return []
+
+    async def fetch_training_load_data(self, user_id: str, days: int = 14) -> Dict[str, Any]:
+        """
+        Fetch user's recent training load data from Supabase.
+
+        Args:
+            user_id: User ID
+            days: Number of days to look back
+
+        Returns:
+            Training load metrics (volume, intensity, frequency)
+        """
+        if not self.supabase:
+            return {}
+
+        try:
+            from datetime import datetime, timedelta
+
+            cutoff_date = (datetime.now() - timedelta(days=days)).isoformat()
+
+            # Fetch recent workout logs
+            workout_response = (
+                self.supabase.table("workout_logs")
+                .select("id, exercise_name, created_at")
+                .eq("user_id", user_id)
+                .gte("created_at", cutoff_date)
+                .execute()
+            )
+
+            # Fetch sets for volume calculation
+            if workout_response.data:
+                workout_ids = [w["id"] for w in workout_response.data]
+                sets_response = (
+                    self.supabase.table("sets")
+                    .select("weight, reps, rpe")
+                    .in_("workout_log_id", workout_ids)
+                    .execute()
+                )
+
+                # Calculate training load metrics
+                total_volume = sum(
+                    s.get("weight", 0) * s.get("reps", 0)
+                    for s in sets_response.data
+                )
+                avg_rpe = (
+                    sum(s.get("rpe", 0) for s in sets_response.data if s.get("rpe"))
+                    / len([s for s in sets_response.data if s.get("rpe")])
+                    if sets_response.data
+                    else 0
+                )
+                workout_frequency = len(workout_response.data)
+
+                return {
+                    "total_volume_kg": total_volume,
+                    "average_rpe": round(avg_rpe, 1),
+                    "workout_frequency": workout_frequency,
+                    "days_tracked": days,
+                    "volume_per_session": (
+                        round(total_volume / workout_frequency, 1)
+                        if workout_frequency > 0
+                        else 0
+                    ),
+                }
+
+            return {}
+        except Exception as e:
+            print(f"Error fetching training load data: {e}")
+            return {}
+
+    def detect_sport_type(self, user_context: Optional[Dict[str, Any]] = None) -> Optional[str]:
+        """
+        Detect user's primary sport type based on exercise history.
+
+        Args:
+            user_context: User context including recent exercises
+
+        Returns:
+            Sport type string or None
+        """
+        if not user_context or "recent_exercises" not in user_context:
+            return None
+
+        exercises = [e.lower() for e in user_context.get("recent_exercises", [])]
+
+        # Powerlifting indicators
+        powerlifting_exercises = {"squat", "bench press", "deadlift"}
+        if any(ex in " ".join(exercises) for ex in powerlifting_exercises):
+            if len([e for e in exercises if any(pl in e for pl in powerlifting_exercises)]) >= 2:
+                return "powerlifting"
+
+        # Olympic lifting indicators
+        oly_exercises = {"snatch", "clean", "jerk", "clean and jerk"}
+        if any(ex in " ".join(exercises) for ex in oly_exercises):
+            return "olympic-lifting"
+
+        # Running indicators
+        if "run" in " ".join(exercises) or "running" in user_context.get("sport_type", "").lower():
+            return "running"
+
+        # CrossFit indicators (mix of modalities)
+        crossfit_indicators = {"box jump", "muscle up", "thruster", "wall ball", "burpee"}
+        if any(ex in " ".join(exercises) for ex in crossfit_indicators):
+            return "crossfit"
+
+        # Bodybuilding indicators (isolation work)
+        bodybuilding_exercises = {"curl", "fly", "extension", "raise", "pulldown"}
+        isolation_count = sum(1 for e in exercises if any(bb in e for bb in bodybuilding_exercises))
+        if isolation_count >= 3:
+            return "bodybuilding"
+
+        return None
+
+    def select_relevant_namespaces(
+        self, notes: str, sport_type: Optional[str] = None
+    ) -> List[str]:
+        """
+        Select most relevant injury namespaces based on notes content and sport type.
 
         Args:
             notes: User's injury notes from readiness check-in
+            sport_type: Optional detected sport type for sport-specific namespaces
 
         Returns:
-            List of 2-4 most relevant namespaces to search
+            List of 2-5 most relevant namespaces to search
         """
         notes_lower = notes.lower()
         selected = []
@@ -120,11 +289,17 @@ class InjuryDetectionRAGService:
         ):
             selected.append("recovery-and-performance")
 
+        # Add sport-specific namespace if detected
+        if sport_type:
+            sport_namespace = f"{sport_type}-injuries"
+            if sport_namespace in INJURY_NAMESPACES and sport_namespace not in selected:
+                selected.append(sport_namespace)
+
         # Ensure at least 2 namespaces (add injury-management if only 1)
         if len(selected) == 1:
             selected.append("injury-management")
 
-        return selected[:4]  # Limit to 4 for performance
+        return selected[:5]  # Limit to 5 for performance (increased for sport coverage)
 
     def search_single_namespace(
         self, namespace: str, query: str, top_k: int
@@ -209,11 +384,160 @@ class InjuryDetectionRAGService:
 
         return context_strings, sources, latency
 
+    def detect_multiple_injuries(self, notes: str) -> List[str]:
+        """
+        Detect if notes mention multiple distinct injuries.
+
+        Args:
+            notes: User's injury notes
+
+        Returns:
+            List of distinct injury descriptions to analyze separately
+        """
+        # Common separators for multiple injuries
+        separators = [" and ", ", ", " also ", " plus "]
+
+        # Body part keywords that indicate separate injuries
+        body_parts = [
+            "shoulder", "elbow", "wrist", "back", "hip", "knee", "ankle",
+            "hamstring", "quad", "calf", "bicep", "tricep", "chest", "neck"
+        ]
+
+        notes_lower = notes.lower()
+
+        # Check for multiple body parts mentioned
+        mentioned_parts = [part for part in body_parts if part in notes_lower]
+
+        if len(mentioned_parts) >= 2:
+            # Try to split by separators
+            injury_segments = [notes]
+            for sep in separators:
+                if sep in notes_lower:
+                    injury_segments = notes.split(sep)
+                    break
+
+            # Validate each segment has a body part
+            valid_segments = []
+            for segment in injury_segments:
+                segment_lower = segment.lower()
+                if any(part in segment_lower for part in body_parts):
+                    valid_segments.append(segment.strip())
+
+            if len(valid_segments) >= 2:
+                return valid_segments
+
+        # Single injury or couldn't split reliably
+        return [notes]
+
+    def generate_follow_up_questions(
+        self, analysis_result: Dict[str, Any], notes: str
+    ) -> List[str]:
+        """
+        Generate follow-up questions for ambiguous or incomplete injury reports.
+
+        Args:
+            analysis_result: Initial injury analysis from Grok
+            notes: Original injury notes
+
+        Returns:
+            List of follow-up questions to ask user
+        """
+        questions = []
+        confidence = analysis_result.get("confidence", 0.0)
+
+        # If low confidence, ask clarifying questions
+        if confidence < 0.6:
+            # Missing pain characteristics
+            if "sharp" not in notes.lower() and "dull" not in notes.lower():
+                questions.append(
+                    "Is the pain sharp and stabbing, or dull and achy?"
+                )
+
+            # Missing timing information
+            if "when" not in notes.lower() and "during" not in notes.lower():
+                questions.append(
+                    "When do you feel the pain? (e.g., during exercise, after, at rest)"
+                )
+
+            # Missing onset information
+            if "sudden" not in notes.lower() and "gradual" not in notes.lower():
+                questions.append(
+                    "Did the pain start suddenly or develop gradually over time?"
+                )
+
+        # Check for missing severity indicators
+        if not analysis_result.get("severity") or analysis_result.get("severity") == "unknown":
+            questions.append(
+                "On a scale of 1-10, how would you rate the pain intensity?"
+            )
+
+        # Check for missing functional impact
+        functional_keywords = ["can't", "unable", "difficult", "hurts to"]
+        if not any(kw in notes.lower() for kw in functional_keywords):
+            questions.append(
+                "What movements or activities does this injury prevent you from doing?"
+            )
+
+        # Ask about previous similar injuries if not mentioned
+        if "before" not in notes.lower() and "previous" not in notes.lower():
+            questions.append(
+                "Have you experienced this type of injury before?"
+            )
+
+        # Limit to top 3 most important questions
+        return questions[:3]
+
+    def calibrate_confidence(
+        self, predicted_confidence: float, actual_outcome: bool
+    ) -> float:
+        """
+        Calibrate confidence scores based on historical accuracy.
+
+        Args:
+            predicted_confidence: Model's predicted confidence (0.0-1.0)
+            actual_outcome: Whether the prediction was accurate (True/False)
+
+        Returns:
+            Calibrated confidence score
+        """
+        # Store prediction and outcome
+        self.confidence_history["predictions"].append(predicted_confidence)
+        self.confidence_history["actual_outcomes"].append(1.0 if actual_outcome else 0.0)
+
+        # Keep only last 100 predictions
+        if len(self.confidence_history["predictions"]) > 100:
+            self.confidence_history["predictions"] = self.confidence_history["predictions"][-100:]
+            self.confidence_history["actual_outcomes"] = self.confidence_history["actual_outcomes"][-100:]
+
+        # Save updated history
+        self._save_confidence_history()
+
+        # If not enough history, return original confidence
+        if len(self.confidence_history["predictions"]) < 10:
+            return predicted_confidence
+
+        # Calculate calibration factor
+        # Group predictions into bins and check accuracy
+        predictions = self.confidence_history["predictions"]
+        outcomes = self.confidence_history["actual_outcomes"]
+
+        # Simple calibration: if model is overconfident, reduce; if underconfident, increase
+        avg_prediction = sum(predictions) / len(predictions)
+        avg_outcome = sum(outcomes) / len(outcomes)
+
+        calibration_factor = avg_outcome / avg_prediction if avg_prediction > 0 else 1.0
+
+        # Apply calibration (with limits)
+        calibrated = predicted_confidence * calibration_factor
+        return max(0.1, min(0.95, calibrated))  # Keep in reasonable range
+
     def analyze_injury_with_grok(
         self,
         notes: str,
         context: List[str],
         user_context: Optional[Dict[str, Any]] = None,
+        injury_history: Optional[List[Dict[str, Any]]] = None,
+        training_load: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Dict[str, Any], float]:
         """
         Analyze injury using Grok 4 Fast Reasoning with RAG context.
@@ -222,6 +546,8 @@ class InjuryDetectionRAGService:
             notes: User's injury description
             context: Retrieved research context from Upstash
             user_context: User's training history, previous injuries, etc.
+            injury_history: User's previous injury records
+            training_load: Recent training load metrics
 
         Returns:
             - Structured injury analysis result
@@ -254,7 +580,9 @@ RESPONSE FORMAT (JSON):
     "Suggested exercise modification 2"
   ],
   "recovery_timeline": "estimated recovery timeline (e.g., '2-4 weeks')",
-  "should_see_doctor": true/false
+  "should_see_doctor": true/false,
+  "related_to_previous_injury": true/false,
+  "overtraining_indicator": true/false
 }
 
 GUIDELINES:
@@ -298,6 +626,33 @@ USER CONTEXT:
 - Previous Injuries: {user_context.get("previous_injuries", "None reported")}
 - Current Recovery Week: {user_context.get("recovery_week", "N/A")}
 - Current Pain Level: {user_context.get("pain_level", "Not specified")}/10"""
+
+        # Add injury history if available
+        if injury_history and len(injury_history) > 0:
+            user_message += "\n\nINJURY HISTORY:"
+            for idx, injury in enumerate(injury_history[:5], 1):
+                user_message += f"""
+- Injury {idx}: {injury.get('body_part', 'Unknown')} {injury.get('injury_type', '')}
+  Severity: {injury.get('severity', 'Unknown')}
+  Date: {injury.get('created_at', 'Unknown')[:10]}
+  Status: {injury.get('status', 'Unknown')}"""
+
+        # Add training load data if available
+        if training_load and training_load.get("total_volume_kg"):
+            user_message += f"""
+
+RECENT TRAINING LOAD ({training_load.get('days_tracked', 14)} days):
+- Total Volume: {training_load.get('total_volume_kg', 0):,.0f} kg
+- Average RPE: {training_load.get('average_rpe', 0)}/10
+- Workout Frequency: {training_load.get('workout_frequency', 0)} sessions
+- Volume per Session: {training_load.get('volume_per_session', 0):,.0f} kg
+
+Consider if current injury may be related to training load, volume spikes, or overtraining."""</parameter>
+
+<old_text line=406>
+                "recovery_timeline": None,
+                "should_see_doctor": False,
+            }, latency
 
         # Prepare messages
         messages = [
@@ -387,22 +742,101 @@ USER CONTEXT:
                 "should_see_doctor": False,
             }, latency
 
-    def analyze_injury(
-        self, notes: str, user_context: Optional[Dict[str, Any]] = None
+    async def analyze_injury(
+        self, notes: str, user_id: Optional[str] = None, user_context: Optional[Dict[str, Any]] = None
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
-        Full injury detection pipeline with RAG.
+        Full injury detection pipeline with RAG and enhanced features.
 
         Args:
             notes: User's injury notes from readiness check-in
+            user_id: User ID for fetching history and training load
             user_context: Optional user context (training history, previous injuries)
 
         Returns:
-            - Injury analysis result (structured)
+            - Injury analysis result (structured, may contain multiple injuries)
             - Metadata (sources, latencies, etc.)
         """
-        # Step 1: Select relevant namespaces
-        namespaces = self.select_relevant_namespaces(notes)
+        # Step 0: Fetch injury history and training load if user_id provided
+        injury_history = []
+        training_load = {}
+        if user_id:
+            injury_history = await self.fetch_injury_history(user_id)
+            training_load = await self.fetch_training_load_data(user_id)
+
+        # Step 1: Detect multiple injuries
+        injury_segments = self.detect_multiple_injuries(notes)
+
+        # If multiple injuries detected, analyze each separately
+        if len(injury_segments) > 1:
+            all_results = []
+            total_retrieval_latency = 0
+            total_inference_latency = 0
+            all_namespaces = []
+            all_sources = []
+
+            for segment in injury_segments:
+                # Detect sport type
+                sport_type = self.detect_sport_type(user_context)
+
+                # Select relevant namespaces
+                namespaces = self.select_relevant_namespaces(segment, sport_type)
+                all_namespaces.extend(namespaces)
+
+                # Retrieve context
+                context, sources, retrieval_latency = self.retrieve_injury_context(
+                    notes=segment, namespaces=namespaces, top_k=3
+                )
+                all_sources.extend(sources)
+                total_retrieval_latency += retrieval_latency
+
+                # Analyze with Grok
+                analysis_result, inference_latency = self.analyze_injury_with_grok(
+                    notes=segment,
+                    context=context,
+                    user_context=user_context,
+                    injury_history=injury_history,
+                    training_load=training_load,
+                )
+                total_inference_latency += inference_latency
+
+                # Calibrate confidence if we have history
+                if len(self.confidence_history["predictions"]) >= 10:
+                    original_confidence = analysis_result.get("confidence", 0.5)
+                    # For calibration, we'd need feedback - for now, just track
+                    analysis_result["original_confidence"] = original_confidence
+
+                # Generate follow-up questions
+                analysis_result["follow_up_questions"] = self.generate_follow_up_questions(
+                    analysis_result, segment
+                )
+
+                all_results.append(analysis_result)
+
+            # Build combined metadata
+            metadata = {
+                "multiple_injuries_detected": True,
+                "injury_count": len(all_results),
+                "namespaces_searched": list(set(all_namespaces)),
+                "sources_used": list(set(all_sources)),
+                "retrieval_latency_ms": round(total_retrieval_latency, 2),
+                "inference_latency_ms": round(total_inference_latency, 2),
+                "total_latency_ms": round(total_retrieval_latency + total_inference_latency, 2),
+                "model_used": self.model_id,
+                "rag_enabled": True,
+                "sport_type": sport_type,
+                "injury_history_available": len(injury_history) > 0,
+                "training_load_available": bool(training_load),
+            }
+
+            return {"injuries": all_results}, metadata
+
+        # Single injury - proceed with normal flow
+        # Detect sport type
+        sport_type = self.detect_sport_type(user_context)
+
+        # Select relevant namespaces
+        namespaces = self.select_relevant_namespaces(notes, sport_type)
 
         # Step 2: Retrieve context from Upstash (RAG)
         context, sources, retrieval_latency = self.retrieve_injury_context(
@@ -411,11 +845,28 @@ USER CONTEXT:
 
         # Step 3: Analyze with Grok 4 Fast Reasoning
         analysis_result, inference_latency = self.analyze_injury_with_grok(
-            notes=notes, context=context, user_context=user_context
+            notes=notes,
+            context=context,
+            user_context=user_context,
+            injury_history=injury_history,
+            training_load=training_load,
+        )
+
+        # Step 4: Calibrate confidence if we have history
+        if len(self.confidence_history["predictions"]) >= 10:
+            original_confidence = analysis_result.get("confidence", 0.5)
+            # For calibration, we'd need feedback - for now, just track
+            analysis_result["original_confidence"] = original_confidence
+
+        # Step 5: Generate follow-up questions for ambiguous cases
+        analysis_result["follow_up_questions"] = self.generate_follow_up_questions(
+            analysis_result, notes
         )
 
         # Build metadata
         metadata = {
+            "multiple_injuries_detected": False,
+            "injury_count": 1,
             "namespaces_searched": namespaces,
             "sources_used": sources,
             "retrieval_latency_ms": round(retrieval_latency, 2),
@@ -423,6 +874,9 @@ USER CONTEXT:
             "total_latency_ms": round(retrieval_latency + inference_latency, 2),
             "model_used": self.model_id,
             "rag_enabled": True,
+            "sport_type": sport_type,
+            "injury_history_available": len(injury_history) > 0,
+            "training_load_available": bool(training_load),
         }
 
         return analysis_result, metadata
@@ -432,9 +886,26 @@ USER CONTEXT:
 _injury_detection_service = None
 
 
-def get_injury_detection_service() -> InjuryDetectionRAGService:
+def get_injury_detection_service(supabase_client: Optional[Any] = None) -> InjuryDetectionRAGService:
     """Get or create singleton instance of InjuryDetectionRAGService"""
     global _injury_detection_service
     if _injury_detection_service is None:
-        _injury_detection_service = InjuryDetectionRAGService()
+        _injury_detection_service = InjuryDetectionRAGService(supabase_client)
     return _injury_detection_service
+
+
+def record_confidence_feedback(
+    predicted_confidence: float, was_accurate: bool
+) -> float:
+    """
+    Record feedback on a prediction for confidence calibration.
+
+    Args:
+        predicted_confidence: The confidence score that was predicted
+        was_accurate: Whether the prediction turned out to be accurate
+
+    Returns:
+        Calibrated confidence score for future predictions
+    """
+    service = get_injury_detection_service()
+    return service.calibrate_confidence(predicted_confidence, was_accurate)

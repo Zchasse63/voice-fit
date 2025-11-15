@@ -33,7 +33,6 @@ module.exports = {
   // Setup files: Testing Library matchers, RN gesture handler, and local jest setup
   setupFilesAfterEnv: [
     "@testing-library/jest-native/extend-expect",
-    "react-native-gesture-handler/jestSetup",
     "<rootDir>/jest.setup.js",
   ],
 
@@ -46,12 +45,19 @@ module.exports = {
       "react-native-.*|" +
       "@react-navigation|" +
       "@react-native-community|" +
-      "expo(nent)?|@expo(nent)?/.*|" +
-      "@unimodules/.*|unimodules|" +
+      "expo|" +
+      "expo-.*|" +
+      "@expo|" +
+      "@expo/.*|" +
+      "expo-modules-core|" +
+      "@unimodules/.*|" +
+      "unimodules|" +
       "native-base|" +
       "react-native-svg|" +
       "@nozbe/watermelondb|" +
-      "lucide-react-native" +
+      "lucide-react-native|" +
+      "victory-native|" +
+      "zustand" +
       ")/)",
   ],
 
@@ -62,6 +68,8 @@ module.exports = {
     "^@/(.*)$": "<rootDir>/src/$1",
     // Style mocks (rarely needed with RN, but harmless)
     "\\.(css|less|scss|sass)$": "identity-obj-proxy",
+    // Mock JSON files that don't exist in test environment
+    "^.*/injury_keywords\\.json$": "<rootDir>/__mocks__/injury_keywords.json",
   },
 
   // Coverage settings (focus on app source; ignore d.ts, test folders, barrel files)

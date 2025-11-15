@@ -38,7 +38,7 @@ describe("Avatar component", () => {
 
   it("renders Image when imageUrl is provided", () => {
     const { UNSAFE_getByType } = render(
-      <Avatar name="Ignored" imageUrl="https://example.com/avatar.png" />
+      <Avatar name="Ignored" imageUrl="https://example.com/avatar.png" />,
     );
     // Should render an Image component instead of initials
     const img = UNSAFE_getByType(Image);
@@ -64,7 +64,9 @@ describe("Avatar component", () => {
 
   it("fires onPress when provided (Pressable wrapper)", () => {
     const onPress = jest.fn();
-    const { UNSAFE_getByType } = render(<Avatar name="Tap Test" onPress={onPress} />);
+    const { UNSAFE_getByType } = render(
+      <Avatar name="Tap Test" onPress={onPress} />,
+    );
     const pressable = UNSAFE_getByType(Pressable);
     fireEvent.press(pressable);
     expect(onPress).toHaveBeenCalledTimes(1);
@@ -89,8 +91,13 @@ describe("Avatar component", () => {
       const { toJSON, unmount } = render(<Avatar name="Size" size={size} />);
       const tree: any = toJSON();
 
-      // Root wrapper carries width/height
-      const rootStyle = flattenStyle(tree.props.style);
+      // Root wrapper carries width/height (style may be a function for Pressable)
+      const rootStyleFn = tree.props.style;
+      const rootStyle = flattenStyle(
+        typeof rootStyleFn === "function"
+          ? rootStyleFn({ pressed: false })
+          : rootStyleFn,
+      );
       expect(rootStyle.width).toBe(expected);
       expect(rootStyle.height).toBe(expected);
 
