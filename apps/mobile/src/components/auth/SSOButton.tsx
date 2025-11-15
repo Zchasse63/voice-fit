@@ -6,7 +6,13 @@
  */
 
 import React from "react";
-import { Pressable, Text, View, ActivityIndicator, StyleSheet } from "react-native";
+import {
+  Pressable,
+  Text,
+  View,
+  ActivityIndicator,
+  StyleSheet,
+} from "react-native";
 import tokens from "../../theme/tokens";
 
 interface SSOButtonProps {
@@ -15,7 +21,11 @@ interface SSOButtonProps {
   loading?: boolean;
 }
 
-export default function SSOButton({ provider, onPress, loading }: SSOButtonProps) {
+export default function SSOButton({
+  provider,
+  onPress,
+  loading,
+}: SSOButtonProps) {
   const isApple = provider === "apple";
 
   // Apple: Black background, white text
@@ -29,6 +39,8 @@ export default function SSOButton({ provider, onPress, loading }: SSOButtonProps
     <Pressable
       onPress={onPress}
       disabled={loading}
+      accessibilityRole="button"
+      accessibilityLabel={`Sign in with ${isApple ? "Apple" : "Google"}`}
       style={({ pressed }) => [
         styles.button,
         {
