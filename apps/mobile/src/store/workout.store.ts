@@ -1,10 +1,11 @@
-import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
-import { database } from '../services/database/watermelon/database';
-import WorkoutLog from '../services/database/watermelon/models/WorkoutLog';
-import Set from '../services/database/watermelon/models/Set';
-import { useAuthStore } from './auth.store';
-import { syncService } from '../services/sync/SyncService';
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
+import { database } from "../services/database/watermelon/database";
+import WorkoutLog from "../services/database/watermelon/models/WorkoutLog";
+import Set from "../services/database/watermelon/models/Set";
+import { useAuthStore } from "./auth.store";
+import { syncService } from "../services/sync/SyncService";
+import { workoutNotificationManager } from "../services/workoutNotification/WorkoutNotificationManager";
 
 interface Set {
   id: string;
@@ -27,7 +28,7 @@ interface WorkoutState {
   isLoading: boolean;
   error: string | null;
   startWorkout: (name: string) => void;
-  addSet: (set: Omit<Set, 'id' | 'timestamp'>) => void;
+  addSet: (set: Omit<Set, "id" | "timestamp">) => void;
   removeSet: (setId: string) => void;
   completeWorkout: () => Promise<void>;
   cancelWorkout: () => void;
@@ -36,13 +37,13 @@ interface WorkoutState {
 
 // Generate UUID for web compatibility
 const generateUUID = (): string => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
   }
   // Fallback for environments without crypto.randomUUID
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
     const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
     return v.toString(16);
   });
 };
@@ -56,28 +57,58 @@ export const useWorkoutStore = create<WorkoutState>()(
       error: null,
 
       startWorkout: (name) => {
+        const workoutId = generateUUID();
         set({
           activeWorkout: {
-            id: generateUUID(),
+            id: workoutId,
             name,
             startTime: new Date(),
           },
           sets: [],
           error: null,
         });
+
+        // Start workout notification (Live Activity on iOS, Foreground Service on Android)
+        workoutNotificationManager.start(name, workoutId).catch((error) => {
+          console.error("Failed to start workout notification:", error);
+        });
       },
 
       addSet: (newSet) => {
-        set((state) => ({
-          sets: [
+        set((state) => {
+          const updatedSets = [
             ...state.sets,
             {
               ...newSet,
               id: generateUUID(),
               timestamp: new Date(),
             },
-          ],
-        }));
+          ];
+
+          // Update workout notification with latest set
+          workoutNotificationManager
+            .updateLastSet(newSet.weight, newSet.reps, newSet.rpe)
+            .catch((error) => {
+              console.error("Failed to update workout notification:", error);
+            });
+
+          // Update exercise and set counts
+          const currentExercise = newSet.exerciseName;
+          const exerciseSets = updatedSets.filter(
+            (s) => s.exerciseName === currentExercise,
+          );
+          workoutNotificationManager
+            .updateCurrentExercise(
+              currentExercise,
+              exerciseSets.length,
+              updatedSets.length,
+            )
+            .catch((error) => {
+              console.error("Failed to update current exercise:", error);
+            });
+
+          return { sets: updatedSets };
+        });
       },
 
       removeSet: (setId) => {
@@ -89,7 +120,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       completeWorkout: async () => {
         const { activeWorkout, sets } = get();
         if (!activeWorkout) {
-          set({ error: 'No active workout to complete' });
+          set({ error: "No active workout to complete" });
           return;
         }
 
@@ -98,14 +129,14 @@ export const useWorkoutStore = create<WorkoutState>()(
           // Get current user ID
           const userId = useAuthStore.getState().user?.id;
           if (!userId) {
-            throw new Error('User not authenticated');
+            throw new Error("User not authenticated");
           }
 
           // Save to WatermelonDB (offline-first)
           await database.write(async () => {
             // Create workout log
             const workoutLog = await database.collections
-              .get<WorkoutLog>('workout_logs')
+              .get<WorkoutLog>("workout_logs")
               .create((workout) => {
                 workout.userId = userId;
                 workout.workoutName = activeWorkout.name;
@@ -116,26 +147,34 @@ export const useWorkoutStore = create<WorkoutState>()(
 
             // Create sets
             for (const set of sets) {
-              await database.collections
-                .get<Set>('sets')
-                .create((s) => {
-                  s.workoutLogId = workoutLog.id;
-                  s.exerciseId = generateUUID(); // Generate exercise ID
-                  s.exerciseName = set.exerciseName;
-                  s.weight = set.weight;
-                  s.reps = set.reps;
-                  s.rpe = set.rpe || 0;
-                  s.synced = false; // Mark for sync
-                });
+              await database.collections.get<Set>("sets").create((s) => {
+                s.workoutLogId = workoutLog.id;
+                s.exerciseId = generateUUID(); // Generate exercise ID
+                s.exerciseName = set.exerciseName;
+                s.weight = set.weight;
+                s.reps = set.reps;
+                s.rpe = set.rpe || 0;
+                s.synced = false; // Mark for sync
+              });
             }
           });
 
-          console.log('✅ Workout saved to WatermelonDB');
+          console.log("✅ Workout saved to WatermelonDB");
 
           // Trigger background sync
           syncService.syncNow(userId).catch((error) => {
-            console.error('⚠️ Sync failed (will retry):', error);
+            console.error("⚠️ Sync failed (will retry):", error);
           });
+
+          // End workout notification
+          await workoutNotificationManager
+            .end({
+              status: "completed",
+              totalSets: sets.length,
+            })
+            .catch((error) => {
+              console.error("Failed to end workout notification:", error);
+            });
 
           set({
             activeWorkout: null,
@@ -143,14 +182,24 @@ export const useWorkoutStore = create<WorkoutState>()(
             isLoading: false,
           });
         } catch (error) {
-          const message = error instanceof Error ? error.message : 'Failed to save workout';
-          console.error('❌ Failed to save workout:', error);
+          const message =
+            error instanceof Error ? error.message : "Failed to save workout";
+          console.error("❌ Failed to save workout:", error);
           set({ error: message, isLoading: false });
           throw error;
         }
       },
 
       cancelWorkout: () => {
+        // End workout notification
+        workoutNotificationManager
+          .end({
+            status: "completed",
+          })
+          .catch((error) => {
+            console.error("Failed to end workout notification:", error);
+          });
+
         set({
           activeWorkout: null,
           sets: [],
@@ -160,7 +209,6 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       clearError: () => set({ error: null }),
     }),
-    { name: 'WorkoutStore' }
-  )
+    { name: "WorkoutStore" },
+  ),
 );
-
