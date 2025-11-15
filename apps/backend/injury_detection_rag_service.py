@@ -117,7 +117,9 @@ class InjuryDetectionRAGService:
             print(f"Error fetching injury history: {e}")
             return []
 
-    async def fetch_training_load_data(self, user_id: str, days: int = 14) -> Dict[str, Any]:
+    async def fetch_training_load_data(
+        self, user_id: str, days: int = 14
+    ) -> Dict[str, Any]:
         """
         Fetch user's recent training load data from Supabase.
 
@@ -157,8 +159,7 @@ class InjuryDetectionRAGService:
 
                 # Calculate training load metrics
                 total_volume = sum(
-                    s.get("weight", 0) * s.get("reps", 0)
-                    for s in sets_response.data
+                    s.get("weight", 0) * s.get("reps", 0) for s in sets_response.data
                 )
                 avg_rpe = (
                     sum(s.get("rpe", 0) for s in sets_response.data if s.get("rpe"))
@@ -185,7 +186,9 @@ class InjuryDetectionRAGService:
             print(f"Error fetching training load data: {e}")
             return {}
 
-    def detect_sport_type(self, user_context: Optional[Dict[str, Any]] = None) -> Optional[str]:
+    def detect_sport_type(
+        self, user_context: Optional[Dict[str, Any]] = None
+    ) -> Optional[str]:
         """
         Detect user's primary sport type based on exercise history.
 
@@ -203,7 +206,16 @@ class InjuryDetectionRAGService:
         # Powerlifting indicators
         powerlifting_exercises = {"squat", "bench press", "deadlift"}
         if any(ex in " ".join(exercises) for ex in powerlifting_exercises):
-            if len([e for e in exercises if any(pl in e for pl in powerlifting_exercises)]) >= 2:
+            if (
+                len(
+                    [
+                        e
+                        for e in exercises
+                        if any(pl in e for pl in powerlifting_exercises)
+                    ]
+                )
+                >= 2
+            ):
                 return "powerlifting"
 
         # Olympic lifting indicators
@@ -212,17 +224,28 @@ class InjuryDetectionRAGService:
             return "olympic-lifting"
 
         # Running indicators
-        if "run" in " ".join(exercises) or "running" in user_context.get("sport_type", "").lower():
+        if (
+            "run" in " ".join(exercises)
+            or "running" in user_context.get("sport_type", "").lower()
+        ):
             return "running"
 
         # CrossFit indicators (mix of modalities)
-        crossfit_indicators = {"box jump", "muscle up", "thruster", "wall ball", "burpee"}
+        crossfit_indicators = {
+            "box jump",
+            "muscle up",
+            "thruster",
+            "wall ball",
+            "burpee",
+        }
         if any(ex in " ".join(exercises) for ex in crossfit_indicators):
             return "crossfit"
 
         # Bodybuilding indicators (isolation work)
         bodybuilding_exercises = {"curl", "fly", "extension", "raise", "pulldown"}
-        isolation_count = sum(1 for e in exercises if any(bb in e for bb in bodybuilding_exercises))
+        isolation_count = sum(
+            1 for e in exercises if any(bb in e for bb in bodybuilding_exercises)
+        )
         if isolation_count >= 3:
             return "bodybuilding"
 
@@ -399,8 +422,20 @@ class InjuryDetectionRAGService:
 
         # Body part keywords that indicate separate injuries
         body_parts = [
-            "shoulder", "elbow", "wrist", "back", "hip", "knee", "ankle",
-            "hamstring", "quad", "calf", "bicep", "tricep", "chest", "neck"
+            "shoulder",
+            "elbow",
+            "wrist",
+            "back",
+            "hip",
+            "knee",
+            "ankle",
+            "hamstring",
+            "quad",
+            "calf",
+            "bicep",
+            "tricep",
+            "chest",
+            "neck",
         ]
 
         notes_lower = notes.lower()
@@ -449,9 +484,7 @@ class InjuryDetectionRAGService:
         if confidence < 0.6:
             # Missing pain characteristics
             if "sharp" not in notes.lower() and "dull" not in notes.lower():
-                questions.append(
-                    "Is the pain sharp and stabbing, or dull and achy?"
-                )
+                questions.append("Is the pain sharp and stabbing, or dull and achy?")
 
             # Missing timing information
             if "when" not in notes.lower() and "during" not in notes.lower():
@@ -466,7 +499,10 @@ class InjuryDetectionRAGService:
                 )
 
         # Check for missing severity indicators
-        if not analysis_result.get("severity") or analysis_result.get("severity") == "unknown":
+        if (
+            not analysis_result.get("severity")
+            or analysis_result.get("severity") == "unknown"
+        ):
             questions.append(
                 "On a scale of 1-10, how would you rate the pain intensity?"
             )
@@ -480,9 +516,7 @@ class InjuryDetectionRAGService:
 
         # Ask about previous similar injuries if not mentioned
         if "before" not in notes.lower() and "previous" not in notes.lower():
-            questions.append(
-                "Have you experienced this type of injury before?"
-            )
+            questions.append("Have you experienced this type of injury before?")
 
         # Limit to top 3 most important questions
         return questions[:3]
@@ -502,12 +536,18 @@ class InjuryDetectionRAGService:
         """
         # Store prediction and outcome
         self.confidence_history["predictions"].append(predicted_confidence)
-        self.confidence_history["actual_outcomes"].append(1.0 if actual_outcome else 0.0)
+        self.confidence_history["actual_outcomes"].append(
+            1.0 if actual_outcome else 0.0
+        )
 
         # Keep only last 100 predictions
         if len(self.confidence_history["predictions"]) > 100:
-            self.confidence_history["predictions"] = self.confidence_history["predictions"][-100:]
-            self.confidence_history["actual_outcomes"] = self.confidence_history["actual_outcomes"][-100:]
+            self.confidence_history["predictions"] = self.confidence_history[
+                "predictions"
+            ][-100:]
+            self.confidence_history["actual_outcomes"] = self.confidence_history[
+                "actual_outcomes"
+            ][-100:]
 
         # Save updated history
         self._save_confidence_history()
@@ -632,27 +672,22 @@ USER CONTEXT:
             user_message += "\n\nINJURY HISTORY:"
             for idx, injury in enumerate(injury_history[:5], 1):
                 user_message += f"""
-- Injury {idx}: {injury.get('body_part', 'Unknown')} {injury.get('injury_type', '')}
-  Severity: {injury.get('severity', 'Unknown')}
-  Date: {injury.get('created_at', 'Unknown')[:10]}
-  Status: {injury.get('status', 'Unknown')}"""
+- Injury {idx}: {injury.get("body_part", "Unknown")} {injury.get("injury_type", "")}
+  Severity: {injury.get("severity", "Unknown")}
+  Date: {injury.get("created_at", "Unknown")[:10]}
+  Status: {injury.get("status", "Unknown")}"""
 
         # Add training load data if available
         if training_load and training_load.get("total_volume_kg"):
             user_message += f"""
 
-RECENT TRAINING LOAD ({training_load.get('days_tracked', 14)} days):
-- Total Volume: {training_load.get('total_volume_kg', 0):,.0f} kg
-- Average RPE: {training_load.get('average_rpe', 0)}/10
-- Workout Frequency: {training_load.get('workout_frequency', 0)} sessions
-- Volume per Session: {training_load.get('volume_per_session', 0):,.0f} kg
+RECENT TRAINING LOAD ({training_load.get("days_tracked", 14)} days):
+- Total Volume: {training_load.get("total_volume_kg", 0):,.0f} kg
+- Average RPE: {training_load.get("average_rpe", 0)}/10
+- Workout Frequency: {training_load.get("workout_frequency", 0)} sessions
+- Volume per Session: {training_load.get("volume_per_session", 0):,.0f} kg
 
-Consider if current injury may be related to training load, volume spikes, or overtraining."""</parameter>
-
-<old_text line=406>
-                "recovery_timeline": None,
-                "should_see_doctor": False,
-            }, latency
+Consider if current injury may be related to training load, volume spikes, or overtraining."""
 
         # Prepare messages
         messages = [
@@ -743,7 +778,10 @@ Consider if current injury may be related to training load, volume spikes, or ov
             }, latency
 
     async def analyze_injury(
-        self, notes: str, user_id: Optional[str] = None, user_context: Optional[Dict[str, Any]] = None
+        self,
+        notes: str,
+        user_id: Optional[str] = None,
+        user_context: Optional[Dict[str, Any]] = None,
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """
         Full injury detection pipeline with RAG and enhanced features.
@@ -807,8 +845,8 @@ Consider if current injury may be related to training load, volume spikes, or ov
                     analysis_result["original_confidence"] = original_confidence
 
                 # Generate follow-up questions
-                analysis_result["follow_up_questions"] = self.generate_follow_up_questions(
-                    analysis_result, segment
+                analysis_result["follow_up_questions"] = (
+                    self.generate_follow_up_questions(analysis_result, segment)
                 )
 
                 all_results.append(analysis_result)
@@ -821,7 +859,9 @@ Consider if current injury may be related to training load, volume spikes, or ov
                 "sources_used": list(set(all_sources)),
                 "retrieval_latency_ms": round(total_retrieval_latency, 2),
                 "inference_latency_ms": round(total_inference_latency, 2),
-                "total_latency_ms": round(total_retrieval_latency + total_inference_latency, 2),
+                "total_latency_ms": round(
+                    total_retrieval_latency + total_inference_latency, 2
+                ),
                 "model_used": self.model_id,
                 "rag_enabled": True,
                 "sport_type": sport_type,
@@ -886,7 +926,9 @@ Consider if current injury may be related to training load, volume spikes, or ov
 _injury_detection_service = None
 
 
-def get_injury_detection_service(supabase_client: Optional[Any] = None) -> InjuryDetectionRAGService:
+def get_injury_detection_service(
+    supabase_client: Optional[Any] = None,
+) -> InjuryDetectionRAGService:
     """Get or create singleton instance of InjuryDetectionRAGService"""
     global _injury_detection_service
     if _injury_detection_service is None:

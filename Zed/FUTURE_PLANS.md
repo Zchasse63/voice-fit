@@ -135,6 +135,91 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
+## Phase 6.4: Warm-up & Cooldown Programming
+
+**Goal:** Automatically generate sport-specific warm-ups and cooldowns based on workout type, injury history, and user preferences
+
+#### Dynamic Warm-up Generation
+```json
+{
+  "workout_type": "strength_lower",
+  "warm_up": {
+    "total_duration": 15,
+    "phases": [
+      {
+        "name": "General Cardiovascular",
+        "duration": 5,
+        "exercises": [
+          {"name": "Light Cardio", "duration": "5 minutes", "equipment": "bike, row, or walk"}
+        ]
+      },
+      {
+        "name": "Dynamic Stretching",
+        "duration": 5,
+        "exercises": [
+          {"name": "Leg Swings (Front/Back)", "reps": "10 each leg"},
+          {"name": "Leg Swings (Side to Side)", "reps": "10 each leg"},
+          {"name": "Walking Lunges", "reps": "10 each leg"},
+          {"name": "Bodyweight Squats", "reps": "15"},
+          {"name": "Hip Circles", "reps": "10 each direction"}
+        ]
+      },
+      {
+        "name": "Movement-Specific Prep",
+        "duration": 5,
+        "exercises": [
+          {"name": "Empty Bar Squats", "reps": "10"},
+          {"name": "Light Goblet Squats", "reps": "10"}
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Features:**
+- [ ] Database of warm-up/cooldown templates by workout type
+- [ ] Dynamic exercise selection based on main workout
+- [ ] Injury-specific mobility additions
+- [ ] Time-of-day adjustments (longer warm-up in morning)
+- [ ] Voice-guided warm-up routines
+- [ ] Progressive intensity warm-ups for high-intensity workouts
+- [ ] Cool-down with static stretching recommendations
+- [ ] Foam rolling protocols
+- [ ] Breathing/recovery exercises
+
+**Warm-up Principles:**
+- General → Dynamic → Specific progression
+- 10-15 minutes for strength training
+- 15-20 minutes for high-intensity intervals
+- Extra mobility work for morning workouts
+- Injury-specific additions (e.g., ankle mobility for ankle injuries)
+
+**Cooldown Principles:**
+- Static stretching (hold 30-60 seconds)
+- Target muscles worked during session
+- 5-10 minutes duration
+- Optional foam rolling protocol
+- Recovery breathing exercises
+
+**Use Cases:**
+- Strength lower body → Hip mobility + dynamic leg stretches + empty bar work
+- Running intervals → Dynamic stretches + strides + accelerations
+- Swimming → Shoulder mobility + activation + technique drills
+- CrossFit → Full body dynamic warm-up + skill practice
+- Morning workout → Add 3-5 minutes extra mobility
+
+**Technical Requirements:**
+- Warm-up/cooldown template database
+- Exercise instruction library with videos
+- Voice guidance system integration
+- Customization based on injury history and time available
+
+**Estimated Timeline:** 4-6 weeks for initial implementation  
+**Dependencies:** Exercise video library, voice system integration
+
+---
+
 ## Phase 7: Multi-Sport Expansion (Months 6-8)
 
 ### 7.1 CrossFit WOD Modifications
