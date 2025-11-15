@@ -26,6 +26,7 @@ from ai_coach_service import AICoachService
 from badge_service import BadgeService
 from chat_classifier import ChatClassifier
 from deload_recommendation_service import DeloadRecommendationService
+from exercise_matching_service import ExerciseMatchingService
 from exercise_swap_service import ExerciseSwapService, get_exercise_swap_service
 from fatigue_monitoring_service import FatigueMonitoringService
 from feature_flags import get_feature_flags
@@ -60,6 +61,8 @@ from models import (
     DeloadRecommendationResponse,
     EndSessionResponse,
     ErrorResponse,
+    ExerciseCreateOrMatchRequest,
+    ExerciseCreateOrMatchResponse,
     ExerciseSwapRequest,
     ExerciseSwapResponse,
     FatigueAnalyticsResponse,
@@ -125,6 +128,7 @@ program_generation_service: ProgramGenerationService = None
 user_context_builder: UserContextBuilder = None
 chat_classifier: ChatClassifier = None
 onboarding_service: OnboardingService = None
+exercise_matching_service: ExerciseMatchingService = None
 
 
 def get_supabase_client() -> Client:
@@ -238,6 +242,14 @@ def get_onboarding_service() -> OnboardingService:
     if onboarding_service is None:
         onboarding_service = OnboardingService()
     return onboarding_service
+
+
+def get_exercise_matching_service() -> ExerciseMatchingService:
+    """Get or create ExerciseMatchingService instance"""
+    global exercise_matching_service
+    if exercise_matching_service is None:
+        exercise_matching_service = ExerciseMatchingService()
+    return exercise_matching_service
 
 
 # PHASE 7 TASK 7.4: Authentication middleware
@@ -2669,9 +2681,57 @@ async def general_exception_handler(request, exc):
 
 
 # ============================================================================
+# EXERCISE CREATION & MATCHING ENDPOINTS
+# ============================================================================
+
+
+@app.post("/api/exercises/create-or-match", response_model=ExerciseCreateOrMatchResponse)
+async def create_or_match_exercise(
+    request: ExerciseCreateOrMatchRequest,
+    matching_service: ExerciseMatchingService = Depends(get_exercise_matching_service),
+    user: dict = Depends(verify_token),
+):
+    """
+    Smart exercise creation and matching with synonym checking.
+
+    Features:
+    - Exact match checking against existing exercises
+    - Fuzzy matching with configurable threshold
+    - Automatic synonym generation (rule-based or LLM-powered)
+    - Auto-creation of new exercises if no match found
+    - Full metadata extraction (movement pattern, equipment, etc.)
+
+    Args:
+        request: Exercise creation/matching request with exercise name and options
+
+    Returns:
+        Detailed match information or newly created exercise details
+    """
+    try:
+        result = matching_service.match_or_create_with_details(
+            exercise_name=request.exercise_name,
+            auto_create=request.auto_create,
+            use_llm_synonyms=request.use_llm_synonyms,
+            fuzzy_threshold=request.fuzzy_threshold,
+        )
+
+        return ExerciseCreateOrMatchResponse(**result)
+
+    except Exception as e:
+        print(f"❌ Error in exercise create/match: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to match or create exercise: {str(e)}"
+        )
+
+
+# ============================================================================
 # BADGE ENDPOINTS
 # ============================================================================
 
+
+@app.post("/api/badges/unlock", response_model=BadgeUnlockResponse)
+</text>
 
 @app.get("/api/badges/{user_id}")
 async def get_user_badges(

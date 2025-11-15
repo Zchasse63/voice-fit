@@ -962,3 +962,92 @@ class BadgeUnlockResponse(BaseModel):
                 "already_unlocked": False,
             }
         }
+
+
+# ============================================================================
+# EXERCISE CREATION & MATCHING MODELS
+# ============================================================================
+
+
+class ExerciseCreateOrMatchRequest(BaseModel):
+    """Request model for exercise creation or matching endpoint"""
+
+    exercise_name: str = Field(
+        ...,
+        description="Exercise name to match or create",
+        min_length=1,
+        max_length=200,
+    )
+    auto_create: bool = Field(
+        True,
+        description="If True, create exercise if no match found. If False, return None.",
+    )
+    use_llm_synonyms: bool = Field(
+        False, description="Use LLM-based synonym generation for better matching"
+    )
+    fuzzy_threshold: float = Field(
+        0.80, description="Minimum fuzzy match score (0.0-1.0)", ge=0.0, le=1.0
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "exercise_name": "DB Flat Bench",
+                "auto_create": True,
+                "use_llm_synonyms": False,
+                "fuzzy_threshold": 0.80,
+            }
+        }
+
+
+class ExerciseCreateOrMatchResponse(BaseModel):
+    """Response model for exercise creation or matching endpoint"""
+
+    success: bool = Field(..., description="Whether operation succeeded")
+    exercise_id: Optional[str] = Field(
+        None, description="Matched or created exercise ID"
+    )
+    exercise_name: str = Field(..., description="Original or normalized exercise name")
+    matched_name: Optional[str] = Field(
+        None,
+        description="Name of the matched exercise (if found via fuzzy/semantic match)",
+    )
+    match_type: Optional[str] = Field(
+        None, description="Type of match: exact, fuzzy, semantic, created, none"
+    )
+    match_score: Optional[float] = Field(
+        None, description="Match confidence score (0.0-1.0)", ge=0.0, le=1.0
+    )
+    synonyms: List[str] = Field(
+        default_factory=list, description="Generated synonyms for the exercise"
+    )
+    created: bool = Field(False, description="Whether a new exercise was created")
+    message: str = Field(..., description="Human-readable message about the result")
+    metadata: Optional[Dict[str, Any]] = Field(
+        None, description="Additional metadata (movement pattern, equipment, etc.)"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "exercise_id": "abc-123-def",
+                "exercise_name": "DB Flat Bench",
+                "matched_name": "Dumbbell Bench Press",
+                "match_type": "fuzzy",
+                "match_score": 0.85,
+                "synonyms": [
+                    "db bench",
+                    "dumbbell bench",
+                    "flat bench",
+                    "db flat bench press",
+                ],
+                "created": False,
+                "message": "Matched to existing exercise: Dumbbell Bench Press (85% similarity)",
+                "metadata": {
+                    "movement_pattern": "horizontal_push",
+                    "primary_equipment": "dumbbell",
+                    "category": "strength",
+                },
+            }
+        }

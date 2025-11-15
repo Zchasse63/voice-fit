@@ -70,29 +70,84 @@ class ExerciseMatchingService:
         return normalized
 
     def generate_synonyms(self, exercise_name: str) -> List[str]:
-        """Generate common synonyms for an exercise name"""
+        """Generate comprehensive synonyms for an exercise name"""
         name_lower = exercise_name.lower()
         synonyms = []
 
-        # Common substitutions
+        # Comprehensive substitutions dictionary
         substitutions = {
-            "dumbbell": ["db", "dumbell", "dumbel"],
-            "barbell": ["bb", "bar"],
-            "single arm": ["one arm", "unilateral", "1 arm", "single-arm"],
-            "single leg": ["one leg", "unilateral", "1 leg", "single-leg"],
-            "press": ["push"],
-            "pull up": ["pullup", "chin up", "chinup"],
-            "push up": ["pushup", "press up"],
-            "sit up": ["situp", "crunch"],
-            "leg curl": ["hamstring curl"],
-            "leg extension": ["quad extension"],
-            "calf raise": ["calf raises", "heel raise"],
+            # Equipment variations
+            "dumbbell": ["db", "dumbell", "dumbel", "dumb bell"],
+            "barbell": ["bb", "bar", "bar bell"],
+            "kettlebell": ["kb", "kettle bell"],
+            "cable": ["machine", "pulley"],
+            "smith machine": ["smith", "machine"],
+            "trap bar": ["hex bar", "trapbar"],
+            "ez bar": ["ez-bar", "ezbar", "easy bar"],
+            "resistance band": ["band", "bands"],
+            # Unilateral variations
+            "single arm": ["one arm", "unilateral", "1 arm", "single-arm", "one-arm"],
+            "single leg": ["one leg", "unilateral", "1 leg", "single-leg", "one-leg"],
+            "double arm": ["two arm", "bilateral", "2 arm", "double-arm", "two-arm"],
+            "double leg": ["two leg", "bilateral", "2 leg", "double-leg", "two-leg"],
+            # Movement variations
+            "press": ["push", "pressing"],
+            "pull up": ["pullup", "chin up", "chinup", "pull-up", "chin-up"],
+            "push up": ["pushup", "press up", "push-up", "pressup"],
+            "sit up": ["situp", "sit-up", "crunch"],
+            "squat": ["squats", "squatting"],
+            "lunge": ["lunges", "lunging"],
+            "deadlift": ["dead lift", "dl"],
+            "row": ["rows", "rowing"],
+            "curl": ["curls", "curling"],
+            "extension": ["extensions"],
+            "raise": ["raises", "raising"],
+            "fly": ["flye", "flies", "flyes"],
+            # Specific exercises
+            "leg curl": ["hamstring curl", "ham curl", "lying leg curl"],
+            "leg extension": ["quad extension", "knee extension"],
+            "calf raise": ["calf raises", "heel raise", "heel raises"],
             "front squat": ["front squats"],
-            "back squat": ["back squats", "squat"],
-            "romanian deadlift": ["rdl", "stiff leg deadlift"],
-            "lateral raise": ["side raise", "lateral raises"],
-            "bent over row": ["bent-over row", "barbell row"],
-            "cable": ["machine"],
+            "back squat": ["back squats", "squat", "squats"],
+            "romanian deadlift": [
+                "rdl",
+                "stiff leg deadlift",
+                "stiff-leg deadlift",
+                "sldl",
+            ],
+            "lateral raise": [
+                "side raise",
+                "lateral raises",
+                "side raises",
+                "side delt raise",
+            ],
+            "bent over row": ["bent-over row", "barbell row", "bent row"],
+            "overhead press": ["ohp", "military press", "shoulder press"],
+            "bench press": ["bench", "flat bench", "barbell bench"],
+            "incline press": ["incline bench", "incline bench press"],
+            "decline press": ["decline bench", "decline bench press"],
+            "lat pulldown": ["lat pull down", "lat pull-down", "pulldown"],
+            "tricep extension": ["triceps extension", "tri extension"],
+            "bicep curl": ["biceps curl", "bi curl"],
+            "chest fly": ["chest flye", "pec fly", "pec flye"],
+            "face pull": ["facepull", "face-pull"],
+            "good morning": ["good mornings"],
+            "glute bridge": ["hip bridge", "glute bridges", "hip bridges"],
+            "hip thrust": ["hip thrusts", "barbell hip thrust"],
+            # Grip/stance variations
+            "close grip": ["close-grip", "narrow grip", "narrow-grip"],
+            "wide grip": ["wide-grip"],
+            "neutral grip": ["neutral-grip"],
+            "overhand": ["pronated"],
+            "underhand": ["supinated"],
+            "sumo": ["wide stance"],
+            # Position variations
+            "standing": [],
+            "seated": [],
+            "lying": ["laying"],
+            "kneeling": [],
+            "incline": ["inclined"],
+            "decline": ["declined"],
         }
 
         # Generate variations
@@ -107,8 +162,61 @@ class ExerciseMatchingService:
         synonyms.append(name_lower)
         synonyms.append(self.normalize_name(exercise_name))
 
+        # Add variations with/without hyphens
+        if "-" in name_lower:
+            synonyms.append(name_lower.replace("-", " "))
+        if " " in name_lower:
+            synonyms.append(name_lower.replace(" ", "-"))
+
         # Remove duplicates and return
         return list(set(synonyms))
+
+    def generate_synonyms_llm(
+        self, exercise_name: str, max_synonyms: int = 10
+    ) -> List[str]:
+        """Generate synonyms using LLM for better quality and context awareness"""
+        try:
+            prompt = f"""Generate {max_synonyms} common synonyms and variations for this exercise: "{exercise_name}"
+
+Include:
+- Equipment variations (e.g., "dumbbell" → "db", "barbell" → "bb")
+- Common abbreviations
+- Alternative names used in gyms
+- Singular/plural forms
+- Different word orders
+
+Return ONLY a comma-separated list of synonyms, no explanations.
+
+Example for "Barbell Back Squat":
+back squat, bb squat, barbell squat, squat, back squats, bb back squat
+
+Synonyms for "{exercise_name}":\n"""
+
+            response = self.openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are an expert fitness trainer who knows all exercise name variations.",
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.3,
+                max_tokens=100,
+            )
+
+            synonyms_text = response.choices[0].message.content.strip()
+            synonyms = [s.strip().lower() for s in synonyms_text.split(",")]
+
+            # Filter out empty strings and duplicates
+            synonyms = [s for s in synonyms if s and len(s) > 2]
+
+            return list(set(synonyms))[:max_synonyms]
+
+        except Exception as e:
+            print(f"  ⚠️  LLM synonym generation failed: {e}")
+            # Fallback to rule-based generation
+            return self.generate_synonyms(exercise_name)
 
     def fuzzy_match_score(self, name1: str, name2: str) -> float:
         """Calculate fuzzy match score between two names (0-1)"""
@@ -411,3 +519,125 @@ class ExerciseMatchingService:
         else:
             print(f"  ⚠️  No match found for '{exercise_name}' (auto-create disabled)")
             return None
+
+    def match_or_create_with_details(
+        self,
+        exercise_name: str,
+        auto_create: bool = True,
+        use_llm_synonyms: bool = False,
+        fuzzy_threshold: float = 0.80,
+    ) -> Dict[str, Any]:
+        """
+        Enhanced method for API endpoint: Match or create exercise with full details.
+
+        Args:
+            exercise_name: Name of the exercise to match
+            auto_create: If True, create exercise if no match found
+            use_llm_synonyms: Use LLM-based synonym generation
+            fuzzy_threshold: Minimum fuzzy match score
+
+        Returns:
+            Dictionary with detailed match/creation information
+        """
+        result = {
+            "success": False,
+            "exercise_id": None,
+            "exercise_name": exercise_name,
+            "matched_name": None,
+            "match_type": None,
+            "match_score": None,
+            "synonyms": [],
+            "created": False,
+            "message": "",
+            "metadata": None,
+        }
+
+        # Step 1: Generate synonyms (for response and better matching)
+        if use_llm_synonyms:
+            result["synonyms"] = self.generate_synonyms_llm(exercise_name)
+        else:
+            result["synonyms"] = self.generate_synonyms(exercise_name)
+
+        # Step 2: Try exact match
+        exercise_id = self.find_exercise_exact(exercise_name)
+        if exercise_id:
+            result["success"] = True
+            result["exercise_id"] = exercise_id
+            result["match_type"] = "exact"
+            result["match_score"] = 1.0
+            result["message"] = f"Exact match found for '{exercise_name}'"
+
+            # Get metadata from cache
+            cached_exercise = self.exercise_cache.get(exercise_name.lower())
+            if cached_exercise:
+                result["metadata"] = {
+                    "movement_pattern": cached_exercise.get("movement_pattern"),
+                    "primary_equipment": cached_exercise.get("primary_equipment"),
+                    "category": cached_exercise.get("category"),
+                    "base_movement": cached_exercise.get("base_movement"),
+                }
+
+            return result
+
+        # Step 3: Try fuzzy match
+        fuzzy_result = self.find_exercise_fuzzy(
+            exercise_name, threshold=fuzzy_threshold
+        )
+        if fuzzy_result:
+            exercise_id, score, matched_name = fuzzy_result
+            result["success"] = True
+            result["exercise_id"] = exercise_id
+            result["matched_name"] = matched_name
+            result["match_type"] = "fuzzy"
+            result["match_score"] = score
+            result["message"] = (
+                f"Matched to existing exercise: {matched_name} "
+                f"({int(score * 100)}% similarity)"
+            )
+
+            # Get metadata from cache
+            cached_exercise = self.exercise_cache.get(matched_name.lower())
+            if cached_exercise:
+                result["metadata"] = {
+                    "movement_pattern": cached_exercise.get("movement_pattern"),
+                    "primary_equipment": cached_exercise.get("primary_equipment"),
+                    "category": cached_exercise.get("category"),
+                    "base_movement": cached_exercise.get("base_movement"),
+                }
+
+            return result
+
+        # Step 4: Try semantic search (commented out - requires DB function)
+        # semantic_result = self.find_exercise_semantic(exercise_name, threshold=0.90)
+        # if semantic_result:
+        #     exercise_id, score = semantic_result
+        #     result["success"] = True
+        #     result["exercise_id"] = exercise_id
+        #     result["match_type"] = "semantic"
+        #     result["match_score"] = score
+        #     result["message"] = f"Semantic match found ({int(score * 100)}% similarity)"
+        #     return result
+
+        # Step 5: Create new exercise (if enabled)
+        if auto_create:
+            exercise_id = self.create_exercise(exercise_name)
+            if exercise_id:
+                components = self.parse_exercise_components(exercise_name)
+                result["success"] = True
+                result["exercise_id"] = exercise_id
+                result["match_type"] = "created"
+                result["created"] = True
+                result["message"] = f"Created new exercise: {exercise_name}"
+                result["metadata"] = components
+                return result
+            else:
+                result["success"] = False
+                result["message"] = f"Failed to create exercise: {exercise_name}"
+                return result
+        else:
+            result["success"] = False
+            result["match_type"] = "none"
+            result["message"] = (
+                f"No match found for '{exercise_name}' (auto-create disabled)"
+            )
+            return result
