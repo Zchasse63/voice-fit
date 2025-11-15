@@ -19,7 +19,230 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
+## 🎯 PRIORITY FEATURES (In Development)
+
+### ✅ Program Scheduling & Calendar View
+**Status:** PLANNED FOR IMMEDIATE IMPLEMENTATION  
+**Timeline:** Next 2-3 sprints  
+**Priority:** HIGH
+
+**Features:**
+- [ ] Interactive calendar view (weekly/monthly)
+- [ ] Drag-and-drop workout rescheduling
+- [ ] Conflict detection & warnings
+- [ ] Multi-week program visualization
+- [ ] Travel mode adjustments
+- [ ] AI-powered schedule suggestions
+
+**See:** [COMPREHENSIVE_FEATURE_PLANNING.md](./COMPREHENSIVE_FEATURE_PLANNING.md#4-program-scheduling--calendar-view) for detailed specs.
+
+---
+
+### ✅ Lock Screen Widget & Live Activity
+**Status:** PLANNED FOR IMMEDIATE IMPLEMENTATION  
+**Timeline:** Next 2-3 sprints  
+**Priority:** HIGH
+
+**Features:**
+- [ ] iOS Live Activity with Dynamic Island support
+- [ ] Lock screen widget with microphone button
+- [ ] Real-time workout tracking (elapsed time, set counter)
+- [ ] Rest timer on lock screen
+- [ ] Android foreground notification equivalent
+
+**See:** [COMPREHENSIVE_FEATURE_PLANNING.md](./COMPREHENSIVE_FEATURE_PLANNING.md#5-lock-screen-widget--live-activity) for detailed specs.
+
+---
+
+### ✅ Smart Exercise Creation & Synonym Checking
+**Status:** PLANNED FOR IMMEDIATE IMPLEMENTATION  
+**Timeline:** Next 2-3 sprints  
+**Priority:** HIGH
+
+**Features:**
+- [ ] Automatic duplicate detection via fuzzy matching
+- [ ] Synonym generation & checking
+- [ ] AI-powered exercise classification
+- [ ] Proper metadata categorization (muscles, equipment, etc.)
+- [ ] User-submitted vs AI-generated exercise tracking
+
+**See:** [COMPREHENSIVE_FEATURE_PLANNING.md](./COMPREHENSIVE_FEATURE_PLANNING.md#6-smart-exercise-creation--synonym-checking) for detailed specs.
+
+---
+
+## Phase 5: Nutrition Integration (Months 3-4)
+
+**Goal:** Enable automatic nutrition data ingestion and basic macro tracking to inform workout recommendations.
+
+**Detailed Documentation:** [NUTRITION_API_ANALYSIS.md](./NUTRITION_API_ANALYSIS.md)
+
+### 5.1 Apple Health Integration (Primary)
+
+**Features:**
+- [ ] HealthKit nutrition data access (calories, protein, carbs, fat)
+- [ ] Daily nutrition sync from user's preferred tracking app
+- [ ] Auto-populate nutrition data instead of manual entry
+- [ ] Display nutrition summary in profile
+- [ ] Basic nutrition-to-performance insights
+
+**Supported Apps via Apple Health:**
+- MyFitnessPal
+- Cronometer
+- MacroFactor
+- Foodnoms
+- LoseIt!, Yazio, Lifesum
+
+**Implementation:**
+- **Timeline:** 1-2 weeks
+- **Cost:** $0 (native iOS integration)
+- **Coverage:** 80% of iOS users
+
+### 5.2 Terra API (Optional - Premium)
+
+**Features:**
+- [ ] Cross-platform nutrition support (iOS, Android, Web)
+- [ ] Meal-level detail (not just daily totals)
+- [ ] MyFitnessPal & Cronometer direct integration
+- [ ] Historical data backfill
+
+**Implementation:**
+- **Timeline:** 2-3 weeks
+- **Cost:** $99-199/month (API fees)
+- **Coverage:** 95% of users (all platforms)
+- **Monetization:** Premium feature to offset costs
+
+### 5.3 Manual Entry Fallback
+
+**Features:**
+- [ ] Simple nutrition logging form
+- [ ] Quick macro presets (high protein, carb refeed, etc.)
+- [ ] Optional for users who don't track in apps
+
+**Implementation:**
+- **Timeline:** 1 week
+- **Cost:** $0
+
+### Use Cases (Basic)
+- Low carbs + scheduled long run → Suggest carb-up or easier pace
+- High protein intake → "Recovery should be good for tomorrow's leg day"
+- Calorie deficit + hard training → Flag potential under-recovery
+
+**Next Level:** See Phase 7 (AI Health Intelligence) for advanced nutrition-performance analysis.
+
+---
+
+## Phase 7: AI Health Intelligence Engine (Months 12-18+)
+
+**Goal:** Discover hidden correlations between nutrition, performance, recovery, and injuries using AI/ML.
+
+**Detailed Documentation:** 
+- [AI_HEALTH_INTELLIGENCE_ENGINE.md](./AI_HEALTH_INTELLIGENCE_ENGINE.md) - Full technical spec (895 lines)
+- [AI_INSIGHTS_EXECUTIVE_SUMMARY.md](./AI_INSIGHTS_EXECUTIVE_SUMMARY.md) - Business case (332 lines)
+
+### 7.1 Core Capabilities
+
+**1. Correlation Discovery**
+Find statistical relationships across data:
+- Protein intake → Recovery speed (HRV, soreness)
+- Sleep quality → Running performance (pace at same HR)
+- Training volume → Injury risk patterns
+- Carb timing → Strength performance
+
+**2. Pattern Recognition**
+Identify recurring patterns:
+- "Volume spike + poor sleep = knee injury" (detected 3x before)
+- "250g carbs + 8h sleep + 3-4 days rest = your best leg days"
+- Performance decline indicators
+
+**3. Predictive Modeling**
+ML models forecast outcomes:
+- Injury risk (7-day forecast with probability)
+- Performance prediction (next workout readiness)
+- Optimal nutrition recommendations
+- Recovery timeline estimates
+
+**4. Anomaly Detection**
+Flag unusual patterns:
+- Sudden performance drops (illness, under-eating)
+- HRV crashes (overtraining risk)
+- Unexplained fatigue patterns
+
+**5. Causal Inference**
+Prove causation, not just correlation:
+- Granger causality testing
+- Interventional analysis ("what if" scenarios)
+- Evidence-based recommendations
+
+### 7.2 Example Insights
+
+**Protein & Recovery:**
+> "Your protein intake below 140g correlates with 18% slower HRV recovery. When you eat 160g+, recovery improves from 2.8 days to 1.8 days. **Action:** Aim for 160-180g daily."
+
+**Injury Risk Alert:**
+> "⚠️ High Risk: Your running volume +38% while recovery score <60 for 4 days. This pattern preceded knee injuries 3 times before. **Risk: 74% in next 7 days.** Reduce volume 40% immediately."
+
+**Performance Optimization:**
+> "Your best leg days (9,000kg+ volume) all had: 250g+ carbs the day before, 8+ hours sleep, 3-4 days rest. Tomorrow's leg day: You only ate 180g carbs today. **Add 70g carbs for 15-20% volume boost.**"
+
+**Sleep-Performance Link:**
+> "After nights with <7 hours sleep, your pace at 150bpm is 6.8% slower. You slept 6.5 hours last night. **Consider making today's tempo run an easy day.**"
+
+### 7.3 Implementation Roadmap
+
+**Phase 1: Foundation (Months 1-3)** - $60K-80K
+- Data pipeline for aggregating all health sources
+- Basic correlation engine (statistical analysis)
+- Simple insights UI
+
+**Phase 2: Pattern Recognition (Months 4-6)** - $80K-100K
+- Pattern mining (clustering, sequence analysis)
+- Anomaly detection (outlier flagging)
+- Basic prediction models (injury risk binary)
+
+**Phase 3: Advanced ML (Months 7-12)** - $120K-150K
+- Sophisticated prediction models (XGBoost, LSTM)
+- Causal inference analysis
+- Personalized nutrition optimizer
+
+**Phase 4: NLG & Polish (Months 13-18)** - $100K-130K
+- GPT-4 natural language generation
+- Conversational AI coach
+- Production MLOps & monitoring
+
+**Total Investment:** $360K-460K over 18 months  
+**Expected Return:** $135K+ incremental ARR, 15% premium conversion lift, 25% retention boost
+
+### 7.4 Success Metrics
+- 80% of users view insights weekly
+- 60% act on recommendations
+- 85% correlation detection accuracy
+- 80%+ injury prediction AUC-ROC
+- ±10% performance forecast accuracy
+
+### 7.5 Competitive Advantage
+**No other app does this comprehensively:**
+- Whoop: Recovery insights, but no nutrition
+- TrainingPeaks: Performance analytics, weak on biometrics  
+- MyFitnessPal: Nutrition only, zero performance integration
+- Strong/Hevy: Workout logging, no recovery insights
+
+**VoiceFit will be the ONLY app connecting all the dots.**
+
+**Prerequisites:**
+- ✅ Wearable integration complete (Apple Health, Whoop, Garmin)
+- ✅ Nutrition data flowing (Phase 5)
+- ✅ 60+ days of user data minimum
+- ⏳ Hire ML engineer with health tech experience
+
+---
+
 ## Phase 6: Advanced Personalization (Months 4-5)
+</text>
+
+<old_text line=135>
+---
+
+## Phase 7: Multi-Sport Expansion (Months 6-8)
 
 ### 6.1 Biometric Integration
 
@@ -135,7 +358,7 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
-## Phase 6.4: Warm-up & Cooldown Programming
+Okay, I think we need to make a push to GitHub to see if that syntax error... ...works. We just have to push it to GitHub for a real way to pick it up. What I want to implement now from the future plans is the program scheduling in calendar view. I think we need a calendar now. I think that would work great. Lock screen widget and live activity. I definitely want to go ahead and do that now. And then smart exercise creation and synonym checking. Definitely want to go ahead and do that now. Everything else can wait until later on. And once we complete these, let's make sure we mark them off in the future plans document so that... ...whoever works on this knows that it is complete. I'm not sure which order these should be done in or what other information we need to put together to... ...get this fully planned and move forward with those three things that were mentioned. The two other things that I want to do is I want to make sure that the nutrition plan and the... ...AI Health Intelligence Engine information... ...I realize that they have their own documents, but I want to make sure that those are at least listed in the future plans. In this future plans markdown can serve as our central location for all information for future plans. And then we still have the other documents that go into further depth on those as well.## Phase 6.4: Warm-up & Cooldown Programming
 
 **Goal:** Automatically generate sport-specific warm-ups and cooldowns based on workout type, injury history, and user preferences
 
@@ -220,9 +443,7 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
-## Phase 7: Multi-Sport Expansion (Months 6-8)
-
-### 7.1 CrossFit WOD Modifications
+### 8.1 CrossFit WOD Modifications
 
 **Goal:** Adapt CrossFit workouts for injuries, equipment, or skill limitations
 
@@ -272,7 +493,7 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
-### 7.2 Sport-Specific Training (Basketball, Soccer, etc.)
+### 8.2 Sport-Specific Training (Basketball, Soccer, etc.)
 
 **Goal:** Tailor strength training to support specific sports
 
@@ -343,7 +564,7 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
-### 7.3 Hybrid Athlete Programs (Strength + Cardio)
+### 8.3 Hybrid Athlete Programs (Strength + Cardio)
 
 **Goal:** Balance strength training with endurance training without interference
 
@@ -403,27 +624,27 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
-## Phase 8: Community & Social Features (Months 9-10)
+## Phase 9: Community & Social Features (Months 9-10)
 
-### 8.1 Most Popular Substitutes
+### 9.1 Most Popular Substitutes
 - [ ] Track which substitutes users accept most often
 - [ ] Display "92% of users chose this substitute"
 - [ ] Surface trending substitutes in similar situations
 - [ ] Community-validated alternatives
 
-### 8.2 User Reviews & Ratings
+### 9.2 User Reviews & Ratings
 - [ ] Rate substitutes 1-5 stars after using them
 - [ ] Write short reviews ("Great for shoulder recovery!")
 - [ ] Filter substitutes by rating
 - [ ] Flag poor substitutes for review
 
-### 8.3 Share Successful Strategies
+### 9.3 Share Successful Strategies
 - [ ] "I swapped bench press for floor press and my shoulder healed in 4 weeks"
 - [ ] Share injury recovery timelines
 - [ ] Export program modifications to share with friends
 - [ ] Social proof ("127 users recovered from shoulder pain with this swap")
 
-### 8.4 Coach/Trainer Recommendations
+### 9.4 Coach/Trainer Recommendations
 - [ ] Verified coaches can suggest substitutes
 - [ ] "Recommended by 15 certified trainers"
 - [ ] Trainer profiles with specialties
@@ -431,21 +652,21 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
-## Phase 9: Voice-First Enhancements (Months 11-12)
+## Phase 10: Voice-First Enhancements (Months 11-12)
 
-### 9.1 Voice Command Swaps
+### 10.1 Voice Command Swaps
 - [ ] "Hey VoiceFit, swap bench press for floor press"
 - [ ] Voice confirmation before applying swap
 - [ ] Hands-free workout modifications
 - [ ] Integration with Siri/Google Assistant
 
-### 9.2 Conversational Program Modifications
+### 10.2 Conversational Program Modifications
 - [ ] "My shoulder hurts, can you modify this week's workouts?"
 - [ ] AI walks through each exercise, suggests swaps conversationally
 - [ ] Voice feedback during workout
 - [ ] Real-time coaching cues via voice
 
-### 9.3 Voice-Activated Form Cues
+### 10.3 Voice-Activated Form Cues
 - [ ] "VoiceFit, watch my squat form"
 - [ ] AI provides real-time verbal cues during set
 - [ ] "Push your knees out" at the right moment
@@ -453,21 +674,21 @@ This document captures future enhancement ideas that go beyond the core context-
 
 ---
 
-## Phase 10: Enterprise & B2B Features (Future)
+## Phase 11: Enterprise & B2B Features (Future)
 
-### 10.1 Gym/Studio Integration
+### 11.1 Gym/Studio Integration
 - [ ] Equipment inventory sync with VoiceFit
 - [ ] Class schedule integration
 - [ ] Group workout modifications
 - [ ] Gym-branded AI coaching
 
-### 10.2 Physical Therapy Partnerships
+### 11.2 Physical Therapy Partnerships
 - [ ] PT prescribes modified programs through VoiceFit
 - [ ] Track patient adherence
 - [ ] Progress reports for insurance
 - [ ] Evidence-based protocols
 
-### 10.3 Corporate Wellness
+### 11.3 Corporate Wellness
 - [ ] Company-wide challenges
 - [ ] Aggregate health metrics (anonymous)
 - [ ] ROI reporting (injury reduction, productivity)
