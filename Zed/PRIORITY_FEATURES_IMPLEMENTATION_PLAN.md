@@ -745,7 +745,47 @@ class LiveActivityManager {
 export default new LiveActivityManager();
 ```
 
-#### Android Foreground Notification
+#### Data Models
+
+```typescript
+// apps/mobile/src/types/schedule.ts
+
+interface WeekSchedule {
+  weekNumber: number;
+  startDate: Date;
+  endDate: Date;
+  totalDistance: number;
+  totalTime: string;
+  completed: number;
+  total: number;
+  distanceCompleted: number;
+  distanceTotal: number;
+  days: DaySchedule[];
+}
+
+interface DaySchedule {
+  date: Date;
+  dayOfWeek: string; // "MON", "TUE", etc.
+  dayNumber: number; // 10, 11, etc.
+  workouts: ScheduledWorkout[];
+}
+
+interface ScheduledWorkout {
+  id: string;
+  name: string;
+  workoutType: 'strength' | 'running' | 'swimming' | 'cycling' | 'rest';
+  distance?: string; // "3.5mi", "10mi"
+  duration?: string; // "25m - 35m", "1h35m"
+  completed: boolean;
+  color: string; // Color bar on left
+  details?: string; // "Taper Intervals • 5mi"
+  conflictWarnings?: ConflictWarning[];
+  originalDate?: Date; // If rescheduled
+  isUserModified: boolean;
+}
+```
+
+#### Backend: Scheduling Service
 
 ```kotlin
 // android/app/src/main/java/com/voicefit/WorkoutNotificationService.kt
@@ -816,28 +856,45 @@ class WorkoutNotificationService : Service() {
 }
 ```
 
-### Sprint 2 Breakdown
+### Sprint 3 Breakdown (Updated for List-Based Design)
 
-**Week 4: iOS Native Implementation**
-- [ ] Create WorkoutActivityAttributes.swift
-- [ ] Implement Live Activity widget
-- [ ] Build Dynamic Island UI
-- [ ] Test on iPhone 14 Pro (Dynamic Island)
-- [ ] Test on iPhone 12 (standard Live Activity)
+**Week 7: Backend & Data Layer**
+- [ ] Create/update scheduled_workouts table schema
+- [ ] Implement conflict detection algorithm
+- [ ] Build reschedule API endpoint (POST /api/schedule/reschedule)
+- [ ] Add week summary calculations
+- [ ] Create reset week functionality
+- [ ] Unit tests for scheduling service
 
-**Week 5: React Native Bridge**
-- [ ] Create iOS native module bridge
-- [ ] Implement LiveActivityManager.ts
-- [ ] Connect to WorkoutStateManager
-- [ ] Handle app lifecycle (background, terminated)
-- [ ] Test state persistence
+**Week 8: Mobile UI Components**
+- [ ] Build TrainingCalendar screen shell
+- [ ] Implement WeekSection component
+- [ ] Build DayRow with workout cards
+- [ ] Implement Week Overview Modal
+- [ ] Add color coding system (strength=blue, running=green, etc.)
+- [ ] Style components to match design
 
-**Week 6: Android & Polish**
-- [ ] Implement Android foreground notification
-- [ ] Match iOS feature parity
-- [ ] Handle voice command deep link
-- [ ] E2E testing on both platforms
-- [ ] Beta test with 30 users
+**Week 9: Drag-and-Drop & Polish**
+- [ ] Implement drag-and-drop with React Native Gesture Handler
+- [ ] Add haptic feedback on long-press
+- [ ] Build drop target detection logic
+- [ ] Show conflict warnings when dropping
+- [ ] Implement "+Add" workout functionality
+- [ ] Add "Reset" button per week
+- [ ] E2E testing (drag, drop, conflicts)
+- [ ] Beta test with 25 users
+</text>
+
+<old_text line=875>
+### Success Criteria (Sprint 2)
+
+✅ Live Activity appears on lock screen within 2 seconds of workout start  
+✅ Timers update in real-time (every second)  
+✅ Voice button works from lock screen  
+✅ Dynamic Island shows workout info (iPhone 14 Pro+)  
+✅ Activity persists across app backgrounds  
+✅ Android notification matches iOS functionality  
+✅ 90% of beta users rate experience 4+/5
 
 ### Success Criteria (Sprint 2)
 
@@ -849,24 +906,390 @@ class WorkoutNotificationService : Service() {
 ✅ Android notification matches iOS functionality  
 ✅ 90% of beta users rate experience 4+/5
 
+### Design Notes (Based on Runna Reference)
+
+**Visual Elements to Include:**
+- ✅ **Color bars** on left edge of workout cards (different colors per workout type)
+- ✅ **Week badges** ("WEEK 9" in black rounded rectangle)
+- ✅ **Completion checkmarks** (black circle with white checkmark)
+- ✅ **Day labels** (SAT 8, SUN 9, etc. in left column)
+- ✅ **"+Add" buttons** (gray with plus icon) for empty days
+- ✅ **Reset button** (refresh icon + "Reset" text) per week
+- ✅ **Week totals** ("Total: 5.4 mi / 21.6 mi") below week badge
+- ✅ **Multiple workouts per day** (stacked horizontally if needed)
+- ✅ **Drag indicators** (subtle visual cue when long-pressing)
+
+**Color Scheme:**
+- Red/Orange: Tempo/Hard runs
+- Yellow/Green: Easy runs
+- Blue: Strength workouts
+- Gray: Rest days
+- Purple: Long runs
+
+**Interactions:**
+- Long-press (300ms) to initiate drag
+- Drag up/down to move between days
+- Drop on target day
+- Tap workout card to view/edit details
+- Tap "+Add" to create new workout
+- Tap "Reset" to restore original schedule
+
 ---
 
 ## Feature 3: Program Scheduling & Calendar View
 
 **Timeline:** Weeks 7-9 (Sprint 3)  
 **Priority:** HIGH  
-**Complexity:** High  
+**Complexity:** Medium (Simplified from original plan)  
 **Team:** 2 Mobile Devs + 1 Backend Dev
+
+**Design Reference:** Runna app's list-based training calendar (NOT a traditional calendar grid)
 
 ### Goals
 
-1. Visual calendar showing all scheduled workouts
-2. Drag-and-drop rescheduling
-3. Conflict detection (e.g., heavy legs before long run)
-4. Multi-week program visualization
-5. Travel mode for schedule adjustments
+1. **List-based training schedule** (vertical, organized by week - similar to Runna)
+2. **Calendar icon** in top-right navigation opens training view
+3. **Drag-and-drop** rescheduling within and across days
+4. **Week overview modal** showing quick summary
+5. **Multi-week sections** with weekly totals
+6. **Conflict detection** (e.g., heavy legs before long run)
+7. **"+Add" buttons** for empty days
+8. **Reset button** per week to restore original schedule
+
+### Design Philosophy (Based on Runna)
+
+**Why List-Based vs Traditional Calendar Grid:**
+- ✅ **Mobile-optimized** - Easier to read/interact on phones
+- ✅ **More context** - See workout details without drilling down
+- ✅ **Better for training** - Focus on progression, not just dates
+- ✅ **Simpler implementation** - No complex grid layout logic
+- ✅ **Native feel** - Vertical scroll feels natural on mobile
+
+### UI Flow
+
+```
+Activities Tab (or Home)
+    └─> Calendar Icon (top right) 
+        └─> Training Calendar Screen
+            ├─> Week Overview Modal (optional quick view)
+            └─> Full Training Schedule
+                ├─> Week Sections (WEEK 9, WEEK 10, etc.)
+                ├─> Daily Workout Cards
+                ├─> Drag to rearrange
+                ├─> Tap to view/edit
+                └─> "+ Add" for new workouts
+```
 
 ### Technical Specifications
+
+#### Mobile Components
+
+**1. Training Calendar Screen**
+```typescript
+// apps/mobile/src/screens/TrainingCalendar.tsx
+
+interface TrainingCalendarProps {
+  initialWeek?: number;
+}
+
+export const TrainingCalendar: React.FC<TrainingCalendarProps> = ({ initialWeek }) => {
+  const [weeks, setWeeks] = useState<WeekSchedule[]>([]);
+  const [showOverview, setShowOverview] = useState(false);
+  
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Icon name="arrow-back" size={24} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Training calendar</Text>
+        <TouchableOpacity onPress={handleSave}>
+          <Text style={styles.saveButton}>Save</Text>
+        </TouchableOpacity>
+      </View>
+      
+      {/* Scrollable Week Sections */}
+      <ScrollView>
+        {weeks.map(week => (
+          <WeekSection
+            key={week.weekNumber}
+            week={week}
+            onWorkoutDrag={handleWorkoutDrag}
+            onAddWorkout={handleAddWorkout}
+            onReset={handleResetWeek}
+          />
+        ))}
+      </ScrollView>
+      
+      {/* Week Overview Modal */}
+      <WeekOverviewModal
+        visible={showOverview}
+        week={currentWeek}
+        onClose={() => setShowOverview(false)}
+      />
+    </View>
+  );
+};
+```
+
+**2. Week Section Component**
+```typescript
+// apps/mobile/src/components/schedule/WeekSection.tsx
+
+interface WeekSectionProps {
+  week: WeekSchedule;
+  onWorkoutDrag: (workoutId: string, newDate: Date) => void;
+  onAddWorkout: (date: Date) => void;
+  onReset: (weekNumber: number) => void;
+}
+
+export const WeekSection: React.FC<WeekSectionProps> = ({
+  week,
+  onWorkoutDrag,
+  onAddWorkout,
+  onReset
+}) => {
+  return (
+    <View style={styles.weekContainer}>
+      {/* Week Header */}
+      <View style={styles.weekHeader}>
+        <View style={styles.weekBadge}>
+          <Text style={styles.weekNumber}>WEEK {week.weekNumber}</Text>
+        </View>
+        <View style={styles.weekSummary}>
+          <Text style={styles.weekTotal}>
+            Total: {week.totalDistance} mi / {week.totalTime}
+          </Text>
+        </View>
+        <TouchableOpacity onPress={() => onReset(week.weekNumber)}>
+          <Icon name="refresh" size={20} />
+          <Text style={styles.resetText}>Reset</Text>
+        </TouchableOpacity>
+      </View>
+      
+      {/* Days List */}
+      {week.days.map(day => (
+        <DayRow
+          key={day.date.toISOString()}
+          day={day}
+          onWorkoutDrag={onWorkoutDrag}
+          onAddWorkout={onAddWorkout}
+        />
+      ))}
+    </View>
+  );
+};
+```
+
+**3. Day Row with Drag-and-Drop**
+```typescript
+// apps/mobile/src/components/schedule/DayRow.tsx
+
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+
+interface DayRowProps {
+  day: DaySchedule;
+  onWorkoutDrag: (workoutId: string, newDate: Date) => void;
+  onAddWorkout: (date: Date) => void;
+}
+
+export const DayRow: React.FC<DayRowProps> = ({ day, onWorkoutDrag, onAddWorkout }) => {
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  
+  return (
+    <View style={styles.dayRow}>
+      {/* Day Label */}
+      <View style={styles.dayLabel}>
+        <Text style={styles.dayName}>{day.dayOfWeek}</Text>
+        <Text style={styles.dayNumber}>{day.dayNumber}</Text>
+      </View>
+      
+      {/* Workout Cards (can have multiple per day) */}
+      <View style={styles.workoutsContainer}>
+        {day.workouts.length > 0 ? (
+          day.workouts.map(workout => (
+            <DraggableWorkoutCard
+              key={workout.id}
+              workout={workout}
+              onDrag={onWorkoutDrag}
+            />
+          ))
+        ) : (
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => onAddWorkout(day.date)}
+          >
+            <Icon name="add" size={16} />
+            <Text style={styles.addText}>Add</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+};
+```
+
+**4. Draggable Workout Card**
+```typescript
+// apps/mobile/src/components/schedule/DraggableWorkoutCard.tsx
+
+interface DraggableWorkoutCardProps {
+  workout: ScheduledWorkout;
+  onDrag: (workoutId: string, newDate: Date) => void;
+}
+
+export const DraggableWorkoutCard: React.FC<DraggableWorkoutCardProps> = ({
+  workout,
+  onDrag
+}) => {
+  const translateY = useSharedValue(0);
+  const scale = useSharedValue(1);
+  const isDragging = useSharedValue(false);
+  
+  const gesture = Gesture.LongPress()
+    .minDuration(300)
+    .onStart(() => {
+      isDragging.value = true;
+      scale.value = withSpring(1.05);
+      // Haptic feedback
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    })
+    .onEnd(() => {
+      isDragging.value = false;
+      scale.value = withSpring(1);
+      translateY.value = withSpring(0);
+    });
+  
+  const panGesture = Gesture.Pan()
+    .enabled(isDragging.value)
+    .onUpdate((event) => {
+      translateY.value = event.translationY;
+    })
+    .onEnd((event) => {
+      // Calculate which day the workout was dropped on
+      const newDate = calculateDropTarget(event.absoluteY);
+      if (newDate) {
+        onDrag(workout.id, newDate);
+      }
+      translateY.value = withSpring(0);
+    });
+  
+  const composed = Gesture.Race(gesture, panGesture);
+  
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateY: translateY.value },
+      { scale: scale.value }
+    ],
+    opacity: isDragging.value ? 0.8 : 1,
+    zIndex: isDragging.value ? 999 : 1
+  }));
+  
+  return (
+    <GestureDetector gesture={composed}>
+      <Animated.View style={[styles.workoutCard, animatedStyle]}>
+        {/* Color Bar (left side) */}
+        <View style={[styles.colorBar, { backgroundColor: workout.color }]} />
+        
+        {/* Workout Info */}
+        <View style={styles.workoutInfo}>
+          <Text style={styles.workoutName}>{workout.name}</Text>
+          <Text style={styles.workoutDetails}>
+            {workout.distance} • {workout.duration}
+          </Text>
+        </View>
+        
+        {/* Completion Checkmark */}
+        {workout.completed && (
+          <View style={styles.checkmark}>
+            <Icon name="checkmark-circle" size={24} color="#4CAF50" />
+          </View>
+        )}
+      </Animated.View>
+    </GestureDetector>
+  );
+};
+```
+
+**5. Week Overview Modal (Popup)**
+```typescript
+// apps/mobile/src/components/schedule/WeekOverviewModal.tsx
+
+interface WeekOverviewModalProps {
+  visible: boolean;
+  week: WeekSchedule;
+  onClose: () => void;
+}
+
+export const WeekOverviewModal: React.FC<WeekOverviewModalProps> = ({
+  visible,
+  week,
+  onClose
+}) => {
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+    >
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Week {week.weekNumber} Overview</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Icon name="close" size={24} />
+          </TouchableOpacity>
+        </View>
+        
+        {/* Progress Bar */}
+        <View style={styles.progressSection}>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${(week.completed / week.total) * 100}%` }
+              ]}
+            />
+          </View>
+          <Text style={styles.progressText}>
+            Workouts: {week.completed}/{week.total}
+          </Text>
+          <Text style={styles.distanceText}>
+            Distance: {week.distanceCompleted}/{week.distanceTotal}mi
+          </Text>
+        </View>
+        
+        {/* Workout List */}
+        <ScrollView style={styles.workoutList}>
+          {week.days.map(day => (
+            day.workouts.map(workout => (
+              <WorkoutSummaryCard
+                key={workout.id}
+                workout={workout}
+                day={day}
+              />
+            ))
+          ))}
+        </ScrollView>
+        
+        {/* View Full Week Button */}
+        <TouchableOpacity
+          style={styles.fullWeekButton}
+          onPress={() => {
+            onClose();
+            navigation.navigate('TrainingCalendar', { week: week.weekNumber });
+          }}
+        >
+          <Text style={styles.fullWeekButtonText}>View full week</Text>
+        </TouchableOpacity>
+      </View>
+    </Modal>
+  );
+};
+```
 
 #### Backend: Scheduling Service
 
