@@ -2685,7 +2685,9 @@ async def general_exception_handler(request, exc):
 # ============================================================================
 
 
-@app.post("/api/exercises/create-or-match", response_model=ExerciseCreateOrMatchResponse)
+@app.post(
+    "/api/exercises/create-or-match", response_model=ExerciseCreateOrMatchResponse
+)
 async def create_or_match_exercise(
     request: ExerciseCreateOrMatchRequest,
     matching_service: ExerciseMatchingService = Depends(get_exercise_matching_service),
@@ -2720,8 +2722,7 @@ async def create_or_match_exercise(
     except Exception as e:
         print(f"❌ Error in exercise create/match: {e}")
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to match or create exercise: {str(e)}"
+            status_code=500, detail=f"Failed to match or create exercise: {str(e)}"
         )
 
 
@@ -2731,7 +2732,24 @@ async def create_or_match_exercise(
 
 
 @app.post("/api/badges/unlock", response_model=BadgeUnlockResponse)
-</text>
+async def unlock_badge(
+    request: BadgeUnlockRequest,
+    badge_service: BadgeService = Depends(get_badge_service),
+    user: dict = Depends(verify_token),
+):
+    """
+    Unlock a badge for a user
+    """
+    try:
+        result = await badge_service.unlock_badge(
+            user_id=request.user_id,
+            badge_id=request.badge_id,
+        )
+        return result
+    except Exception as e:
+        print(f"❌ Error unlocking badge: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to unlock badge: {str(e)}")
+
 
 @app.get("/api/badges/{user_id}")
 async def get_user_badges(
