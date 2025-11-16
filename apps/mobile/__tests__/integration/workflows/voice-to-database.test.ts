@@ -65,7 +65,7 @@ describe("Integration: Voice-to-Database Workflow", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            text: "I did bench press 135 pounds for 10 reps",
+            transcript: "I did bench press 135 pounds for 10 reps",
             user_id: testUser.id,
           }),
         },
@@ -85,7 +85,7 @@ describe("Integration: Voice-to-Database Workflow", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            text: "Squat 225 for 8 reps at RPE 8",
+            transcript: "Squat 225 for 8 reps at RPE 8",
             user_id: testUser.id,
           }),
         },
@@ -104,7 +104,7 @@ describe("Integration: Voice-to-Database Workflow", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            text: "Deadlift 3 sets of 5 reps at 315 pounds",
+            transcript: "Deadlift 3 sets of 5 reps at 315 pounds",
             user_id: testUser.id,
           }),
         },
@@ -351,7 +351,7 @@ describe("Integration: Voice-to-Database Workflow", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            text: voiceInput,
+            transcript: voiceInput,
             user_id: testUser.id,
           }),
         },
@@ -450,7 +450,7 @@ describe("Integration: Voice-to-Database Workflow", () => {
         {
           method: "POST",
           body: JSON.stringify({
-            text: "asdfasdf random gibberish",
+            transcript: "asdfasdf random gibberish",
             user_id: testUser.id,
           }),
         },
