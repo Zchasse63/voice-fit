@@ -316,7 +316,7 @@ async def startup_event():
     try:
         get_voice_parser()
         print("✅ Voice parser initialized")
-        print(f"✅ Model: {os.getenv('VOICE_MODEL_ID')}")
+        print(f"✅ Model: {os.getenv('KIMI_VOICE_MODEL_ID', 'kimi-k2-turbo-preview')}")
     except Exception as e:
         print(f"⚠️  Voice parser initialization failed: {e}")
 
@@ -346,7 +346,7 @@ async def health_check():
     return HealthCheckResponse(
         status="healthy" if supabase_connected else "degraded",
         version="2.0.0",
-        model_id=os.getenv("VOICE_MODEL_ID", "not_configured"),
+        model_id=os.getenv("KIMI_VOICE_MODEL_ID", "kimi-k2-turbo-preview"),
         supabase_connected=supabase_connected,
     )
 
@@ -378,7 +378,7 @@ async def parse_voice_command(
     """
     Parse a voice command into structured workout data.
 
-    Uses fine-tuned Llama 3.3 70B model + Upstash Search for exercise matching.
+    Uses Kimi K2 Turbo Preview + Upstash Search for exercise matching.
     """
     try:
         result = parser.parse_and_log_set(
@@ -492,7 +492,7 @@ async def classify_chat_message(
 
     This endpoint is used by the unified chat interface to determine how to handle
     user messages:
-    - workout_log: Parse with Llama and log to WatermelonDB
+    - workout_log: Parse with Kimi and log to WatermelonDB
     - question: Route to AI Coach
     - onboarding: Continue onboarding flow
     - general: Acknowledge or provide general response
@@ -541,7 +541,7 @@ async def extract_onboarding_data(
     """
     Extract structured onboarding data from conversational chat.
 
-    Uses fine-tuned Llama 3.3 70B to extract:
+    Uses Kimi to extract:
     - Experience level (beginner, intermediate, advanced)
     - Training goals (strength, hypertrophy, endurance, etc.)
     - Available equipment (barbell, dumbbells, machines, etc.)
@@ -833,7 +833,7 @@ async def coach_ask(
     - Full user context (training history, injuries, PRs, readiness, streaks, badges)
     - Smart namespace selection (classifies query to relevant knowledge areas)
     - Parallel Upstash Search (retrieves context from knowledge base)
-    - Streaming Llama 3.3 70B responses (fine-tuned model)
+    - Streaming Kimi responses
 
     Performance:
     - Perceived latency: ~2 seconds (retrieval + time to first token)

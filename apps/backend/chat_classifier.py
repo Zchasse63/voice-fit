@@ -122,7 +122,7 @@ Respond with a JSON object:
   "message_type": "workout_log" | "exercise_swap" | "question" | "onboarding" | "general",
   "confidence": 0.0-1.0,
   "reasoning": "Brief explanation of classification",
-  "suggested_action": "parse_with_llama" | "show_exercise_swaps" | "call_ai_coach" | "continue_onboarding" | "acknowledge",
+  "suggested_action": "parse_with_kimi" | "show_exercise_swaps" | "call_ai_coach" | "continue_onboarding" | "acknowledge",
   "extracted_data": {
     "exercise_name": "extracted exercise name if exercise_swap, else null",
     "reason": "optional reason for swap (injury, pain, equipment) if mentioned"
@@ -229,7 +229,7 @@ For exercise_swap, extract the exercise name from the message."""
                 "workout_log",
                 0.7,
                 "Contains numbers and workout keywords",
-                "parse_with_llama",
+                "parse_with_kimi",
             )
 
         # Check for questions

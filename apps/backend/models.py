@@ -805,7 +805,7 @@ class ChatClassifyResponse(BaseModel):
                 "message_type": "workout_log",
                 "confidence": 0.92,
                 "reasoning": "User is logging weight and reps",
-                "suggested_action": "parse_with_llama",
+                "suggested_action": "parse_with_kimi",
                 "extracted_data": None,
             }
         }
