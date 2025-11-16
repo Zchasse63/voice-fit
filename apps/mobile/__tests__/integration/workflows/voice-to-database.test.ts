@@ -72,10 +72,10 @@ describe("Integration: Voice-to-Database Workflow", () => {
       );
 
       expect(response).toBeDefined();
-      expect(response.parsed_data).toBeDefined();
-      expect(response.parsed_data.exercise_name).toContain("bench press");
-      expect(response.parsed_data.weight).toBe(135);
-      expect(response.parsed_data.reps).toBe(10);
+      expect(response.data).toBeDefined();
+      expect(response.data.exercise_name).toContain("bench press");
+      expect(response.data.weight).toBe(135);
+      expect(response.data.reps).toBe(10);
     });
 
     it("should parse voice input with RPE", async () => {
@@ -91,10 +91,10 @@ describe("Integration: Voice-to-Database Workflow", () => {
         },
       );
 
-      expect(response.parsed_data.exercise_name).toContain("squat");
-      expect(response.parsed_data.weight).toBe(225);
-      expect(response.parsed_data.reps).toBe(8);
-      expect(response.parsed_data.rpe).toBe(8);
+      expect(response.data.exercise_name).toContain("squat");
+      expect(response.data.weight).toBe(225);
+      expect(response.data.reps).toBe(8);
+      expect(response.data.rpe).toBe(8);
     });
 
     it("should handle multiple sets in voice input", async () => {
@@ -110,10 +110,10 @@ describe("Integration: Voice-to-Database Workflow", () => {
         },
       );
 
-      expect(response.parsed_data.exercise_name).toContain("deadlift");
-      expect(response.parsed_data.sets).toBe(3);
-      expect(response.parsed_data.reps).toBe(5);
-      expect(response.parsed_data.weight).toBe(315);
+      expect(response.data.exercise_name).toContain("deadlift");
+      expect(response.data.sets).toBe(3);
+      expect(response.data.reps).toBe(5);
+      expect(response.data.weight).toBe(315);
     });
   });
 
@@ -319,8 +319,8 @@ describe("Integration: Voice-to-Database Workflow", () => {
       );
 
       expect(logResponse.success).toBe(true);
-      expect(logResponse.parsed_data.notes).toBeDefined();
-      expect(logResponse.parsed_data.notes.toLowerCase()).toContain("heavy");
+      expect(logResponse.data.notes).toBeDefined();
+      expect(logResponse.data.notes.toLowerCase()).toContain("heavy");
 
       const setId = logResponse.set_ids[0];
 
