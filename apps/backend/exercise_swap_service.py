@@ -30,8 +30,8 @@ logger = logging.getLogger(__name__)
 # API keys
 XAI_API_KEY = os.getenv("XAI_API_KEY")
 XAI_BASE_URL = "https://api.x.ai/v1"
-UPSTASH_SEARCH_URL = os.getenv("UPSTASH_SEARCH_URL")
-UPSTASH_SEARCH_TOKEN = os.getenv("UPSTASH_SEARCH_TOKEN")
+UPSTASH_SEARCH_URL = os.getenv("UPSTASH_SEARCH_REST_URL")
+UPSTASH_SEARCH_TOKEN = os.getenv("UPSTASH_SEARCH_REST_TOKEN")
 
 
 class ExerciseSwapService:
