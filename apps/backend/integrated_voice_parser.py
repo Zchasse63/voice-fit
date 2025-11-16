@@ -14,17 +14,19 @@ Features:
 - Personality-driven confirmation messages (conversational, encouraging)
 """
 
-import os
-import re
 import json
-import time
+import os
 import random
-import requests
-from typing import Dict, Any, Optional, List
+import re
+import time
 from datetime import datetime
-from supabase import Client
-from upstash_search import Search
+from typing import Any, Dict, List, Optional
+
+import requests
 from dotenv import load_dotenv
+from upstash_search import Search
+
+from supabase import Client
 
 load_dotenv()
 
@@ -47,7 +49,7 @@ def extract_json_from_response(content: str) -> dict:
         pass
 
     # Extract from markdown code block (```json ... ```)
-    json_match = re.search(r'```json\s*\n(.*?)\n```', content, re.DOTALL)
+    json_match = re.search(r"```json\s*\n(.*?)\n```", content, re.DOTALL)
     if json_match:
         try:
             return json.loads(json_match.group(1))
@@ -55,7 +57,7 @@ def extract_json_from_response(content: str) -> dict:
             pass
 
     # Try extracting any JSON object
-    json_match = re.search(r'\{.*\}', content, re.DOTALL)
+    json_match = re.search(r"\{.*\}", content, re.DOTALL)
     if json_match:
         try:
             return json.loads(json_match.group(0))
@@ -65,6 +67,7 @@ def extract_json_from_response(content: str) -> dict:
     # If all else fails, print the full content for debugging
     print(f"DEBUG - Voice Parser Full response content:\n{content}\n")
     raise ValueError(f"No valid JSON found in response")
+
 
 # Kimi AI configuration
 KIMI_API_KEY = os.getenv("KIMI_API_KEY")
@@ -78,14 +81,14 @@ UPSTASH_SEARCH_TOKEN = os.getenv("UPSTASH_SEARCH_REST_TOKEN")
 
 # Confidence thresholds
 CONFIDENCE_THRESHOLD_HIGH = 0.85  # Auto-accept
-CONFIDENCE_THRESHOLD_LOW = 0.70   # Require confirmation
+CONFIDENCE_THRESHOLD_LOW = 0.70  # Require confirmation
 
 
 def _generate_confirmation_message(
     parsed_data: Dict[str, Any],
     is_pr: bool = False,
     set_number: int = 1,
-    user_name: Optional[str] = None
+    user_name: Optional[str] = None,
 ) -> str:
     """
     Generate a conversational, encouraging confirmation message.
@@ -155,7 +158,7 @@ def _generate_confirmation_message(
     if user_name and random.random() < 0.1:
         message = random.choice(confirmations)
         # Add name at the end
-        message = message.rstrip('.!') + f", {user_name}!"
+        message = message.rstrip(".!") + f", {user_name}!"
         return message
 
     return random.choice(confirmations)
@@ -166,7 +169,7 @@ def _check_if_pr(
     user_id: str,
     exercise_name: str,
     weight: Optional[float],
-    reps: Optional[int]
+    reps: Optional[int],
 ) -> bool:
     """
     Check if this set is a personal record (PR).
@@ -190,7 +193,15 @@ def _check_if_pr(
 
     try:
         # Get user's previous sets for this exercise
-        response = supabase_client.table('workout_sets').select('weight, reps').eq('user_id', user_id).ilike('exercise_name', f'%{exercise_name}%').order('created_at', desc=True).limit(50).execute()
+        response = (
+            supabase_client.table("workout_sets")
+            .select("weight, reps")
+            .eq("user_id", user_id)
+            .ilike("exercise_name", f"%{exercise_name}%")
+            .order("created_at", desc=True)
+            .limit(50)
+            .execute()
+        )
 
         if not response.data:
             # First time doing this exercise = PR!
@@ -201,8 +212,8 @@ def _check_if_pr(
 
         # Check if current volume is higher than any previous set
         for prev_set in response.data:
-            prev_weight = prev_set.get('weight', 0)
-            prev_reps = prev_set.get('reps', 0)
+            prev_weight = prev_set.get("weight", 0)
+            prev_reps = prev_set.get("reps", 0)
             prev_volume = prev_weight * prev_reps
 
             if current_volume > prev_volume:
@@ -231,21 +242,19 @@ class IntegratedVoiceParser:
         # Initialize Upstash Search client for exercise matching
         if UPSTASH_SEARCH_URL and UPSTASH_SEARCH_TOKEN:
             self.search_client = Search(
-                url=UPSTASH_SEARCH_URL,
-                token=UPSTASH_SEARCH_TOKEN
+                url=UPSTASH_SEARCH_URL, token=UPSTASH_SEARCH_TOKEN
             )
         else:
             self.search_client = None
-            print("⚠️  Upstash Search not configured - exercise matching will be limited")
+            print(
+                "⚠️  Upstash Search not configured - exercise matching will be limited"
+            )
 
         if not all([KIMI_API_KEY, KIMI_BASE_URL, KIMI_MODEL_ID]):
             raise ValueError("Missing required environment variables for voice parsing")
-    
+
     def parse_and_log_set(
-        self,
-        transcript: str,
-        user_id: str,
-        auto_save: bool = False
+        self, transcript: str, user_id: str, auto_save: bool = False
     ) -> Dict[str, Any]:
         """
         Parse a voice command and optionally save to database.
@@ -270,15 +279,15 @@ class IntegratedVoiceParser:
         parsed_data = self._parse_with_kimi(transcript, session, same_weight_detected)
 
         # Match exercise name to database using Upstash Search
-        if parsed_data.get('exercise_name') and self.search_client:
-            exercise_match = self._match_exercise(parsed_data['exercise_name'])
+        if parsed_data.get("exercise_name") and self.search_client:
+            exercise_match = self._match_exercise(parsed_data["exercise_name"])
             if exercise_match:
-                parsed_data['exercise_id'] = exercise_match['id']
-                parsed_data['exercise_name'] = exercise_match['name']
-                parsed_data['exercise_match_score'] = exercise_match['score']
+                parsed_data["exercise_id"] = exercise_match["id"]
+                parsed_data["exercise_name"] = exercise_match["name"]
+                parsed_data["exercise_match_score"] = exercise_match["score"]
 
         # Calculate confidence
-        confidence = parsed_data.get('confidence', 0.5)
+        confidence = parsed_data.get("confidence", 0.5)
 
         # Determine action
         if confidence >= CONFIDENCE_THRESHOLD_HIGH:
@@ -287,79 +296,82 @@ class IntegratedVoiceParser:
             action = "needs_confirmation"
         else:
             action = "needs_clarification"
-        
+
         # Update session
-        session['total_sets'] += 1
-        session['last_exercise'] = parsed_data.get('exercise_name')
-        session['last_weight'] = parsed_data.get('weight')
-        session['last_reps'] = parsed_data.get('reps')
-        
+        session["total_sets"] += 1
+        session["last_exercise"] = parsed_data.get("exercise_name")
+        session["last_weight"] = parsed_data.get("weight")
+        session["last_reps"] = parsed_data.get("reps")
+
         # Check if exercise switched
-        is_exercise_switch = (
-            session.get('current_exercise') and
-            session['current_exercise'] != parsed_data.get('exercise_name')
-        )
-        
+        is_exercise_switch = session.get("current_exercise") and session[
+            "current_exercise"
+        ] != parsed_data.get("exercise_name")
+
         if is_exercise_switch:
-            session['exercises_count'] += 1
-        
-        session['current_exercise'] = parsed_data.get('exercise_name')
-        
+            session["exercises_count"] += 1
+
+        session["current_exercise"] = parsed_data.get("exercise_name")
+
         # Build session context
         session_context = {
-            'session_id': session['session_id'],
-            'set_number': session['total_sets'],
-            'is_exercise_switch': is_exercise_switch,
-            'edge_case_handled': False,
-            'total_sets_in_session': session['total_sets']
+            "session_id": session["session_id"],
+            "set_number": session["total_sets"],
+            "is_exercise_switch": is_exercise_switch,
+            "edge_case_handled": False,
+            "total_sets_in_session": session["total_sets"],
         }
-        
+
         # Auto-save if requested and confidence is high
         saved = False
         save_error = None
-        
+        saved_set = None
+
         if auto_save and confidence >= CONFIDENCE_THRESHOLD_HIGH:
             try:
-                self._save_set_to_database(user_id, parsed_data, session['session_id'])
+                saved_set = self._save_set_to_database(
+                    user_id, parsed_data, session["session_id"]
+                )
                 saved = True
             except Exception as e:
                 save_error = str(e)
-        
+
         # Check if this is a PR (only if we have weight and reps)
         is_pr = False
-        if parsed_data.get('weight') and parsed_data.get('reps'):
+        if parsed_data.get("weight") and parsed_data.get("reps"):
             is_pr = _check_if_pr(
                 self.supabase,
                 user_id,
-                parsed_data.get('exercise_name', ''),
-                parsed_data.get('weight'),
-                parsed_data.get('reps')
+                parsed_data.get("exercise_name", ""),
+                parsed_data.get("weight"),
+                parsed_data.get("reps"),
             )
 
         # Generate conversational confirmation message
         confirmation_message = _generate_confirmation_message(
             parsed_data=parsed_data,
             is_pr=is_pr,
-            set_number=session_context.get('set_number', 1),
-            user_name=None  # TODO: Get user's first name from auth context
+            set_number=session_context.get("set_number", 1),
+            user_name=None,  # TODO: Get user's first name from auth context
         )
 
         # Calculate latency
         latency_ms = int((time.time() - start_time) * 1000)
 
         return {
-            'success': True,
-            'action': action,
-            'confidence': confidence,
-            'data': parsed_data,
-            'transcript': transcript,
-            'same_weight_detected': same_weight_detected,
-            'session_context': session_context,
-            'edge_case': None,
-            'message': confirmation_message,  # Personality-driven confirmation
-            'saved': saved,
-            'save_error': save_error,
-            'latency_ms': latency_ms
+            "success": True,
+            "action": action,
+            "confidence": confidence,
+            "data": parsed_data,
+            "transcript": transcript,
+            "same_weight_detected": same_weight_detected,
+            "session_context": session_context,
+            "edge_case": None,
+            "message": confirmation_message,  # Personality-driven confirmation
+            "saved": saved,
+            "save_error": save_error,
+            "set_id": saved_set["id"] if saved_set else None,
+            "latency_ms": latency_ms,
         }
 
     def _detect_same_weight(self, transcript: str) -> bool:
@@ -373,11 +385,11 @@ class IntegratedVoiceParser:
             True if "same weight" reference detected
         """
         same_weight_phrases = [
-            'same weight',
-            'same',
-            'keep the weight',
-            'keep weight',
-            'same load'
+            "same weight",
+            "same",
+            "keep the weight",
+            "keep weight",
+            "same load",
         ]
 
         transcript_lower = transcript.lower()
@@ -402,21 +414,77 @@ class IntegratedVoiceParser:
         # Words to skip when extracting exercise name
         filler_words = {
             # Action words
-            'please', 'log', 'add', 'record', 'save', 'enter',
+            "please",
+            "log",
+            "add",
+            "record",
+            "save",
+            "enter",
             # Determiners/pronouns
-            'this', 'that', 'a', 'an', 'the', 'my',
+            "this",
+            "that",
+            "a",
+            "an",
+            "the",
+            "my",
             # Prepositions
-            'of', 'at', 'for', 'with', 'on', 'in',
+            "of",
+            "at",
+            "for",
+            "with",
+            "on",
+            "in",
             # Workout metadata
-            'set', 'sets', 'rep', 'reps', 'rpe', 'rir', 'tempo',
+            "set",
+            "sets",
+            "rep",
+            "reps",
+            "rpe",
+            "rir",
+            "tempo",
             # Units
-            'pounds', 'lbs', 'lb', 'kg', 'kgs', 'kilos', 'kilo',
+            "pounds",
+            "lbs",
+            "lb",
+            "kg",
+            "kgs",
+            "kilos",
+            "kilo",
             # Common connectors
-            'and', 'to', 'x',
+            "and",
+            "to",
+            "x",
             # Number words (in case voice transcription converts numbers to words)
-            'zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten',
-            'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen', 'twenty',
-            'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety', 'hundred', 'thousand'
+            "zero",
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
+            "ten",
+            "eleven",
+            "twelve",
+            "thirteen",
+            "fourteen",
+            "fifteen",
+            "sixteen",
+            "seventeen",
+            "eighteen",
+            "nineteen",
+            "twenty",
+            "thirty",
+            "forty",
+            "fifty",
+            "sixty",
+            "seventy",
+            "eighty",
+            "ninety",
+            "hundred",
+            "thousand",
         }
 
         # Extract exercise name by filtering out noise
@@ -425,7 +493,7 @@ class IntegratedVoiceParser:
 
         for word in words:
             # Skip numbers (including decimals like 8.5)
-            if word.replace('.', '').isdigit():
+            if word.replace(".", "").isdigit():
                 continue
             # Skip filler words
             if word in filler_words:
@@ -439,11 +507,13 @@ class IntegratedVoiceParser:
         # Build search query from exercise words
         if not exercise_words:
             # Fallback: use first 3 words if filtering removed everything
-            return ' '.join(transcript.lower().split()[:3])
+            return " ".join(transcript.lower().split()[:3])
         else:
-            return ' '.join(exercise_words)
+            return " ".join(exercise_words)
 
-    def _get_exercise_examples_from_upstash(self, transcript: str, limit: int = 10) -> str:
+    def _get_exercise_examples_from_upstash(
+        self, transcript: str, limit: int = 10
+    ) -> str:
         """
         Retrieve exercise examples from Upstash Search based on transcript.
         This helps the model recognize exercise names and common variations.
@@ -472,9 +542,9 @@ class IntegratedVoiceParser:
             # Format results as context
             examples = []
             for i, result in enumerate(results, 1):
-                content = result.content if hasattr(result, 'content') else {}
-                exercise_name = content.get('original_name', 'Unknown')
-                synonyms = content.get('synonyms', [])
+                content = result.content if hasattr(result, "content") else {}
+                exercise_name = content.get("original_name", "Unknown")
+                synonyms = content.get("synonyms", [])
 
                 example = f"{i}. {exercise_name}"
                 if synonyms:
@@ -489,7 +559,7 @@ class IntegratedVoiceParser:
 
     def _match_exercise(self, exercise_name: str) -> Optional[Dict[str, Any]]:
         """
-        Match exercise name to database using Upstash Search.
+        Match exercise name to database using Upstash Search, with Supabase fallback.
 
         Args:
             exercise_name: Exercise name from voice parsing
@@ -497,30 +567,108 @@ class IntegratedVoiceParser:
         Returns:
             Dictionary with exercise_id, name, and match score, or None
         """
-        if not self.search_client:
-            return None
+        # Try Upstash first (fast, optimized for fuzzy search)
+        if self.search_client:
+            try:
+                # Search in the "exercises" namespace (actual exercise list)
+                index = self.search_client.index("exercises")
+                results = index.search(query=exercise_name, limit=1)
 
+                if results and len(results) > 0:
+                    top_result = results[0]
+                    content = (
+                        top_result.content if hasattr(top_result, "content") else {}
+                    )
+                    return {
+                        "id": top_result.id if hasattr(top_result, "id") else None,
+                        "name": content.get("original_name", exercise_name),
+                        "score": top_result.score
+                        if hasattr(top_result, "score")
+                        else 0.0,
+                    }
+
+            except Exception as e:
+                print(f"Upstash search failed, falling back to Supabase: {e}")
+
+        # Fallback: Query Supabase directly
+        return self._match_exercise_from_supabase(exercise_name)
+
+    def _match_exercise_from_supabase(
+        self, exercise_name: str
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Match exercise by querying Supabase directly using synonyms and text search.
+
+        This is a fallback when Upstash Search is not available or fails.
+        Uses progressive matching: exact synonyms → text search → fuzzy match.
+
+        Args:
+            exercise_name: Exercise name from voice parsing
+
+        Returns:
+            Dictionary with exercise_id, name, and match score, or None
+        """
         try:
-            # Search in the "exercises" namespace (actual exercise list)
-            index = self.search_client.index("exercises")
-            results = index.search(query=exercise_name, limit=1)
+            # Normalize the exercise name for better matching
+            normalized = exercise_name.lower().strip()
 
-            if results and len(results) > 0:
-                top_result = results[0]
-                content = top_result.content if hasattr(top_result, 'content') else {}
+            # Query 1: Exact match in synonyms array (most reliable)
+            result = (
+                self.supabase.table("exercises")
+                .select("id, original_name")
+                .contains("synonyms", [normalized])
+                .limit(1)
+                .execute()
+            )
+
+            if result.data and len(result.data) > 0:
                 return {
-                    'id': top_result.id if hasattr(top_result, 'id') else None,
-                    'name': content.get('original_name', exercise_name),
-                    'score': top_result.score if hasattr(top_result, 'score') else 0.0
+                    "id": result.data[0]["id"],
+                    "name": result.data[0]["original_name"],
+                    "score": 1.0,  # Exact synonym match
+                }
+
+            # Query 2: Use PostgreSQL text search on search_vector
+            result = (
+                self.supabase.table("exercises")
+                .select("id, original_name")
+                .text_search("search_vector", normalized.replace(" ", " & "))
+                .limit(1)
+                .execute()
+            )
+
+            if result.data and len(result.data) > 0:
+                return {
+                    "id": result.data[0]["id"],
+                    "name": result.data[0]["original_name"],
+                    "score": 0.85,  # Text search match
+                }
+
+            # Query 3: Fuzzy match on original_name (last resort)
+            result = (
+                self.supabase.table("exercises")
+                .select("id, original_name")
+                .ilike("original_name", f"%{normalized}%")
+                .limit(1)
+                .execute()
+            )
+
+            if result.data and len(result.data) > 0:
+                return {
+                    "id": result.data[0]["id"],
+                    "name": result.data[0]["original_name"],
+                    "score": 0.7,  # Partial match
                 }
 
             return None
 
         except Exception as e:
-            print(f"Error matching exercise: {e}")
+            print(f"Error matching exercise from Supabase: {e}")
             return None
 
-    def _parse_with_kimi(self, transcript: str, session: Dict, same_weight_detected: bool = False) -> Dict[str, Any]:
+    def _parse_with_kimi(
+        self, transcript: str, session: Dict, same_weight_detected: bool = False
+    ) -> Dict[str, Any]:
         """
         Parse voice transcript using Kimi K2 Turbo Preview with RAG.
 
@@ -549,13 +697,13 @@ Output format:
 Only include fields that are mentioned in the transcript."""
 
         # Add session context if available
-        if session.get('last_exercise'):
+        if session.get("last_exercise"):
             system_prompt += f"\n\nCurrent exercise: {session['last_exercise']}"
-            if session.get('last_weight'):
+            if session.get("last_weight"):
                 system_prompt += f"\nLast weight: {session['last_weight']} {session.get('last_weight_unit', 'lbs')}"
 
         # Handle "same weight" reference
-        if same_weight_detected and session.get('last_weight'):
+        if same_weight_detected and session.get("last_weight"):
             system_prompt += f"\n\nUser said 'same weight' - use weight: {session['last_weight']} {session.get('last_weight_unit', 'lbs')}"
 
         # Build user prompt with RAG context
@@ -572,34 +720,36 @@ VOICE TRANSCRIPT TO PARSE:
         url = f"{KIMI_BASE_URL}/chat/completions"
         headers = {
             "Authorization": f"Bearer {KIMI_API_KEY}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
         payload = {
             "model": KIMI_MODEL_ID,
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
             "temperature": 0.1,  # Low temperature for consistency
-            "max_tokens": 500  # Lower limit for K2 Turbo Preview (non-reasoning)
+            "max_tokens": 500,  # Lower limit for K2 Turbo Preview (non-reasoning)
         }
 
         try:
-            response = requests.post(url, headers=headers, json=payload, timeout=30)  # Increased for Kimi K2 reasoning
+            response = requests.post(
+                url, headers=headers, json=payload, timeout=30
+            )  # Increased for Kimi K2 reasoning
 
             if response.status_code != 200:
                 raise Exception(f"Kimi API error: {response.status_code}")
-            
+
             result = response.json()
-            content = result['choices'][0]['message']['content']
+            content = result["choices"][0]["message"]["content"]
 
             # Parse JSON response (handles markdown code blocks)
             parsed_data = extract_json_from_response(content)
 
             # Fix: Sometimes returns 'weight_value' instead of 'weight'
-            if 'weight_value' in parsed_data and 'weight' not in parsed_data:
-                parsed_data['weight'] = parsed_data.pop('weight_value')
+            if "weight_value" in parsed_data and "weight" not in parsed_data:
+                parsed_data["weight"] = parsed_data.pop("weight_value")
 
             return parsed_data
 
@@ -607,77 +757,79 @@ VOICE TRANSCRIPT TO PARSE:
             print(f"Error parsing with Kimi: {e}")
             # Return fallback response
             return {
-                'exercise_name': 'Unknown Exercise',
-                'confidence': 0.3,
-                'error': str(e)
+                "exercise_name": "Unknown Exercise",
+                "confidence": 0.3,
+                "error": str(e),
             }
-    
+
     def _get_or_create_session(self, user_id: str) -> Dict[str, Any]:
         """Get existing session or create new one."""
         if user_id not in self.sessions:
             self.sessions[user_id] = {
-                'session_id': f"session_{user_id}_{int(time.time())}",
-                'user_id': user_id,
-                'started_at': datetime.utcnow().isoformat(),
-                'total_sets': 0,
-                'exercises_count': 0,
-                'current_exercise': None,
-                'last_exercise': None,
-                'last_weight': None,
-                'last_reps': None,
-                'last_weight_unit': 'lbs'
+                "session_id": f"session_{user_id}_{int(time.time())}",
+                "user_id": user_id,
+                "started_at": datetime.utcnow().isoformat(),
+                "total_sets": 0,
+                "exercises_count": 0,
+                "current_exercise": None,
+                "last_exercise": None,
+                "last_weight": None,
+                "last_reps": None,
+                "last_weight_unit": "lbs",
             }
-        
+
         return self.sessions[user_id]
-    
+
     def get_session_summary(self, user_id: str) -> Dict[str, Any]:
         """Get current session summary for a user."""
         session = self.sessions.get(user_id)
-        
+
         if not session:
             return {
-                'session_id': None,
-                'started_at': None,
-                'total_sets': 0,
-                'current_exercise': None,
-                'exercises_count': 0
+                "session_id": None,
+                "started_at": None,
+                "total_sets": 0,
+                "current_exercise": None,
+                "exercises_count": 0,
             }
-        
+
         return {
-            'session_id': session['session_id'],
-            'started_at': session['started_at'],
-            'total_sets': session['total_sets'],
-            'current_exercise': {
-                'name': session.get('current_exercise'),
-                'last_weight': session.get('last_weight'),
-                'last_reps': session.get('last_reps')
-            } if session.get('current_exercise') else None,
-            'exercises_count': session['exercises_count']
+            "session_id": session["session_id"],
+            "started_at": session["started_at"],
+            "total_sets": session["total_sets"],
+            "current_exercise": {
+                "name": session.get("current_exercise"),
+                "last_weight": session.get("last_weight"),
+                "last_reps": session.get("last_reps"),
+            }
+            if session.get("current_exercise")
+            else None,
+            "exercises_count": session["exercises_count"],
         }
-    
+
     def end_session(self, user_id: str) -> Dict[str, Any]:
         """End the current workout session."""
         session = self.sessions.get(user_id)
-        
+
         if not session:
-            return {'error': 'No active session found'}
-        
+            return {"error": "No active session found"}
+
         # Build final summary
         summary = {
-            'session_id': session['session_id'],
-            'user_id': user_id,
-            'started_at': session['started_at'],
-            'ended_at': datetime.utcnow().isoformat(),
-            'total_sets': session['total_sets'],
-            'exercises_count': session['exercises_count'],
-            'exercises': []  # TODO: Track individual exercises
+            "session_id": session["session_id"],
+            "user_id": user_id,
+            "started_at": session["started_at"],
+            "ended_at": datetime.utcnow().isoformat(),
+            "total_sets": session["total_sets"],
+            "exercises_count": session["exercises_count"],
+            "exercises": [],  # TODO: Track individual exercises
         }
-        
+
         # Clear session
         del self.sessions[user_id]
-        
+
         return summary
-    
+
     def _save_set_to_database(self, user_id: str, parsed_data: Dict, session_id: str):
         """
         Save a set to the database.
@@ -693,23 +845,23 @@ VOICE TRANSCRIPT TO PARSE:
         try:
             # Prepare set data for database
             set_data = {
-                'user_id': user_id,
-                'exercise_id': parsed_data.get('exercise_id'),
-                'weight': parsed_data.get('weight'),
-                'weight_unit': parsed_data.get('weight_unit', 'lbs'),
-                'reps': parsed_data.get('reps'),
-                'rpe': parsed_data.get('rpe'),
-                'rir': parsed_data.get('rir'),
-                'notes': parsed_data.get('notes'),
-                'session_id': session_id,
-                'created_at': datetime.utcnow().isoformat()
+                "user_id": user_id,
+                "exercise_id": parsed_data.get("exercise_id"),
+                "weight": parsed_data.get("weight"),
+                "weight_unit": parsed_data.get("weight_unit", "lbs"),
+                "reps": parsed_data.get("reps"),
+                "rpe": parsed_data.get("rpe"),
+                "rir": parsed_data.get("rir"),
+                "notes": parsed_data.get("notes"),
+                "session_id": session_id,
+                "created_at": datetime.utcnow().isoformat(),
             }
 
             # Remove None values
             set_data = {k: v for k, v in set_data.items() if v is not None}
 
             # Insert into database
-            result = self.supabase.table('sets').insert(set_data).execute()
+            result = self.supabase.table("workout_logs").insert(set_data).execute()
 
             if not result.data:
                 raise Exception("Failed to save set to database")
@@ -719,4 +871,3 @@ VOICE TRANSCRIPT TO PARSE:
         except Exception as e:
             print(f"Error saving set to database: {e}")
             raise
-
