@@ -78,6 +78,8 @@ from models import (
     RunningParseRequest,
     RunningParseResponse,
     SessionSummaryResponse,
+    VoiceLogRequest,
+    VoiceLogResponse,
     VoiceParseRequest,
     VoiceParseResponse,
     VolumeAnalyticsResponse,
@@ -349,6 +351,24 @@ async def health_check():
     )
 
 
+@app.options("/{full_path:path}")
+async def options_handler(full_path: str):
+    """
+    Global OPTIONS handler for CORS preflight requests.
+    Returns 200 OK with CORS headers for any path.
+    """
+    return JSONResponse(
+        content={"message": "OK"},
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Max-Age": "3600",
+        },
+    )
+
+
 @app.post("/api/voice/parse", response_model=VoiceParseResponse)
 async def parse_voice_command(
     request: VoiceParseRequest,
@@ -373,6 +393,53 @@ async def parse_voice_command(
         print(f"Error parsing voice command: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to parse voice command: {str(e)}"
+        )
+
+
+@app.post("/api/voice/log", response_model=VoiceLogResponse)
+async def log_voice_workout(
+    request: VoiceLogRequest,
+    parser: IntegratedVoiceParser = Depends(get_voice_parser),
+    user: dict = Depends(verify_token),
+):
+    """
+    Log a voice workout - parse voice input and save to database.
+
+    This endpoint parses the voice input and automatically saves the set to the database.
+    Returns the created set IDs and parsed data.
+    """
+    try:
+        # Parse the voice input with auto_save enabled
+        result = parser.parse_and_log_set(
+            transcript=request.voice_input,
+            user_id=request.user_id,
+            auto_save=True,  # Always save when using /api/voice/log
+        )
+
+        # Extract set IDs if saved
+        set_ids = []
+        if result.get("saved") and result.get("data"):
+            # If the parser saved the set, we should have a set ID
+            # For now, return empty list as we need to modify parser to return set IDs
+            # This will be populated when parser is updated
+            set_ids = []
+
+        # Create parsed data object
+        parsed_data = result.get("data", {})
+
+        return VoiceLogResponse(
+            success=result.get("success", False),
+            workout_log_id=request.workout_id,
+            set_ids=set_ids,
+            parsed_data=parsed_data,
+            message=result.get("message", "Voice input processed"),
+        )
+
+    except Exception as e:
+        print(f"Error logging voice workout: {e}")
+        return VoiceLogResponse(
+            success=False,
+            error=f"Failed to log voice workout: {str(e)}",
         )
 
 

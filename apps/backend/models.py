@@ -139,6 +139,54 @@ class EndSessionResponse(BaseModel):
     exercises: List[Dict[str, Any]]
 
 
+class VoiceLogRequest(BaseModel):
+    """Request model for voice logging endpoint"""
+
+    voice_input: str = Field(
+        ..., description="Voice input to parse and log", min_length=1
+    )
+    user_id: str = Field(..., description="User ID")
+    workout_id: Optional[str] = Field(
+        None, description="Workout log ID to associate sets with"
+    )
+    timestamp: Optional[str] = Field(None, description="Timestamp of the voice input")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "voice_input": "Bench press 185 for 8 reps",
+                "user_id": "user_123",
+                "workout_id": "workout_456",
+            }
+        }
+
+
+class VoiceLogResponse(BaseModel):
+    """Response model for voice logging endpoint"""
+
+    success: bool
+    workout_log_id: Optional[str] = None
+    set_ids: Optional[List[str]] = None
+    parsed_data: Optional[ParsedWorkoutData] = None
+    message: Optional[str] = None
+    error: Optional[str] = None
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "workout_log_id": "workout_456",
+                "set_ids": ["set_789", "set_790"],
+                "parsed_data": {
+                    "exercise_name": "Bench Press",
+                    "weight": 185,
+                    "reps": 8,
+                },
+                "message": "Successfully logged workout",
+            }
+        }
+
+
 class HealthCheckResponse(BaseModel):
     """Response model for health check endpoint"""
 
