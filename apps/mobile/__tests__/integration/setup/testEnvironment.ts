@@ -83,10 +83,17 @@ let supabaseAdminClient: ReturnType<typeof createClient<Database>> | null =
 export function initializeTestEnvironment() {
   testEnv = loadTestEnvironment();
 
-  // Create Supabase client
+  // Create Supabase client with auth configuration matching production
   supabaseClient = createClient<Database>(
     testEnv.supabaseUrl,
     testEnv.supabaseAnonKey,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: false,
+      },
+    },
   );
 
   // Create admin client if service key available
@@ -94,6 +101,13 @@ export function initializeTestEnvironment() {
     supabaseAdminClient = createClient<Database>(
       testEnv.supabaseUrl,
       testEnv.supabaseServiceKey,
+      {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+        },
+      },
     );
   }
 
@@ -451,12 +465,12 @@ export async function createTestWorkoutLog(
   const client = getSupabaseClient();
 
   const { data: workoutLog, error } = await client
-    .from("workout_logs")
+    .from("workouts")
     .insert({
       user_id: userId,
-      workout_date: new Date().toISOString(),
-      workout_type: "strength",
-      duration_minutes: 60,
+      name: "Test Workout",
+      start_time: new Date().toISOString(),
+      end_time: new Date(Date.now() + 3600000).toISOString(), // 1 hour later
       notes: "Test workout",
       ...data,
     })
