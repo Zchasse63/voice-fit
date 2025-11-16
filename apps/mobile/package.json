@@ -64,6 +64,7 @@
     "@types/react": "~19.0.10",
     "detox": "^20.45.1",
     "detox-expo-helpers": "^0.6.0",
+    "dotenv": "^17.2.3",
     "jest": "~29.7.0",
     "jest-expo": "~53.0.10",
     "patch-package": "^8.0.1",

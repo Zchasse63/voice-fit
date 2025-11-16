@@ -10,6 +10,11 @@
  */
 
 // -----------------------------
+// Load .env file for integration tests
+// -----------------------------
+require("dotenv").config();
+
+// -----------------------------
 // Environment variables for tests
 // -----------------------------
 process.env.EXPO_PUBLIC_SUPABASE_URL =
