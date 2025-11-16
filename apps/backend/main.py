@@ -418,11 +418,9 @@ async def log_voice_workout(
 
         # Extract set IDs if saved
         set_ids = []
-        if result.get("saved") and result.get("data"):
-            # If the parser saved the set, we should have a set ID
-            # For now, return empty list as we need to modify parser to return set IDs
-            # This will be populated when parser is updated
-            set_ids = []
+        if result.get("saved") and result.get("set_id"):
+            # The parser returns set_id when a set is successfully saved
+            set_ids = [str(result.get("set_id"))]
 
         # Create parsed data object
         parsed_data = result.get("data", {})
