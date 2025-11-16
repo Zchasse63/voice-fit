@@ -24,6 +24,11 @@ from typing import Any, Dict, List, Optional
 
 import requests
 from dotenv import load_dotenv
+from redis_client import (
+    cache_exercise_match,
+    get_cached_exercise_match,
+    get_session_manager,
+)
 from upstash_search import Search
 
 from supabase import Client
@@ -237,7 +242,14 @@ class IntegratedVoiceParser:
     def __init__(self, supabase_client: Client):
         """Initialize the integrated voice parser."""
         self.supabase = supabase_client
-        self.sessions = {}  # In-memory session storage: {user_id: session_data}
+
+        # Initialize Redis session manager
+        try:
+            self.session_manager = get_session_manager()
+            print("✅ Redis session manager initialized")
+        except Exception as e:
+            print(f"⚠️  Redis session manager failed to initialize: {e}")
+            self.session_manager = None
 
         # Initialize Upstash Search client for exercise matching
         if UPSTASH_SEARCH_URL and UPSTASH_SEARCH_TOKEN:
@@ -312,6 +324,10 @@ class IntegratedVoiceParser:
             session["exercises_count"] += 1
 
         session["current_exercise"] = parsed_data.get("exercise_name")
+
+        # Persist session updates to Redis
+        if self.session_manager:
+            self.session_manager.set_session(user_id, session)
 
         # Build session context
         session_context = {
@@ -560,6 +576,7 @@ class IntegratedVoiceParser:
     def _match_exercise(self, exercise_name: str) -> Optional[Dict[str, Any]]:
         """
         Match exercise name to database using Upstash Search, with Supabase fallback.
+        Uses Redis caching to speed up repeated matches.
 
         Args:
             exercise_name: Exercise name from voice parsing
@@ -567,6 +584,11 @@ class IntegratedVoiceParser:
         Returns:
             Dictionary with exercise_id, name, and match score, or None
         """
+        # Check Redis cache first
+        cached_match = get_cached_exercise_match(exercise_name)
+        if cached_match:
+            return cached_match
+
         # Try Upstash first (fast, optimized for fuzzy search)
         if self.search_client:
             try:
@@ -579,7 +601,7 @@ class IntegratedVoiceParser:
                     content = (
                         top_result.content if hasattr(top_result, "content") else {}
                     )
-                    return {
+                    result = {
                         "id": top_result.id if hasattr(top_result, "id") else None,
                         "name": content.get("original_name", exercise_name),
                         "score": top_result.score
@@ -587,11 +609,21 @@ class IntegratedVoiceParser:
                         else 0.0,
                     }
 
+                    # Cache the result
+                    cache_exercise_match(exercise_name, result, ttl_days=7)
+                    return result
+
             except Exception as e:
                 print(f"Upstash search failed, falling back to Supabase: {e}")
 
         # Fallback: Query Supabase directly
-        return self._match_exercise_from_supabase(exercise_name)
+        result = self._match_exercise_from_supabase(exercise_name)
+
+        # Cache Supabase result too
+        if result:
+            cache_exercise_match(exercise_name, result, ttl_days=7)
+
+        return result
 
     def _match_exercise_from_supabase(
         self, exercise_name: str
@@ -763,26 +795,39 @@ VOICE TRANSCRIPT TO PARSE:
             }
 
     def _get_or_create_session(self, user_id: str) -> Dict[str, Any]:
-        """Get existing session or create new one."""
-        if user_id not in self.sessions:
-            self.sessions[user_id] = {
-                "session_id": f"session_{user_id}_{int(time.time())}",
-                "user_id": user_id,
-                "started_at": datetime.utcnow().isoformat(),
-                "total_sets": 0,
-                "exercises_count": 0,
-                "current_exercise": None,
-                "last_exercise": None,
-                "last_weight": None,
-                "last_reps": None,
-                "last_weight_unit": "lbs",
-            }
+        """Get existing session or create new one from Redis."""
+        # Try to get from Redis first
+        if self.session_manager:
+            session = self.session_manager.get_session(user_id)
+            if session:
+                return session
 
-        return self.sessions[user_id]
+        # Create new session
+        session = {
+            "session_id": f"session_{user_id}_{int(time.time())}",
+            "user_id": user_id,
+            "started_at": datetime.utcnow().isoformat(),
+            "total_sets": 0,
+            "exercises_count": 0,
+            "current_exercise": None,
+            "last_exercise": None,
+            "last_weight": None,
+            "last_reps": None,
+            "last_weight_unit": "lbs",
+        }
+
+        # Save to Redis
+        if self.session_manager:
+            self.session_manager.set_session(user_id, session)
+
+        return session
 
     def get_session_summary(self, user_id: str) -> Dict[str, Any]:
-        """Get current session summary for a user."""
-        session = self.sessions.get(user_id)
+        """Get current session summary for a user from Redis."""
+        # Get from Redis
+        session = None
+        if self.session_manager:
+            session = self.session_manager.get_session(user_id)
 
         if not session:
             return {
@@ -808,8 +853,11 @@ VOICE TRANSCRIPT TO PARSE:
         }
 
     def end_session(self, user_id: str) -> Dict[str, Any]:
-        """End the current workout session."""
-        session = self.sessions.get(user_id)
+        """End the current workout session and clear from Redis."""
+        # Get from Redis
+        session = None
+        if self.session_manager:
+            session = self.session_manager.get_session(user_id)
 
         if not session:
             return {"error": "No active session found"}
@@ -825,8 +873,9 @@ VOICE TRANSCRIPT TO PARSE:
             "exercises": [],  # TODO: Track individual exercises
         }
 
-        # Clear session
-        del self.sessions[user_id]
+        # Clear session from Redis
+        if self.session_manager:
+            self.session_manager.delete_session(user_id)
 
         return summary
 
