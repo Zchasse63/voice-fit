@@ -12,11 +12,12 @@ Extracts:
 - Injury history (current injuries, past injuries)
 """
 
+import json
 import os
 import re
-import json
+from typing import Any, Dict, List, Optional
+
 import requests
-from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 from personality_engine import PersonalityEngine
 
@@ -39,16 +40,17 @@ def extract_json_from_response(content: str) -> dict:
         return json.loads(content)
     except json.JSONDecodeError:
         # Extract from markdown code block (```json ... ```)
-        json_match = re.search(r'```json\s*\n(.*?)\n```', content, re.DOTALL)
+        json_match = re.search(r"```json\s*\n(.*?)\n```", content, re.DOTALL)
         if json_match:
             return json.loads(json_match.group(1))
 
         # Try extracting any JSON object
-        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        json_match = re.search(r"\{.*\}", content, re.DOTALL)
         if json_match:
             return json.loads(json_match.group(0))
 
         raise ValueError(f"No valid JSON found in response: {content[:100]}...")
+
 
 KIMI_API_KEY = os.getenv("KIMI_API_KEY")
 KIMI_BASE_URL = os.getenv("KIMI_BASE_URL", "https://api.moonshot.ai/v1")
@@ -66,22 +68,25 @@ class OnboardingService:
         self.personality_engine = PersonalityEngine()
 
         if not all([self.kimi_api_key, self.model_id]):
-            raise ValueError("Missing required environment variables for Onboarding service")
-    
+            raise ValueError(
+                "Missing required environment variables for Onboarding service"
+            )
+
     def extract_onboarding_data(
         self,
         message: str,
         current_step: str,
-        conversation_history: Optional[List[Dict[str, str]]] = None
+        conversation_history: Optional[List[Dict[str, str]]] = None,
+        rag_context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Extract structured onboarding data from user message.
-        
+
         Args:
             message: User's message
             current_step: Current onboarding step (welcome, experience_level, training_goals, etc.)
             conversation_history: Previous conversation messages
-        
+
         Returns:
             Dictionary with extracted data:
             {
@@ -95,14 +100,14 @@ class OnboardingService:
         """
         # Build system prompt for extraction
         system_prompt = self._build_extraction_prompt(current_step)
-        
+
         # Build messages
         messages = [{"role": "system", "content": system_prompt}]
-        
+
         # Add conversation history
         if conversation_history:
             messages.extend(conversation_history[-5:])  # Last 5 messages for context
-        
+
         # Add current message
         messages.append({"role": "user", "content": message})
 
@@ -110,23 +115,23 @@ class OnboardingService:
         url = f"{self.kimi_base_url}/chat/completions"
         headers = {
             "Authorization": f"Bearer {self.kimi_api_key}",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
-        
+
         payload = {
             "model": self.model_id,
             "messages": messages,
             "temperature": 0.3,  # Low temperature for consistent extraction
             "max_tokens": 1500,  # High limit for Kimi K2 reasoning + final JSON answer
-            "response_format": {"type": "json_object"}  # Force JSON output
+            "response_format": {"type": "json_object"},  # Force JSON output
         }
-        
+
         try:
             response = requests.post(url, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
 
             result = response.json()
-            content = result['choices'][0]['message']['content']
+            content = result["choices"][0]["message"]["content"]
 
             # Parse JSON response (handles markdown code blocks)
             extracted_data = extract_json_from_response(content)
@@ -142,12 +147,12 @@ class OnboardingService:
                 "available_equipment": None,
                 "training_frequency": None,
                 "injury_history": None,
-                "next_step": current_step
+                "next_step": current_step,
             }
-    
+
     def _build_extraction_prompt(self, current_step: str) -> str:
         """Build system prompt for data extraction based on current step"""
-        
+
         base_prompt = """You are an AI assistant helping extract structured onboarding data from user messages.
 
 Your task is to extract relevant information and return it as JSON.
@@ -161,7 +166,7 @@ IMPORTANT: Always return valid JSON with these fields:
 - next_step: "experience_level" | "training_goals" | "available_equipment" | "training_frequency" | "injury_history" | "complete"
 
 """
-        
+
         step_prompts = {
             "welcome": """
 Current step: WELCOME
@@ -214,12 +219,15 @@ Extract any current or past injuries mentioned.
 If user says "no injuries" or "healthy", set injury_history to "none".
 
 Set next_step to "complete" after extracting injury history.
-"""
+""",
         }
-        
+
         step_specific = step_prompts.get(current_step, step_prompts["welcome"])
-        
-        return base_prompt + step_specific + """
+
+        return (
+            base_prompt
+            + step_specific
+            + """
 
 Example JSON response:
 {
@@ -233,12 +241,14 @@ Example JSON response:
 
 Return ONLY valid JSON, no other text.
 """
+        )
 
     def generate_conversational_response(
         self,
         current_step: str,
         user_context: Dict[str, Any],
-        previous_answer: Optional[str] = None
+        previous_answer: Optional[str] = None,
+        rag_context: Optional[str] = None,
     ) -> str:
         """
         Generate a personalized, conversational response for the next onboarding question.
@@ -258,18 +268,19 @@ Return ONLY valid JSON, no other text.
             "training_goals": "What are your main training goals?",
             "available_equipment": "What equipment do you have access to?",
             "training_frequency": "How many days per week can you train?",
-            "injury_history": "Do you have any current or past injuries I should know about?"
+            "injury_history": "Do you have any current or past injuries I should know about?",
         }
 
-        base_question = base_questions.get(current_step, "Tell me more about your training.")
+        base_question = base_questions.get(
+            current_step, "Tell me more about your training."
+        )
 
         # Use PersonalityEngine to generate conversational response
         response = self.personality_engine.generate_response(
             base_question=base_question,
             user_context=user_context,
             previous_answer=previous_answer,
-            conversation_type="onboarding"
+            conversation_type="onboarding",
         )
 
         return response
-

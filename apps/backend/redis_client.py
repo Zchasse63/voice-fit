@@ -333,36 +333,129 @@ def get_cached_ai_response(query: str) -> Optional[Dict]:
 
 
 class RateLimiter:
-    """Redis-backed rate limiter"""
+    """
+    Redis-backed rate limiter with tier-based limits and sliding window.
+
+    Tier-based limits:
+    - free: 60 requests/hour, 10 requests/minute for expensive endpoints
+    - premium: 300 requests/hour, 50 requests/minute for expensive endpoints
+    - admin: Unlimited
+    """
+
+    # Tier configurations (requests per hour, requests per minute)
+    TIER_LIMITS = {
+        "free": {"default": 60, "expensive": 10},
+        "premium": {"default": 300, "expensive": 50},
+        "admin": {"default": 10000, "expensive": 10000},
+    }
+
+    # Expensive endpoints require stricter per-minute limits
+    EXPENSIVE_ENDPOINTS = [
+        "/api/program/generate/strength",
+        "/api/program/generate/running",
+        "/api/coach/ask",
+        "/api/injury/analyze",
+        "/api/running/analyze",
+        "/api/workout/insights",
+    ]
 
     def __init__(self, redis_client: Redis):
         self.redis = redis_client
 
     def check_rate_limit(
+        self, user_id: str, endpoint: str, tier: str = "free"
+    ) -> tuple[bool, int, int]:
+        """
+        Check if request is within rate limit using sliding window.
+
+        Args:
+            user_id: User identifier
+            endpoint: API endpoint path
+            tier: User tier (free, premium, admin)
+
+        Returns:
+            (is_allowed, requests_remaining, retry_after_seconds)
+        """
+        try:
+            # Admin tier bypasses rate limits
+            if tier == "admin":
+                return (True, 999, 0)
+
+            # Determine if this is an expensive endpoint
+            is_expensive = any(exp in endpoint for exp in self.EXPENSIVE_ENDPOINTS)
+            limit_type = "expensive" if is_expensive else "default"
+
+            # Get tier limits
+            tier_config = self.TIER_LIMITS.get(tier, self.TIER_LIMITS["free"])
+            hourly_limit = tier_config["default"]
+            minute_limit = tier_config[limit_type]
+
+            # Check both hourly and per-minute limits
+            hour_key = f"ratelimit:hour:{user_id}:{endpoint}"
+            minute_key = f"ratelimit:minute:{user_id}:{endpoint}"
+
+            # Check hourly limit (3600 seconds)
+            hour_count = self.redis.incr(hour_key)
+            if hour_count == 1:
+                self.redis.expire(hour_key, 3600)
+
+            hour_ttl = self.redis.ttl(hour_key)
+            if hour_ttl < 0:  # Key exists but has no expiry
+                self.redis.expire(hour_key, 3600)
+                hour_ttl = 3600
+
+            # Check minute limit (60 seconds)
+            minute_count = self.redis.incr(minute_key)
+            if minute_count == 1:
+                self.redis.expire(minute_key, 60)
+
+            minute_ttl = self.redis.ttl(minute_key)
+            if minute_ttl < 0:  # Key exists but has no expiry
+                self.redis.expire(minute_key, 60)
+                minute_ttl = 60
+
+            # Check if over limits
+            hour_exceeded = hour_count > hourly_limit
+            minute_exceeded = minute_count > minute_limit
+
+            if hour_exceeded or minute_exceeded:
+                # Calculate retry-after (use the shorter TTL)
+                retry_after = minute_ttl if minute_exceeded else hour_ttl
+                remaining = 0
+
+                # Decrement counters since we're rejecting the request
+                self.redis.decr(hour_key)
+                self.redis.decr(minute_key)
+
+                return (False, remaining, retry_after)
+
+            # Calculate remaining (use the more restrictive limit)
+            hour_remaining = max(0, hourly_limit - hour_count)
+            minute_remaining = max(0, minute_limit - minute_count)
+            remaining = min(hour_remaining, minute_remaining)
+
+            return (True, remaining, 0)
+
+        except Exception as e:
+            print(f"⚠️  Rate limit check error: {e}")
+            # Fail open - allow request if Redis fails (with logging)
+            return (True, 999, 0)
+
+    def check_rate_limit_legacy(
         self, identifier: str, limit: int, window_seconds: int = 60
     ) -> tuple[bool, int]:
         """
-        Check if request is within rate limit.
+        Legacy rate limit check (backwards compatible).
 
-        Args:
-            identifier: Unique identifier (e.g., f"user:{user_id}:{endpoint}")
-            limit: Max requests allowed in window
-            window_seconds: Time window in seconds
-
-        Returns:
-            (is_allowed, requests_remaining)
+        Use check_rate_limit() for new implementations.
         """
         try:
             key = f"ratelimit:{identifier}"
-
-            # Increment counter
             count = self.redis.incr(key)
 
-            # Set expiration on first request
             if count == 1:
                 self.redis.expire(key, window_seconds)
 
-            # Check if over limit
             is_allowed = count <= limit
             remaining = max(0, limit - count)
 
@@ -370,18 +463,81 @@ class RateLimiter:
 
         except Exception as e:
             print(f"Rate limit check error: {e}")
-            # Fail open - allow request if Redis fails
             return (True, limit)
 
-    def reset_rate_limit(self, identifier: str) -> bool:
-        """Reset rate limit counter"""
+    def reset_rate_limit(self, user_id: str, endpoint: str = None) -> bool:
+        """
+        Reset rate limit counters for a user.
+
+        Args:
+            user_id: User identifier
+            endpoint: Optional specific endpoint. If None, resets all endpoints.
+        """
         try:
-            key = f"ratelimit:{identifier}"
-            self.redis.delete(key)
+            if endpoint:
+                # Reset specific endpoint
+                hour_key = f"ratelimit:hour:{user_id}:{endpoint}"
+                minute_key = f"ratelimit:minute:{user_id}:{endpoint}"
+                self.redis.delete(hour_key)
+                self.redis.delete(minute_key)
+            else:
+                # Reset all endpoints for user
+                pattern = f"ratelimit:*:{user_id}:*"
+                keys = self.redis.keys(pattern)
+                if keys:
+                    self.redis.delete(*keys)
+
             return True
         except Exception as e:
             print(f"Rate limit reset error: {e}")
             return False
+
+    def get_rate_limit_status(
+        self, user_id: str, endpoint: str, tier: str = "free"
+    ) -> dict:
+        """
+        Get current rate limit status without incrementing counters.
+
+        Returns:
+            Dictionary with current usage and limits
+        """
+        try:
+            tier_config = self.TIER_LIMITS.get(tier, self.TIER_LIMITS["free"])
+            is_expensive = any(exp in endpoint for exp in self.EXPENSIVE_ENDPOINTS)
+
+            hour_key = f"ratelimit:hour:{user_id}:{endpoint}"
+            minute_key = f"ratelimit:minute:{user_id}:{endpoint}"
+
+            hour_count = int(self.redis.get(hour_key) or 0)
+            minute_count = int(self.redis.get(minute_key) or 0)
+
+            hour_ttl = self.redis.ttl(hour_key) if hour_count > 0 else 3600
+            minute_ttl = self.redis.ttl(minute_key) if minute_count > 0 else 60
+
+            return {
+                "tier": tier,
+                "endpoint": endpoint,
+                "is_expensive": is_expensive,
+                "hourly": {
+                    "limit": tier_config["default"],
+                    "used": hour_count,
+                    "remaining": max(0, tier_config["default"] - hour_count),
+                    "resets_in": hour_ttl,
+                },
+                "per_minute": {
+                    "limit": tier_config["expensive" if is_expensive else "default"],
+                    "used": minute_count,
+                    "remaining": max(
+                        0,
+                        tier_config["expensive" if is_expensive else "default"]
+                        - minute_count,
+                    ),
+                    "resets_in": minute_ttl,
+                },
+            }
+        except Exception as e:
+            print(f"Error getting rate limit status: {e}")
+            return {}
 
 
 # =============================================================================

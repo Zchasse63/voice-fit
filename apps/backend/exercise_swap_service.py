@@ -66,6 +66,7 @@ class ExerciseSwapService:
         injured_body_part: Optional[str] = None,
         reason: Optional[str] = None,
         include_ai_ranking: bool = True,
+        rag_context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Get context-aware exercise substitutes.
@@ -76,6 +77,7 @@ class ExerciseSwapService:
             injured_body_part: Optional body part to protect
             reason: Optional reason for swap (injury, equipment, etc.)
             include_ai_ranking: Whether to use AI re-ranking (premium feature)
+            rag_context: Optional pre-retrieved RAG context for AI re-ranking
 
         Returns:
             Dict with substitutes, context used, and message
@@ -113,7 +115,7 @@ class ExerciseSwapService:
             ):
                 logger.info(f"AI re-ranking {len(substitutes)} substitutes")
                 substitutes = await self.ai_rerank_substitutes(
-                    canonical_name, substitutes, context
+                    canonical_name, substitutes, context, rag_context
                 )
                 ai_reranked = True
 
@@ -441,7 +443,11 @@ class ExerciseSwapService:
         return True
 
     async def ai_rerank_substitutes(
-        self, original: str, substitutes: List[Dict[str, Any]], context: Dict[str, Any]
+        self,
+        original: str,
+        substitutes: List[Dict[str, Any]],
+        context: Dict[str, Any],
+        rag_context: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
         """
         Use Grok 4 Fast Reasoning to re-rank substitutes based on full context.
@@ -480,8 +486,17 @@ USER CONTEXT:
 - Program Phase: {context.get("program_phase", "not in program")}
 - Current Week: {context.get("current_week", "N/A")}
 - Session Fatigue: {context.get("session_fatigue", "low")}
+"""
 
-CANDIDATE SUBSTITUTES (from database):
+            # Add RAG context if provided
+            if rag_context:
+                prompt += f"""
+KNOWLEDGE BASE CONTEXT:
+{rag_context}
+
+"""
+
+            prompt += f"""CANDIDATE SUBSTITUTES (from database):
 {json.dumps(substitutes, indent=2, default=str)}
 
 TASK:

@@ -14,12 +14,13 @@ Optimizations:
 - Grok 4 Fast: 3x cheaper than GPT-4.1, better reasoning
 """
 
+import json
 import os
 import time
-import json
-from typing import List, Dict, Any, Tuple, Optional
-from openai import OpenAI
+from typing import Any, Dict, List, Optional, Tuple
+
 from dotenv import load_dotenv
+from openai import OpenAI
 
 from smart_namespace_selector import SmartNamespaceSelector
 
@@ -41,20 +42,20 @@ class ProgramGenerationService:
 
         # Initialize Grok client (uses OpenAI-compatible API)
         self.grok_client = OpenAI(
-            api_key=self.xai_api_key,
-            base_url="https://api.x.ai/v1"
+            api_key=self.xai_api_key, base_url="https://api.x.ai/v1"
         )
 
         # Model configuration
         self.model_name = "grok-4-fast-reasoning"
-        
+
         # RAG configuration
         self.max_chunks = 50  # Maximum knowledge chunks to retrieve
-    
+
     def generate_program(
         self,
         questionnaire: Dict[str, Any],
-        user_context: Optional[str] = None
+        user_context: Optional[str] = None,
+        rag_context: Optional[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate a complete 12-week training program using Grok 4 Fast
@@ -62,6 +63,7 @@ class ProgramGenerationService:
         Args:
             questionnaire: User's training questionnaire data
             user_context: User's training history, PRs, injuries, etc. from UserContextBuilder
+            rag_context: Pre-retrieved RAG context from RAGIntegrationService (optional)
 
         Returns:
             Dict containing:
@@ -72,19 +74,35 @@ class ProgramGenerationService:
         """
         start_time = time.time()
 
-        # Step 1: Retrieve knowledge using Smart Namespace Selector
-        retrieval_start = time.time()
-        rag_context = self.selector.get_rag_context(questionnaire, max_chunks=self.max_chunks)
-        retrieval_time = time.time() - retrieval_start
+        # Step 1: Use provided RAG context or retrieve knowledge using Smart Namespace Selector
+        if rag_context:
+            # RAG context already provided - use it directly
+            retrieval_time = 0
+            namespace_config = {}
+            stats = {
+                "namespaces_selected": 0,
+                "context_length": len(rag_context),
+                "estimated_tokens": len(rag_context) // 4,
+                "retrieval_time_seconds": 0,
+                "source": "rag_integration_service",
+            }
+        else:
+            # Retrieve knowledge using Smart Namespace Selector
+            retrieval_start = time.time()
+            rag_context = self.selector.get_rag_context(
+                questionnaire, max_chunks=self.max_chunks
+            )
+            retrieval_time = time.time() - retrieval_start
 
-        # Get retrieval stats
-        namespace_config = self.selector.select_namespaces(questionnaire)
-        stats = {
-            "namespaces_selected": len(namespace_config),
-            "context_length": len(rag_context),
-            "estimated_tokens": len(rag_context) // 4,
-            "retrieval_time_seconds": retrieval_time
-        }
+            # Get retrieval stats
+            namespace_config = self.selector.select_namespaces(questionnaire)
+            stats = {
+                "namespaces_selected": len(namespace_config),
+                "context_length": len(rag_context),
+                "estimated_tokens": len(rag_context) // 4,
+                "retrieval_time_seconds": retrieval_time,
+                "source": "smart_namespace_selector",
+            }
 
         # Step 2: Build prompt with user context
         prompt = self._build_program_prompt(questionnaire, rag_context, user_context)
@@ -95,10 +113,10 @@ class ProgramGenerationService:
             model=self.model_name,
             messages=[
                 {"role": "system", "content": self._get_system_message()},
-                {"role": "user", "content": prompt}
+                {"role": "user", "content": prompt},
             ],
             max_tokens=30000,  # Increased for complete 12-week programs
-            temperature=0.7
+            temperature=0.7,
         )
         generation_time = time.time() - generation_start
 
@@ -115,9 +133,11 @@ class ProgramGenerationService:
             program = json.loads(program_json)
         except json.JSONDecodeError as e:
             # Save raw response for debugging
-            with open('grok_error_response.txt', 'w') as f:
+            with open("grok_error_response.txt", "w") as f:
                 f.write(program_json)
-            raise ValueError(f"Failed to parse JSON response: {e}. Raw response saved to grok_error_response.txt")
+            raise ValueError(
+                f"Failed to parse JSON response: {e}. Raw response saved to grok_error_response.txt"
+            )
 
         # Calculate metrics
         total_time = time.time() - start_time
@@ -135,12 +155,12 @@ class ProgramGenerationService:
                 "output_tokens": output_tokens,
                 "input_cost": input_cost,
                 "output_cost": output_cost,
-                "total_cost": total_cost
+                "total_cost": total_cost,
             },
             "stats": stats,
             "generation_time_seconds": total_time,
             "retrieval_time_seconds": retrieval_time,
-            "model_generation_time_seconds": generation_time
+            "model_generation_time_seconds": generation_time,
         }
 
     def _get_system_message(self) -> str:
@@ -169,8 +189,13 @@ Your programs are known for:
 - Customization based on individual needs and goals
 - Evidence-based progression models (not just linear weight increases)
 - Attention to detail in programming variables (intensity, volume, frequency, exercise order)"""
-    
-    def _build_program_prompt(self, questionnaire: Dict[str, Any], knowledge_context: str, user_context: Optional[str] = None) -> str:
+
+    def _build_program_prompt(
+        self,
+        questionnaire: Dict[str, Any],
+        knowledge_context: str,
+        user_context: Optional[str] = None,
+    ) -> str:
         """Build the complete program generation prompt with user context"""
         # Build prompt
         prompt = f"""Generate a complete 12-week training program for this athlete:
@@ -221,4 +246,3 @@ Generate the complete 12-week program in JSON format with this EXACT structure:
 CRITICAL: Return ONLY this JSON structure. Include ALL 12 weeks with complete exercise details."""
 
         return prompt
-

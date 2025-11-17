@@ -86,9 +86,12 @@ from models import (
     WorkoutInsightsRequest,
     WorkoutInsightsResponse,
 )
+from monitoring_service import get_monitoring_service
 from onboarding_service import OnboardingService
 from program_adherence_monitor import ProgramAdherenceMonitor
 from program_generation_service import ProgramGenerationService
+from rag_integration_service import RAGIntegrationService, get_rag_service
+from rate_limit_middleware import add_rate_limiting
 from user_context_builder import UserContextBuilder
 from volume_tracking_service import VolumeTrackingService
 from weather_service import WeatherService
@@ -121,6 +124,10 @@ app.add_middleware(
     allow_headers=["Content-Type", "Authorization"],  # Only needed headers
 )
 
+# Add rate limiting middleware (Phase 4)
+ENABLE_RATE_LIMITING = os.getenv("ENABLE_RATE_LIMITING", "true").lower() == "true"
+add_rate_limiting(app, enable=ENABLE_RATE_LIMITING)
+
 # Global variables
 supabase_client: Client = None
 voice_parser: IntegratedVoiceParser = None
@@ -131,6 +138,7 @@ user_context_builder: UserContextBuilder = None
 chat_classifier: ChatClassifier = None
 onboarding_service: OnboardingService = None
 exercise_matching_service: ExerciseMatchingService = None
+rag_service: RAGIntegrationService = None
 
 
 def get_supabase_client() -> Client:
@@ -254,6 +262,14 @@ def get_exercise_matching_service() -> ExerciseMatchingService:
     return exercise_matching_service
 
 
+def get_rag_service() -> RAGIntegrationService:
+    """Get or create RAG Integration service instance"""
+    global rag_service
+    if rag_service is None:
+        rag_service = RAGIntegrationService()
+    return rag_service
+
+
 # PHASE 7 TASK 7.4: Authentication middleware
 # Set to False for development, True for production
 REQUIRE_AUTH = os.getenv("REQUIRE_AUTH", "false").lower() == "true"
@@ -351,6 +367,62 @@ async def health_check():
     )
 
 
+@app.get("/api/monitoring/health")
+async def monitoring_health():
+    """
+    Monitoring endpoint - returns system health and metrics
+
+    Includes:
+    - Rate limiting stats
+    - Cache performance
+    - Redis health
+    - Endpoint metrics
+    """
+    try:
+        monitoring_service = get_monitoring_service()
+        health = monitoring_service.get_system_health()
+        return health
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to get monitoring data: {str(e)}",
+        }
+
+
+@app.get("/api/monitoring/summary")
+async def monitoring_summary():
+    """
+    Human-readable monitoring summary
+
+    Returns plain text health report
+    """
+    try:
+        monitoring_service = get_monitoring_service()
+        summary = monitoring_service.get_health_summary()
+        return {"summary": summary}
+    except Exception as e:
+        return {"error": f"Failed to generate summary: {str(e)}"}
+
+
+@app.get("/api/monitoring/alerts")
+async def monitoring_alerts():
+    """
+    Check for active alerts
+
+    Returns list of current system alerts
+    """
+    try:
+        monitoring_service = get_monitoring_service()
+        alerts = monitoring_service.check_alerts()
+        return {
+            "alerts": alerts,
+            "count": len(alerts),
+            "has_critical": any(a["severity"] == "critical" for a in alerts),
+        }
+    except Exception as e:
+        return {"error": f"Failed to check alerts: {str(e)}", "alerts": [], "count": 0}
+
+
 @app.options("/{full_path:path}")
 async def options_handler(full_path: str):
     """
@@ -400,6 +472,7 @@ async def parse_voice_command(
 async def log_voice_workout(
     request: VoiceLogRequest,
     parser: IntegratedVoiceParser = Depends(get_voice_parser),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
     user: dict = Depends(verify_token),
 ):
     """
@@ -424,6 +497,10 @@ async def log_voice_workout(
 
         # Create parsed data object
         parsed_data = result.get("data", {})
+
+        # Invalidate user context cache after logging workout
+        if result.get("saved"):
+            context_builder.invalidate_cache(request.user_id)
 
         return VoiceLogResponse(
             success=result.get("success", False),
@@ -485,6 +562,7 @@ async def end_session(
 async def classify_chat_message(
     request: ChatClassifyRequest,
     classifier: ChatClassifier = Depends(get_chat_classifier),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -506,11 +584,22 @@ async def classify_chat_message(
         ChatClassifyResponse with message_type, confidence, reasoning, and suggested_action
     """
     try:
+        # Get RAG context for classification
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/chat/classify",
+            request_data={"message": request.message},
+            user_context={},
+            max_chunks=15,
+            use_cache=True,
+            cache_ttl=3600,
+        )
+
         # Classify the message
         message_type, confidence, reasoning, suggested_action = classifier.classify(
             message=request.message,
             user_id=request.user_id,
             conversation_history=request.conversation_history,
+            rag_context=rag_context,
         )
 
         return ChatClassifyResponse(
@@ -536,6 +625,7 @@ async def classify_chat_message(
 async def extract_onboarding_data(
     request: OnboardingExtractRequest,
     onboarding_service: OnboardingService = Depends(get_onboarding_service),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -557,11 +647,25 @@ async def extract_onboarding_data(
         OnboardingExtractResponse with extracted data and next_step
     """
     try:
+        # Get RAG context for onboarding extraction
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/onboarding/extract",
+            request_data={
+                "message": request.message,
+                "current_step": request.current_step,
+            },
+            user_context={},
+            max_chunks=20,
+            use_cache=True,
+            cache_ttl=3600,
+        )
+
         # Extract data from message
         extracted_data = onboarding_service.extract_onboarding_data(
             message=request.message,
             current_step=request.current_step,
             conversation_history=request.conversation_history,
+            rag_context=rag_context,
         )
 
         return OnboardingExtractResponse(**extracted_data)
@@ -576,9 +680,10 @@ async def extract_onboarding_data(
 @app.post(
     "/api/onboarding/conversational", response_model=OnboardingConversationalResponse
 )
-async def generate_conversational_response(
+async def onboarding_conversational(
     request: OnboardingConversationalRequest,
     onboarding_service: OnboardingService = Depends(get_onboarding_service),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -602,11 +707,25 @@ async def generate_conversational_response(
         OnboardingConversationalResponse with personalized message
     """
     try:
+        # Get RAG context for conversational onboarding
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/onboarding/conversational",
+            request_data={
+                "current_step": request.current_step,
+                "previous_answer": request.previous_answer,
+            },
+            user_context={},
+            max_chunks=20,
+            use_cache=True,
+            cache_ttl=3600,
+        )
+
         # Generate conversational response
         message = onboarding_service.generate_conversational_response(
             current_step=request.current_step,
             user_context=request.user_context,
             previous_answer=request.previous_answer,
+            rag_context=rag_context,
         )
 
         return OnboardingConversationalResponse(message=message)
@@ -740,6 +859,8 @@ async def swap_exercise_via_chat(
 async def swap_exercise_enhanced(
     request: ExerciseSwapRequest,
     supabase: Client = Depends(get_supabase_client),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
     user: dict = Depends(verify_token),
 ):
     """
@@ -779,6 +900,23 @@ async def swap_exercise_enhanced(
         # Check if AI re-ranking is enabled
         ai_enabled = feature_flags.is_enabled("ai_reranking", user_id, user_context)
 
+        # Get user context
+        user_context = await context_builder.build_context(user_id)
+
+        # Get RAG context for exercise swapping
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/chat/swap-exercise-enhanced",
+            request_data={
+                "exercise_name": request.exercise_name,
+                "injured_body_part": request.injured_body_part,
+                "reason": request.reason,
+            },
+            user_context=user_context,
+            max_chunks=25,
+            use_cache=True,
+            cache_ttl=3600,
+        )
+
         # Get exercise swap service
         swap_service = get_exercise_swap_service(supabase)
 
@@ -789,6 +927,7 @@ async def swap_exercise_enhanced(
             injured_body_part=request.injured_body_part,
             reason=request.reason,
             include_ai_ranking=ai_enabled,  # Enable AI re-ranking if flag is on
+            rag_context=rag_context,
         )
 
         if not result["success"]:
@@ -824,6 +963,7 @@ async def coach_ask(
     request: CoachQuestionRequest,
     coach_service: AICoachService = Depends(get_ai_coach_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -846,11 +986,52 @@ async def coach_ask(
         # Build comprehensive user context
         user_context = await context_builder.build_context(request.user_id)
 
-        # Call AI Coach service with user context
+        # Get RAG context for running analysis
+        run_data = {
+            "run_type": request.run_type,
+            "distance_km": request.distance_km,
+            "duration_seconds": request.duration_seconds,
+        }
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/running/analyze",
+            request_data=run_data,
+            user_context=user_context,
+            max_chunks=30,
+            use_cache=True,
+            cache_ttl=1800,
+        )
+
+        # Get RAG context for workout analysis
+        workout_data = {
+            "exercises": [{"name": ex.exercise_name} for ex in request.sets],
+            "session_id": request.session_id,
+        }
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/workout/insights",
+            request_data=workout_data,
+            user_context=user_context,
+            max_chunks=35,
+            use_cache=True,
+            cache_ttl=1800,
+        )
+
+        # Get RAG context using SmartNamespaceSelector
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/coach/ask",
+            request_data={"question": request.question},
+            user_context=user_context,
+            max_chunks=30,
+            use_cache=True,
+            cache_ttl=1800,
+        )
+
+        # Call AI Coach service with user context and RAG
+        # Note: coach_service.ask may need updating to accept rag_context
         result = coach_service.ask(
             question=request.question,
             conversation_history=request.conversation_history,
             user_context=user_context,
+            rag_context=rag_context,
         )
 
         return CoachQuestionResponse(
@@ -877,6 +1058,7 @@ async def generate_strength_program(
     request: ProgramGenerationRequest,
     program_service: ProgramGenerationService = Depends(get_program_generation_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -910,8 +1092,24 @@ async def generate_strength_program(
         # Build comprehensive user context
         user_context = await context_builder.build_context(user_id)
 
-        # Generate strength program with user context
-        result = program_service.generate_program(request.questionnaire, user_context)
+        # Get RAG context using SmartNamespaceSelector
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/program/generate/strength",
+            request_data=request.questionnaire,
+            user_context=user_context,
+            max_chunks=40,
+            use_cache=True,
+            cache_ttl=3600,
+        )
+
+        # Generate strength program with user context and RAG
+        # Note: program_service.generate_program may need updating to accept rag_context
+        result = program_service.generate_program(
+            request.questionnaire, user_context, rag_context=rag_context
+        )
+
+        # Invalidate user context cache after generating program
+        context_builder.invalidate_cache(user_id)
 
         return ProgramGenerationResponse(
             program=result["program"],
@@ -932,6 +1130,7 @@ async def generate_running_program(
     request: ProgramGenerationRequest,
     program_service: ProgramGenerationService = Depends(get_program_generation_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -965,17 +1164,23 @@ async def generate_running_program(
         # Build comprehensive user context
         user_context = await context_builder.build_context(user_id)
 
-        # Modify questionnaire to indicate running program
-        running_questionnaire = request.questionnaire.copy()
-        running_questionnaire["program_type"] = "running"
-        running_questionnaire["primary_goal"] = running_questionnaire.get(
-            "primary_goal", "endurance"
+        # Get RAG context using SmartNamespaceSelector
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/program/generate/running",
+            request_data=request.questionnaire,
+            user_context=user_context,
+            max_chunks=40,
+            use_cache=True,
+            cache_ttl=3600,
         )
 
-        # Generate running program with user context
-        # Note: This uses the same service but with running-specific questionnaire
-        # In the future, we can create a separate RunningProgramGenerationService
-        result = program_service.generate_program(running_questionnaire, user_context)
+        # Generate running program with user context and RAG
+        result = program_service.generate_program(
+            request.questionnaire, user_context, rag_context=rag_context
+        )
+
+        # Invalidate user context cache after generating program
+        context_builder.invalidate_cache(user_id)
 
         return ProgramGenerationResponse(
             program=result["program"],
@@ -1147,6 +1352,7 @@ async def analyze_running_workout(
     supabase: Client = Depends(get_supabase_client),
     coach_service: AICoachService = Depends(get_ai_coach_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -1203,6 +1409,21 @@ async def analyze_running_workout(
         # Get user context for AI insights
         user_context = await context_builder.build_context(request.user_id)
 
+        # Get RAG context for running analysis
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/running/analyze",
+            request_data={
+                "distance": run_summary["distance"],
+                "duration": run_summary["duration"],
+                "pace": run_summary["pace"],
+                "elevation_gain": run_summary.get("elevation_gain", 0),
+            },
+            user_context=user_context,
+            max_chunks=30,
+            use_cache=True,
+            cache_ttl=1800,
+        )
+
         # Build AI prompt for performance insights
         prompt = f"""Analyze this running workout and provide performance insights:
 
@@ -1228,9 +1449,12 @@ Run Data:
 
         prompt += "\nProvide brief insights on:\n1. Performance quality\n2. Weather/elevation impact\n3. Training recommendations"
 
-        # Get AI insights
+        # Get AI insights with RAG context
         ai_result = coach_service.ask(
-            question=prompt, conversation_history=None, user_context=user_context
+            question=prompt,
+            conversation_history=None,
+            user_context=user_context,
+            rag_context=rag_context,
         )
 
         performance_insights = ai_result.get("answer", "Great run!")
@@ -1306,6 +1530,7 @@ async def get_workout_insights(
     supabase: Client = Depends(get_supabase_client),
     coach_service: AICoachService = Depends(get_ai_coach_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -1442,6 +1667,24 @@ async def get_workout_insights(
         # Get user context for AI insights
         user_context = await context_builder.build_context(request.user_id)
 
+        # Get RAG context for workout analysis
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/workout/insights",
+            request_data={
+                "exercises": [
+                    {"name": ex.get("exercises", {}).get("original_name", "")}
+                    for ex in sets_data
+                    if ex.get("exercises")
+                ],
+                "total_sets": total_sets,
+                "avg_rpe": avg_rpe,
+            },
+            user_context=user_context,
+            max_chunks=35,
+            use_cache=True,
+            cache_ttl=1800,
+        )
+
         # Build AI prompt for performance insights
         prompt = f"""Analyze this strength training workout and provide performance insights:
 
@@ -1477,9 +1720,12 @@ Provide brief insights on:
 4. Recovery recommendations
 """
 
-        # Get AI insights
+        # Get AI insights with RAG context
         ai_result = coach_service.ask(
-            question=prompt, conversation_history=None, user_context=user_context
+            question=prompt,
+            conversation_history=None,
+            user_context=user_context,
+            rag_context=rag_context,
         )
 
         performance_insights = ai_result.get("answer", "Great workout!")
@@ -1612,6 +1858,8 @@ async def get_volume_analytics(
 async def get_fatigue_analytics(
     user_id: str,
     fatigue_service: FatigueMonitoringService = Depends(get_fatigue_monitoring_service),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
     user: dict = Depends(verify_token),
 ):
     """
@@ -1649,6 +1897,8 @@ async def get_deload_recommendation(
     deload_service: DeloadRecommendationService = Depends(
         get_deload_recommendation_service
     ),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
     user: dict = Depends(verify_token),
 ):
     """
@@ -1746,6 +1996,7 @@ async def record_injury_confidence_feedback(
 async def analyze_injury(
     request: InjuryAnalyzeRequest,
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
     supabase: Client = Depends(get_supabase_client),
     user: dict = Depends(verify_token),
 ):
@@ -1892,6 +2143,7 @@ async def analyze_injury(
 async def log_injury(
     request: InjuryLogRequest,
     supabase: Client = Depends(get_supabase_client),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
     user: dict = Depends(verify_token),
 ):
     """
@@ -1921,6 +2173,9 @@ async def log_injury(
             raise HTTPException(status_code=500, detail="Failed to create injury log")
 
         injury_log = result.data[0]
+
+        # Invalidate user context cache after logging injury
+        context_builder.invalidate_cache(request.user_id)
 
         return InjuryLogResponse(
             id=injury_log["id"],
@@ -3058,6 +3313,8 @@ async def unlock_badge(
 async def get_adherence_report(
     user_id: str,
     adherence_monitor: ProgramAdherenceMonitor = Depends(get_adherence_monitor),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
     user: dict = Depends(verify_token),
 ):
     """

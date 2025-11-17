@@ -79,6 +79,7 @@ class ChatClassifier:
         message: str,
         user_id: str,
         conversation_history: Optional[List[Dict[str, str]]] = None,
+        rag_context: Optional[str] = None,
     ) -> Tuple[str, float, str, str]:
         """
         Classify a chat message to determine user intent.
