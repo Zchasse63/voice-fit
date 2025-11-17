@@ -308,7 +308,7 @@ class RAGIntegrationService:
         # Cache result
         if use_cache and self.cache_manager and context:
             cache_key = self._generate_cache_key(endpoint, questionnaire)
-            self.cache_manager.set(cache_key, context, ttl=cache_ttl)
+            self.cache_manager.set(cache_key, context, ttl_seconds=cache_ttl)
             print(f"✅ Cached RAG context for {endpoint}")
 
         return context
