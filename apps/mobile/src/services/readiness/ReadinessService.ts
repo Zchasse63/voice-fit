@@ -1,6 +1,6 @@
 /**
  * Readiness Service
- * 
+ *
  * Calculates and manages user readiness scores for training.
  * Supports both simple (emoji-based) and detailed (slider-based) assessments.
  */
@@ -33,6 +33,72 @@ export interface ReadinessScoreData {
   notes?: string; // Phase 3: User notes for injury detection
 }
 
+export type ReadinessTrendDirection = 'improving' | 'declining' | 'stable';
+
+export interface ReadinessTrendInputPoint {
+  date: Date;
+  score: number;
+}
+
+export interface ReadinessTrendResult {
+  averageScore: number;
+  direction: ReadinessTrendDirection;
+  change: number;
+}
+
+/**
+ * Pure helper to calculate a simple readiness trend from recent scores.
+ * This is intentionally decoupled from WatermelonDB so it can be unit tested easily.
+ */
+export function calculateReadinessTrend(
+  points: ReadinessTrendInputPoint[],
+): ReadinessTrendResult | null {
+  if (!points || points.length === 0) {
+    return null;
+  }
+
+  const sorted = [...points].sort(
+    (a, b) => a.date.getTime() - b.date.getTime(),
+  );
+
+  const scores = sorted.map((p) => p.score);
+  const total = scores.reduce((sum, value) => sum + value, 0);
+  const averageScore = Math.round(total / scores.length);
+
+  if (scores.length === 1) {
+    return {
+      averageScore,
+      direction: 'stable',
+      change: 0,
+    };
+  }
+
+  const mid = Math.floor(scores.length / 2);
+  const older = scores.slice(0, mid);
+  const recent = scores.slice(mid);
+
+  const olderAvg =
+    older.reduce((sum, value) => sum + value, 0) / older.length;
+  const recentAvg =
+    recent.reduce((sum, value) => sum + value, 0) / recent.length;
+
+  const change = Math.round(recentAvg - olderAvg);
+  const threshold = 5;
+
+  let direction: ReadinessTrendDirection = 'stable';
+  if (change > threshold) {
+    direction = 'improving';
+  } else if (change < -threshold) {
+    direction = 'declining';
+  }
+
+  return {
+    averageScore,
+    direction,
+    change,
+  };
+}
+
 class ReadinessService {
   /**
    * Calculate simple readiness score from emoji selection
@@ -57,7 +123,7 @@ class ReadinessService {
   /**
    * Calculate detailed readiness score from slider inputs
    * Premium tier feature
-   * 
+   *
    * Formula: R = 0.3×Sleep + 0.25×(10-Soreness) + 0.2×(10-Stress) + 0.25×Energy
    * Normalized to 0-100 scale
    */
@@ -198,7 +264,7 @@ class ReadinessService {
    */
   async getAverageReadiness(userId: string, days: number = 7): Promise<number> {
     const scores = await this.getRecentReadinessScores(userId, days);
-    
+
     if (scores.length === 0) return 0;
 
     const sum = scores.reduce((acc, score) => acc + score.score, 0);
@@ -210,7 +276,7 @@ class ReadinessService {
    */
   async isReadinessDeclining(userId: string): Promise<boolean> {
     const scores = await this.getRecentReadinessScores(userId, 7);
-    
+
     if (scores.length < 3) return false;
 
     // Check if last 2 days are significantly lower than average

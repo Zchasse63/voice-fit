@@ -18,17 +18,17 @@ class MockScheduledWorkout {
   synced: boolean;
 
   constructor(data: Partial<MockScheduledWorkout>) {
-    this.programId = data.programId || 'program-1';
+    this.programId = data.programId ?? 'program-1';
     this.templateId = data.templateId;
-    this.userId = data.userId || 'user-1';
-    this.scheduledDate = data.scheduledDate || Date.now();
+    this.userId = data.userId ?? 'user-1';
+    this.scheduledDate = data.scheduledDate ?? Date.now();
     this.weekNumber = data.weekNumber;
     this.dayOfWeek = data.dayOfWeek;
-    this.position = data.position || 0;
-    this.status = data.status || 'scheduled';
+    this.position = data.position ?? 0;
+    this.status = data.status ?? 'scheduled';
     this.completedWorkoutLogId = data.completedWorkoutLogId;
     this.notes = data.notes;
-    this.synced = data.synced || false;
+    this.synced = data.synced ?? false;
   }
 
   get scheduledDateObject(): Date {
@@ -68,9 +68,7 @@ class MockScheduledWorkout {
   }
 
   get isFuture(): boolean {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return this.scheduledDateObject > today;
+    return !this.isPast && !this.isToday;
   }
 
   get dayOfWeekName(): string {
@@ -555,7 +553,7 @@ describe('ScheduledWorkout Model', () => {
     it('should handle epoch timestamp (1970)', () => {
       const workout = new MockScheduledWorkout({ scheduledDate: 0 });
 
-      expect(workout.scheduledDateObject.getFullYear()).toBe(1970);
+      expect(workout.scheduledDateObject.getUTCFullYear()).toBe(1970);
       expect(workout.isPast).toBe(true);
     });
 

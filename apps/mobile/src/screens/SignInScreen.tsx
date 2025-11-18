@@ -89,7 +89,8 @@ export default function SignInScreen({ navigation }: any) {
   };
 
   const handleForgotPassword = () => {
-    navigation.navigate("ForgotPassword");
+    // TODO: Implement forgot password functionality
+    alert("Forgot password feature coming soon!");
   };
 
   const handleSignUp = () => {

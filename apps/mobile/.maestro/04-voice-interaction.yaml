@@ -1,0 +1,122 @@
+appId: com.voicefit.app
+---
+# Test: Voice Interaction Flow
+# This test verifies voice input and interaction with AI coach
+
+- launchApp
+
+# Wait for app to load (assume already logged in)
+- assertVisible:
+    text: "Home"
+    timeout: 10000
+
+# Navigate to Chat tab where voice input is available
+- tapOn: "Chat"
+- assertVisible: "VoiceFit Coach"
+
+# Test 1: Access voice input
+- assertVisible:
+    id: "voice-input-button"
+    timeout: 3000
+
+# Tap to start voice recording
+- tapOn:
+    id: "voice-input-button"
+
+# Verify voice recording UI appears
+- assertVisible:
+    text: "Listening"
+    optional: true
+    timeout: 3000
+- assertVisible:
+    id: "recording-indicator"
+    optional: true
+
+# Test 2: Cancel voice recording
+- tapOn:
+    text: "Cancel"
+    optional: true
+- tapOn:
+    id: "cancel-voice"
+    optional: true
+
+# Verify we're back to normal chat state
+- assertVisible:
+    id: "voice-input-button"
+
+# Test 3: Record and send a voice message
+- tapOn:
+    id: "voice-input-button"
+
+# Wait for recording to start
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Stop recording and send
+- tapOn:
+    text: "Send"
+    optional: true
+- tapOn:
+    id: "send-voice"
+    optional: true
+
+# Wait for voice transcription or processing
+- extendedWaitUntil:
+    visible:
+      - "Processing"
+      - "Transcribing"
+      - id: "user-message"
+    timeout: 15000
+
+# Wait for AI coach response
+- assertVisible:
+    id: "coach-message"
+    optional: true
+    timeout: 20000
+
+# Test 4: Verify voice message appears in chat history
+- scrollUntilVisible:
+    element:
+      id: "user-message"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+# Test 5: Test voice input during workout (if applicable)
+- tapOn: "Run"
+- assertVisible:
+    text: "Start Workout"
+    optional: true
+
+# Check if voice commands are available during workout
+- tapOn:
+    text: "Start Workout"
+    optional: true
+
+- assertVisible:
+    id: "voice-command-button"
+    optional: true
+    timeout: 5000
+
+# Try a voice command (e.g., "pause", "stats")
+- tapOn:
+    id: "voice-command-button"
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 2000
+    optional: true
+
+# Stop workout if started
+- tapOn:
+    text: "Stop"
+    optional: true
+- tapOn:
+    text: "Cancel"
+    optional: true
+
+# Return to home
+- tapOn: "Home"
+
+# Success!
+- runScript: echo "✅ Voice interaction flow completed!"

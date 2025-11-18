@@ -21,18 +21,18 @@ class MockProgram {
   synced: boolean;
 
   constructor(data: Partial<MockProgram>) {
-    this.userId = data.userId || 'user-1';
-    this.name = data.name || 'Test Program';
+    this.userId = data.userId ?? 'user-1';
+    this.name = data.name ?? 'Test Program';
     this.description = data.description;
     this.focus = data.focus;
     this.startDate = data.startDate;
     this.endDate = data.endDate;
-    this.currentWeek = data.currentWeek || 1;
+    this.currentWeek = data.currentWeek ?? 1;
     this.totalWeeks = data.totalWeeks;
-    this.color = data.color || '#4A9B6F';
+    this.color = data.color ?? '#4A9B6F';
     this.isActive = data.isActive !== undefined ? data.isActive : true;
-    this.status = data.status || 'active';
-    this.synced = data.synced || false;
+    this.status = data.status ?? 'active';
+    this.synced = data.synced ?? false;
   }
 
   get startDateObject(): Date | null {

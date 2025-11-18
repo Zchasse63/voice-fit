@@ -1,12 +1,12 @@
 /**
  * ExerciseSubstitutionService
- * 
+ *
  * Provides exercise substitution recommendations based on:
  * - Injured body part (shoulder, lower_back, knee, elbow, hip)
  * - Current workout exercises
  * - Similarity scores (0.0-1.0)
  * - Movement patterns and equipment availability
- * 
+ *
  * Data source: Comprehensive Exercise Substitution Mapping Database
  * 250+ scientifically-backed alternatives with EMG studies and biomechanical analysis
  */
@@ -59,10 +59,95 @@ export interface SubstitutionResult {
   };
 }
 
+const normalizeExerciseName = (name: string): string => name.trim().toLowerCase();
+
+// Static, rule-based substitutions for common exercises and injury patterns.
+// This supports free-tier users without relying on AI endpoints or schema changes.
+const STATIC_SUBSTITUTIONS: Record<string, Record<string, ExerciseSubstitution[]>> = {
+  shoulder: {
+    'overhead press': [
+      {
+        id: 'static-shoulder-overhead-1',
+        exercise_name: 'Overhead Press',
+        substitute_name: 'Landmine Press',
+        similarity_score: 0.85,
+        reduced_stress_area: 'shoulder',
+        movement_pattern: 'vertical_push',
+        primary_muscles: 'deltoids, triceps',
+        equipment_required: 'barbell, landmine',
+        difficulty_level: 'intermediate',
+        notes:
+          'Landmine press keeps the shoulder in a safer scapular plane and reduces end-range overhead stress.',
+      },
+    ],
+  },
+  lower_back: {
+    'barbell back squat': [
+      {
+        id: 'static-lb-squat-1',
+        exercise_name: 'Barbell Back Squat',
+        substitute_name: 'Goblet Squat',
+        similarity_score: 0.8,
+        reduced_stress_area: 'lower_back',
+        movement_pattern: 'squat',
+        primary_muscles: 'quadriceps, glutes',
+        equipment_required: 'dumbbell, kettlebell',
+        difficulty_level: 'beginner',
+        notes:
+          'Goblet squat keeps load closer to the center of mass and reduces shear stress on the lower back.',
+      },
+    ],
+    deadlift: [
+      {
+        id: 'static-lb-deadlift-1',
+        exercise_name: 'Deadlift',
+        substitute_name: 'Trap Bar Deadlift from Blocks',
+        similarity_score: 0.8,
+        reduced_stress_area: 'lower_back',
+        movement_pattern: 'hinge',
+        primary_muscles: 'glutes, hamstrings',
+        equipment_required: 'trap bar',
+        difficulty_level: 'intermediate',
+        notes:
+          'Elevating the bar and using a trap bar reduces torso forward lean and lumbar loading.',
+      },
+    ],
+  },
+  knee: {
+    'barbell back squat': [
+      {
+        id: 'static-knee-squat-1',
+        exercise_name: 'Barbell Back Squat',
+        substitute_name: 'Box Squat',
+        similarity_score: 0.78,
+        reduced_stress_area: 'knee',
+        movement_pattern: 'squat',
+        primary_muscles: 'quadriceps, glutes',
+        equipment_required: 'barbell, box',
+        difficulty_level: 'intermediate',
+        notes:
+          'Box squats limit knee flexion depth and help control forward knee travel, reducing patellofemoral stress.',
+      },
+    ],
+  },
+};
+
+const getStaticSubstitutions = (
+  exerciseName: string,
+  injuredBodyPart?: string,
+): ExerciseSubstitution[] => {
+  if (!injuredBodyPart) return [];
+  const bodyKey = injuredBodyPart.toLowerCase();
+  const byBodyPart = STATIC_SUBSTITUTIONS[bodyKey];
+  if (!byBodyPart) return [];
+  const normalized = normalizeExerciseName(exerciseName);
+  return byBodyPart[normalized] || [];
+};
+
 class ExerciseSubstitutionService {
   /**
    * Get exercise substitutions for a specific exercise
-   * 
+   *
    * @param query - Substitution query parameters
    * @returns Substitution results with filtered alternatives
    */
@@ -107,7 +192,38 @@ class ExerciseSubstitutionService {
 
       if (error) {
         console.error('[ExerciseSubstitutionService] Error fetching substitutions:', error);
+        const fallback = getStaticSubstitutions(exercise_name, injured_body_part);
+        if (fallback.length > 0) {
+          return {
+            original_exercise: exercise_name,
+            substitutes: fallback,
+            total_found: fallback.length,
+            filters_applied: {
+              injured_body_part,
+              min_similarity: min_similarity_score,
+              equipment: equipment_filter,
+              difficulty: difficulty_filter,
+            },
+          };
+        }
         throw error;
+      }
+
+      if (!data || data.length === 0) {
+        const fallback = getStaticSubstitutions(exercise_name, injured_body_part);
+        if (fallback.length > 0) {
+          return {
+            original_exercise: exercise_name,
+            substitutes: fallback,
+            total_found: fallback.length,
+            filters_applied: {
+              injured_body_part,
+              min_similarity: min_similarity_score,
+              equipment: equipment_filter,
+              difficulty: difficulty_filter,
+            },
+          };
+        }
       }
 
       return {
@@ -123,13 +239,27 @@ class ExerciseSubstitutionService {
       };
     } catch (error) {
       console.error('[ExerciseSubstitutionService] getSubstitutions error:', error);
+      const fallback = getStaticSubstitutions(exercise_name, injured_body_part);
+      if (fallback.length > 0) {
+        return {
+          original_exercise: exercise_name,
+          substitutes: fallback,
+          total_found: fallback.length,
+          filters_applied: {
+            injured_body_part,
+            min_similarity: min_similarity_score,
+            equipment: equipment_filter,
+            difficulty: difficulty_filter,
+          },
+        };
+      }
       throw error;
     }
   }
 
   /**
    * Get substitutions for multiple exercises in a workout
-   * 
+   *
    * @param exercise_names - Array of exercise names from workout
    * @param injured_body_part - Body part to protect
    * @param min_similarity_score - Minimum similarity threshold
@@ -169,7 +299,7 @@ class ExerciseSubstitutionService {
 
   /**
    * Get best substitute for an exercise (highest similarity score)
-   * 
+   *
    * @param exercise_name - Exercise to substitute
    * @param injured_body_part - Body part to protect
    * @returns Best substitute or null if none found
@@ -195,7 +325,7 @@ class ExerciseSubstitutionService {
 
   /**
    * Get all exercises that have substitutions available
-   * 
+   *
    * @returns Array of unique exercise names
    */
   async getAvailableExercises(): Promise<string[]> {
@@ -222,7 +352,7 @@ class ExerciseSubstitutionService {
   /**
    * Get substitutions by movement pattern
    * Useful for finding alternatives that maintain similar movement mechanics
-   * 
+   *
    * @param movement_pattern - Movement pattern (squat, hinge, horizontal_push, etc.)
    * @param injured_body_part - Body part to protect
    * @param min_similarity_score - Minimum similarity threshold
@@ -262,7 +392,7 @@ class ExerciseSubstitutionService {
   /**
    * Get injury-safe alternatives for a specific body part
    * Returns all exercises that reduce stress on the specified area
-   * 
+   *
    * @param injured_body_part - Body part to protect
    * @param min_similarity_score - Minimum similarity threshold
    * @returns Array of injury-safe substitutions

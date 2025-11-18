@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
-import { Platform } from 'react-native';
+import { Platform, TouchableOpacity } from 'react-native';
 import LiveActivityPreview from '../../../../src/components/workout/LiveActivityPreview';
 import { workoutNotificationManager } from '../../../../src/services/workoutNotification/WorkoutNotificationManager';
 
@@ -228,7 +228,7 @@ describe('LiveActivityPreview', () => {
 
     it('should call onPausePress when pause button is pressed while active', () => {
       const onPausePress = jest.fn();
-      const { UNSAFE_getByType } = render(
+      const { UNSAFE_getAllByType } = render(
         <LiveActivityPreview
           {...defaultProps}
           status="active"
@@ -236,7 +236,7 @@ describe('LiveActivityPreview', () => {
         />
       );
 
-      const buttons = UNSAFE_getByType('TouchableOpacity' as any);
+      const buttons = UNSAFE_getAllByType(TouchableOpacity);
       // Second button is pause/resume (after mic button)
       fireEvent.press(buttons[1]);
       expect(onPausePress).toHaveBeenCalledTimes(1);
@@ -244,7 +244,7 @@ describe('LiveActivityPreview', () => {
 
     it('should call onResumePress when play button is pressed while paused', () => {
       const onResumePress = jest.fn();
-      const { UNSAFE_getByType } = render(
+      const { UNSAFE_getAllByType } = render(
         <LiveActivityPreview
           {...defaultProps}
           status="paused"
@@ -252,18 +252,18 @@ describe('LiveActivityPreview', () => {
         />
       );
 
-      const buttons = UNSAFE_getByType('TouchableOpacity' as any);
+      const buttons = UNSAFE_getAllByType(TouchableOpacity);
       fireEvent.press(buttons[1]);
       expect(onResumePress).toHaveBeenCalledTimes(1);
     });
 
     it('should call onStopPress when stop button is pressed', () => {
       const onStopPress = jest.fn();
-      const { UNSAFE_getByType } = render(
+      const { UNSAFE_getAllByType } = render(
         <LiveActivityPreview {...defaultProps} onStopPress={onStopPress} />
       );
 
-      const buttons = UNSAFE_getByType('TouchableOpacity' as any);
+      const buttons = UNSAFE_getAllByType(TouchableOpacity);
       // Third button is stop (after mic and pause/resume)
       fireEvent.press(buttons[2]);
       expect(onStopPress).toHaveBeenCalledTimes(1);
@@ -517,7 +517,7 @@ describe('LiveActivityPreview', () => {
       expect(getByText('Log Set')).toBeTruthy();
 
       // Check there are 3 TouchableOpacity elements (mic, pause/resume, stop)
-      const buttons = UNSAFE_getAllByType('TouchableOpacity' as any);
+      const buttons = UNSAFE_getAllByType(TouchableOpacity);
       expect(buttons.length).toBe(3);
     });
 

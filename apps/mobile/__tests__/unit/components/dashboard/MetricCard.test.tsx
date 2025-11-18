@@ -85,7 +85,7 @@ describe("MetricCard component", () => {
   it("exposes accessibility label when pressable", () => {
     const onPress = jest.fn();
     const a11yLabel = "Workouts: 12, this week";
-    const { getByA11yLabel } = render(
+    const { getByLabelText } = render(
       <MetricCard
         title="Workouts"
         value="12"
@@ -94,7 +94,7 @@ describe("MetricCard component", () => {
       />,
     );
 
-    expect(getByA11yLabel(a11yLabel)).toBeTruthy();
+    expect(getByLabelText(a11yLabel)).toBeTruthy();
   });
 
   it("renders compact variant without crashing", () => {

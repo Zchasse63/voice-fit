@@ -86,6 +86,7 @@
       "stiffness",
       "sore",
       "soreness",
+      "swollen",
       "uncomfortable",
       "tender",
       "tenderness",
@@ -99,7 +100,9 @@
       "discomfort",
       "achy",
       "aches",
-      "aching"
+      "aching",
+      "strained",
+      "pulled"
     ],
     "moderate": [
       "tweak",
@@ -466,7 +469,9 @@
         "can't move",
         "had to stop",
         "had to modify",
-        "had to skip"
+        "had to skip",
+        "limping",
+        "hobbling"
       ],
       "acute_onset": [
         "immediately",
@@ -496,6 +501,9 @@
         "hasn't resolved",
         "for days",
         "for weeks",
+        "flare up",
+        "flaring up",
+        "flared up",
         "chronic"
       ],
       "objective_signs": [
@@ -583,7 +591,6 @@
       "killed me",
       "destroyed",
       "dying",
-      "dead",
       "murdered",
       "annihilated",
       "obliterated",

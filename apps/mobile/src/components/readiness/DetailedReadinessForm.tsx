@@ -12,6 +12,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../store/auth.store';
 import { readinessService, DetailedReadinessInput } from '../../services/readiness/ReadinessService';
 import { InjuryDetectionService, InjuryDetectionResult } from '../../services/injury/InjuryDetectionService';
+import { InjuryLoggingService } from '../../services/injury/InjuryLoggingService';
 import InjuryDetectionModal from '../injury/InjuryDetectionModal';
 import { Moon, Zap, Brain, Battery } from 'lucide-react-native';
 
@@ -233,9 +234,26 @@ export default function DetailedReadinessForm({ onComplete }: { onComplete?: () 
           onClose={() => setShowInjuryModal(false)}
           injuryResult={detectedInjury}
           onLogInjury={async () => {
-            // TODO: Implement injury logging
-            console.log('Log injury:', detectedInjury);
-            setShowInjuryModal(false);
+            if (!user || !detectedInjury) {
+              setShowInjuryModal(false);
+              return;
+            }
+
+            try {
+              const severity = detectedInjury.severity || 'mild';
+
+              await InjuryLoggingService.createInjuryLog({
+                userId: user.id,
+                bodyPart: detectedInjury.bodyPart || 'unspecified',
+                severity,
+                description: detectedInjury.description,
+              });
+            } catch (error) {
+              console.error('Failed to log injury from detailed readiness:', error);
+            } finally {
+              setShowInjuryModal(false);
+              setDetectedInjury(null);
+            }
           }}
           onDismiss={() => {
             setShowInjuryModal(false);

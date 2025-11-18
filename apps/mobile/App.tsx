@@ -1,24 +1,38 @@
 import React, { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
+import { NavigationContainer, NavigationContainerRef } from "@react-navigation/native";
 import { ThemeProvider } from "./src/theme/ThemeContext";
 import RootNavigator from "./src/navigation/RootNavigator";
 import AuthNavigator from "./src/navigation/AuthNavigator";
-import OnboardingScreen from "./src/screens/OnboardingScreen";
+
 import LoadingSpinner from "./src/components/common/LoadingSpinner";
-import { useOnboarding } from "./src/hooks/useOnboarding";
+
 import { useAuthStore } from "./src/store/auth.store";
 import { syncService } from "./src/services/sync/SyncService";
+import { AnalyticsService } from "./src/services/analytics/AnalyticsService";
 import "./global.css";
 
 export default function App() {
-  const {
-    hasCompletedOnboarding,
-    isLoading: onboardingLoading,
-    completeOnboarding,
-  } = useOnboarding();
   const user = useAuthStore((state) => state.user);
   const checkSession = useAuthStore((state) => state.checkSession);
   const [isCheckingAuth, setIsCheckingAuth] = React.useState(true);
+
+  const navigationRef = React.useRef<NavigationContainerRef<any> | null>(null);
+  const routeNameRef = React.useRef<string | null>(null);
+
+  // Initialize analytics once on app mount
+  useEffect(() => {
+    AnalyticsService.initialize();
+  }, []);
+
+  // Keep Amplitude user identity in sync with auth state
+  useEffect(() => {
+    if (user?.id) {
+      AnalyticsService.setUserId(user.id);
+    } else {
+      AnalyticsService.setUserId(null);
+    }
+  }, [user?.id]);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -40,14 +54,32 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      {onboardingLoading || isCheckingAuth ? (
+      {isCheckingAuth ? (
         <LoadingSpinner message="Loading..." fullScreen />
-      ) : !hasCompletedOnboarding ? (
-        <OnboardingScreen onComplete={completeOnboarding} />
-      ) : !user ? (
-        <AuthNavigator />
       ) : (
-        <RootNavigator />
+        <NavigationContainer
+          ref={navigationRef}
+          onReady={() => {
+            const currentRoute = navigationRef.current?.getCurrentRoute();
+            if (currentRoute?.name) {
+              routeNameRef.current = currentRoute.name;
+              AnalyticsService.logEvent("screen_view", {
+                screen_name: currentRoute.name,
+              });
+            }
+          }}
+          onStateChange={() => {
+            const currentRoute = navigationRef.current?.getCurrentRoute();
+            const currentName = currentRoute?.name;
+            if (!currentName || routeNameRef.current === currentName) return;
+            routeNameRef.current = currentName;
+            AnalyticsService.logEvent("screen_view", {
+              screen_name: currentName,
+            });
+          }}
+        >
+          {!user ? <AuthNavigator /> : <RootNavigator />}
+        </NavigationContainer>
       )}
       <StatusBar style="auto" />
     </ThemeProvider>

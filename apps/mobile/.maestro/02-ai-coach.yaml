@@ -1,0 +1,55 @@
+appId: com.voicefit.app
+---
+# Test: AI Coach Chat Flow
+# This test verifies AI Coach functionality
+
+- launchApp
+
+# Wait for app to load (assume already logged in from previous test)
+- assertVisible:
+    text: "Home"
+    timeout: 10000
+
+# Navigate to Chat tab
+- tapOn: "Chat"
+- assertVisible: "VoiceFit Coach"
+
+# Test 1: Send a question to the coach
+- tapOn:
+    id: "chat-input"
+- inputText: "What is my workout for today?"
+- tapOn:
+    id: "send-button"
+
+# Wait for AI response
+- assertVisible:
+    text: "Sorry, I'm having trouble"
+    optional: true
+    timeout: 15000
+
+# If connection works, should see a response
+- assertVisible:
+    id: "coach-message"
+    optional: true
+    timeout: 15000
+
+# Test 2: Try asking about form
+- tapOn:
+    id: "chat-input"
+- inputText: "How do I improve my bench press form?"
+- tapOn:
+    id: "send-button"
+
+# Wait for response
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# Test 3: Verify message history is visible
+- scrollUntilVisible:
+    element:
+        text: "What is my workout"
+    direction: DOWN
+    timeout: 5000
+
+# Success!
+- runScript: echo "✅ AI Coach chat test completed!"

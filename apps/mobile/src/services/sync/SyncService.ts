@@ -1,6 +1,6 @@
 /**
  * Sync Service
- * 
+ *
  * Handles bidirectional sync between WatermelonDB (local) and Supabase (cloud).
  * - Uploads unsynced local data to Supabase
  * - Downloads new data from Supabase to local database
@@ -177,14 +177,14 @@ export class SyncService {
         .query(Q.sortBy('updated_at', Q.desc), Q.take(1))
         .fetch();
 
-      const lastUpdated = latestWorkout[0]?.updatedAt || new Date(0);
+      const lastUpdated = latestWorkout[0]?.createdAt || new Date(0);
 
       // Fetch new workouts from Supabase
       const { data: workouts, error } = await supabase
         .from('workout_logs')
         .select('*')
         .eq('user_id', userId)
-        .gt('updated_at', lastUpdated.toISOString());
+        .gt('created_at', lastUpdated.toISOString());
 
       if (error) {
         console.error('[SyncService] Error downloading workouts:', error);
@@ -277,4 +277,3 @@ export class SyncService {
 
 // Export singleton instance
 export const syncService = new SyncService();
-

@@ -1,0 +1,199 @@
+appId: com.voicefit.app
+---
+# Test: Error Handling and Edge Cases Flow
+# This test verifies proper error handling throughout the app
+
+- launchApp
+- assertVisible: "Sign In"
+
+# Test 1: Invalid login credentials
+- tapOn: "Email"
+- inputText: "invalid@example.com"
+
+- tapOn: "Password"
+- inputText: "WrongPassword123!"
+
+- tapOn: "Sign In"
+
+# Verify error message appears
+- assertVisible:
+    text: "Invalid credentials"
+    optional: true
+    timeout: 5000
+- assertVisible:
+    text: "Login failed"
+    optional: true
+- assertVisible:
+    text: "incorrect"
+    optional: true
+
+# Test 2: Empty email field
+- tapOn: "Email"
+- eraseText
+
+- tapOn: "Password"
+- inputText: "SomePassword123!"
+
+- tapOn: "Sign In"
+
+# Verify validation error
+- assertVisible:
+    text: "Email is required"
+    optional: true
+    timeout: 3000
+- assertVisible:
+    text: "Enter a valid email"
+    optional: true
+
+# Test 3: Invalid email format
+- tapOn: "Email"
+- inputText: "not-an-email"
+
+- tapOn: "Sign In"
+
+- assertVisible:
+    text: "valid email"
+    optional: true
+    timeout: 3000
+
+# Test 4: Weak password (on signup)
+- tapOn: "Don't have an account? Sign Up"
+
+- assertVisible:
+    text: "Create Account"
+    timeout: 5000
+
+- tapOn: "Email"
+- inputText: "test@example.com"
+
+- tapOn: "Password"
+- inputText: "weak"
+
+- tapOn: "Create Account"
+
+# Verify password validation error
+- assertVisible:
+    text: "Password must be"
+    optional: true
+    timeout: 3000
+- assertVisible:
+    text: "at least"
+    optional: true
+
+# Go back to login
+- tapOn:
+    id: "back-button"
+    optional: true
+- tapOn:
+    text: "Back to Sign In"
+    optional: true
+
+# Test 5: Successful login for remaining tests
+- tapOn: "Email"
+- eraseText
+- inputText: "test@voicefit.app"
+
+- tapOn: "Password"
+- eraseText
+- inputText: "TestUser2025!"
+
+- tapOn: "Sign In"
+
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 10000
+
+# Test 6: Empty chat message
+- tapOn: "Chat"
+- assertVisible: "VoiceFit Coach"
+
+- tapOn:
+    id: "send-button"
+    optional: true
+
+# Should not send empty message
+- assertNotVisible:
+    text: "Processing"
+    timeout: 2000
+
+# Test 7: Network error simulation (if supported)
+- tapOn:
+    id: "chat-input"
+- inputText: "Test message for network error"
+
+# Enable airplane mode would be here if Maestro supports it
+# For now, we'll test the error state that might occur
+
+- tapOn:
+    id: "send-button"
+
+# Wait and check for error handling
+- assertVisible:
+    text: "trouble"
+    optional: true
+    timeout: 15000
+- assertVisible:
+    text: "connection"
+    optional: true
+- assertVisible:
+    text: "retry"
+    optional: true
+
+# Test 8: Empty states
+- tapOn: "Run"
+
+# Check for empty workout history state
+- assertVisible:
+    text: "No workouts yet"
+    optional: true
+- assertVisible:
+    text: "Start your first"
+    optional: true
+
+# Test 9: Try to access protected content
+- tapOn: "Profile"
+
+# Try to access account settings without proper verification
+- tapOn:
+    text: "Delete Account"
+    optional: true
+
+# Should show confirmation or require re-auth
+- assertVisible:
+    text: "Are you sure"
+    optional: true
+    timeout: 3000
+- assertVisible:
+    text: "Confirm"
+    optional: true
+
+# Cancel the action
+- tapOn:
+    text: "Cancel"
+    optional: true
+
+# Test 10: Session handling - force logout and verify redirect
+- scrollUntilVisible:
+    element:
+      text: "Logout"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- tapOn: "Logout"
+
+# Confirm logout
+- tapOn:
+    text: "Confirm"
+    optional: true
+- tapOn:
+    text: "Yes"
+    optional: true
+
+# Verify redirect to login
+- assertVisible:
+    text: "Sign In"
+    timeout: 5000
+
+# Success!
+- runScript: echo "✅ Error handling flow completed!"

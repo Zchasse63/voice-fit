@@ -91,7 +91,7 @@ describe("TimelineItem component", () => {
     const time = "Tue";
     const a11y = `${title}, ${subtitle}, ${time}`;
 
-    const { getByRole, getByA11yLabel } = render(
+    const { getByRole, getByLabelText } = render(
       <TimelineItem
         title={title}
         subtitle={subtitle}
@@ -101,7 +101,7 @@ describe("TimelineItem component", () => {
     );
 
     const button = getByRole("button");
-    expect(getByA11yLabel(a11y)).toBeTruthy();
+    expect(getByLabelText(a11y)).toBeTruthy();
 
     fireEvent.press(button);
     expect(onPress).toHaveBeenCalledTimes(1);

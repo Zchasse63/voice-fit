@@ -4,6 +4,8 @@
   <dict>
     <key>CADisableMinimumFrameDurationOnPhone</key>
     <true/>
+    <key>CFBundleAllowMixedLocalizations</key>
+    <true/>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleDisplayName</key>
@@ -54,6 +56,8 @@
     <string>Allow Voice Fit to use your microphone for voice logging.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
     <string>Allow Voice Fit to recognize your speech for workout logging.</string>
+    <key>NSSupportsLiveActivities</key>
+    <true/>
     <key>UIBackgroundModes</key>
     <array>
       <string>location</string>

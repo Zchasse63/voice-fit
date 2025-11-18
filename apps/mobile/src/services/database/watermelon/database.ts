@@ -27,7 +27,7 @@ const adapter = new SQLiteAdapter({
   schema,
   migrations,
   dbName: "VoiceFit",
-  jsi: true, // Use JSI for better performance (iOS only)
+  jsi: false, // JSI disabled for compatibility - can re-enable after native setup fixed
   onSetUpError: (error) => {
     console.error("[WatermelonDB] Setup error:", error);
   },

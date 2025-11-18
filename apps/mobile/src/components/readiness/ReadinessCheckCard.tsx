@@ -9,8 +9,9 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ActivityIndicator, TextInput } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuthStore } from '../../store/auth.store';
-import { readinessService, SimpleReadinessInput } from '../../services/readiness/ReadinessService';
+import { readinessService, SimpleReadinessInput, calculateReadinessTrend } from '../../services/readiness/ReadinessService';
 import { InjuryDetectionService, InjuryDetectionResult } from '../../services/injury/InjuryDetectionService';
+import { InjuryLoggingService } from '../../services/injury/InjuryLoggingService';
 import InjuryDetectionModal from '../injury/InjuryDetectionModal';
 import { CheckCircle } from 'lucide-react-native';
 
@@ -35,6 +36,9 @@ export default function ReadinessCheckCard() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [todayScore, setTodayScore] = useState<number | null>(null);
+  const [trendAverage, setTrendAverage] = useState<number | null>(null);
+  const [trendDirection, setTrendDirection] = useState<'improving' | 'declining' | 'stable' | null>(null);
+  const [trendChange, setTrendChange] = useState<number | null>(null);
   const [notes, setNotes] = useState<string>(''); // Phase 3: User notes for injury detection
   const [showInjuryModal, setShowInjuryModal] = useState(false);
   const [detectedInjury, setDetectedInjury] = useState<InjuryDetectionResult | null>(null);
@@ -48,16 +52,42 @@ export default function ReadinessCheckCard() {
 
     try {
       setIsLoading(true);
-      const score = await readinessService.getTodayReadinessScore(user.id);
-      if (score) {
-        setTodayScore(score.score);
-        if (score.emoji) {
-          setSelectedEmoji(score.emoji as EmojiOption);
+
+      const [today, recentScores] = await Promise.all([
+        readinessService.getTodayReadinessScore(user.id),
+        readinessService.getRecentReadinessScores(user.id, 7),
+      ]);
+
+      if (today) {
+        setTodayScore(today.score);
+        if (today.emoji) {
+          setSelectedEmoji(today.emoji as EmojiOption);
         }
       }
+
+      if (recentScores && recentScores.length > 0) {
+        const trend = calculateReadinessTrend(
+          recentScores.map((score) => ({ date: score.date, score: score.score })),
+        );
+
+        if (trend) {
+          setTrendAverage(trend.averageScore);
+          setTrendDirection(trend.direction);
+          setTrendChange(trend.change);
+        } else {
+          setTrendAverage(null);
+          setTrendDirection(null);
+          setTrendChange(null);
+        }
+      } else {
+        setTrendAverage(null);
+        setTrendDirection(null);
+        setTrendChange(null);
+      }
+
       setIsLoading(false);
     } catch (error) {
-      console.error('Failed to load today\'s readiness score:', error);
+      console.error("Failed to load today's readiness score:", error);
       setIsLoading(false);
     }
   };
@@ -119,6 +149,19 @@ export default function ReadinessCheckCard() {
           </View>
         )}
       </View>
+
+      {/* Free-tier on-device readiness trend summary */}
+      {trendAverage !== null && trendDirection && (
+        <View className="mb-3">
+          <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Last 7 days: {trendAverage}% ·
+            {trendDirection === 'improving' && ' Trending up'}
+            {trendDirection === 'declining' && ' Trending down'}
+            {trendDirection === 'stable' && ' Stable'}
+            {trendChange !== null && Math.abs(trendChange) >= 1 && ` (${trendChange > 0 ? '+' : ''}${trendChange} pts)`}
+          </Text>
+        </View>
+      )}
 
       {/* Emoji Selection */}
       <View className="flex-row justify-between">
@@ -200,9 +243,26 @@ export default function ReadinessCheckCard() {
           onClose={() => setShowInjuryModal(false)}
           injuryResult={detectedInjury}
           onLogInjury={async () => {
-            // TODO: Implement injury logging
-            console.log('Log injury:', detectedInjury);
-            setShowInjuryModal(false);
+            if (!user || !detectedInjury) {
+              setShowInjuryModal(false);
+              return;
+            }
+
+            try {
+              const severity = detectedInjury.severity || 'mild';
+
+              await InjuryLoggingService.createInjuryLog({
+                userId: user.id,
+                bodyPart: detectedInjury.bodyPart || 'unspecified',
+                severity,
+                description: detectedInjury.description,
+              });
+            } catch (error) {
+              console.error('Failed to log injury from readiness card:', error);
+            } finally {
+              setShowInjuryModal(false);
+              setDetectedInjury(null);
+            }
           }}
           onDismiss={() => {
             setShowInjuryModal(false);

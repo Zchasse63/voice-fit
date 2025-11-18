@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "description": "Voice Fit - Voice-first fitness tracking app monorepo",
-
   "scripts": {
     "mobile": "cd apps/mobile && npm start",
     "mobile:ios": "cd apps/mobile && npx expo run:ios",
@@ -12,12 +11,19 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "clean": "rm -rf apps/*/node_modules packages/*/node_modules node_modules"
   },
-  "keywords": ["voice-fit", "fitness", "react-native", "expo"],
+  "keywords": [
+    "voice-fit",
+    "fitness",
+    "react-native",
+    "expo"
+  ],
   "author": "",
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "dependencies": {
+    "expo-analytics-amplitude": "^11.2.0"
   }
 }
-

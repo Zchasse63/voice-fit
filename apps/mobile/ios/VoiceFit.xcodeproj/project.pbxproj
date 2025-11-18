@@ -7,29 +7,29 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0C5F05F7D099E503A059EEB0 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D9A3E214C5F6F1AD1E4E73AF /* PrivacyInfo.xcprivacy */; };
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		331BDC652B7454D489384973 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = E1AA9AA54EE89BDFCA006428 /* PrivacyInfo.xcprivacy */; };
+		3D0BFBE32AF875C276E98BEF /* libPods-VoiceFit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 03B73EC8CCDF38819FB65E7D /* libPods-VoiceFit.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		68B74F50731A81D0C850474A /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1641EBF77A695A310885C7AA /* ExpoModulesProvider.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		DCD67BC3021E8C3BF4340C20 /* libPods-VoiceFit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = BA693B37C5A4DE6E25C8C36A /* libPods-VoiceFit.a */; };
+		CC355C68B33093F9845AB692 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4DA375FFDF9CDCB87CF4A8B /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		03B73EC8CCDF38819FB65E7D /* libPods-VoiceFit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VoiceFit.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07F961A680F5B00A75B9A /* VoiceFit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VoiceFit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = VoiceFit/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = VoiceFit/Info.plist; sourceTree = "<group>"; };
-		15434B726FC1A5D708A9861E /* Pods-VoiceFit.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VoiceFit.debug.xcconfig"; path = "Target Support Files/Pods-VoiceFit/Pods-VoiceFit.debug.xcconfig"; sourceTree = "<group>"; };
-		1641EBF77A695A310885C7AA /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-VoiceFit/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		6D3D808A424C7FC356124368 /* Pods-VoiceFit.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VoiceFit.release.xcconfig"; path = "Target Support Files/Pods-VoiceFit/Pods-VoiceFit.release.xcconfig"; sourceTree = "<group>"; };
+		8D7C962E525DF163A3ABAD79 /* Pods-VoiceFit.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VoiceFit.debug.xcconfig"; path = "Target Support Files/Pods-VoiceFit/Pods-VoiceFit.debug.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = VoiceFit/SplashScreen.storyboard; sourceTree = "<group>"; };
-		BA693B37C5A4DE6E25C8C36A /* libPods-VoiceFit.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-VoiceFit.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		E1AA9AA54EE89BDFCA006428 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = VoiceFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D9A3E214C5F6F1AD1E4E73AF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = VoiceFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = VoiceFit/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* VoiceFit-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "VoiceFit-Bridging-Header.h"; path = "VoiceFit/VoiceFit-Bridging-Header.h"; sourceTree = "<group>"; };
-		F9F478AF68746A1308003388 /* Pods-VoiceFit.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VoiceFit.release.xcconfig"; path = "Target Support Files/Pods-VoiceFit/Pods-VoiceFit.release.xcconfig"; sourceTree = "<group>"; };
+		F4DA375FFDF9CDCB87CF4A8B /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-VoiceFit/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -37,19 +37,19 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DCD67BC3021E8C3BF4340C20 /* libPods-VoiceFit.a in Frameworks */,
+				3D0BFBE32AF875C276E98BEF /* libPods-VoiceFit.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		014092A55D234BB90663ACBF /* VoiceFit */ = {
+		1364677FEF3423CBAEB05BD4 /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				1641EBF77A695A310885C7AA /* ExpoModulesProvider.swift */,
+				E6C2A347B264A0BD49924B5F /* VoiceFit */,
 			);
-			name = VoiceFit;
+			name = ExpoModulesProviders;
 			sourceTree = "<group>";
 		};
 		13B07FAE1A68108700A75B9A /* VoiceFit */ = {
@@ -61,7 +61,7 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				E1AA9AA54EE89BDFCA006428 /* PrivacyInfo.xcprivacy */,
+				D9A3E214C5F6F1AD1E4E73AF /* PrivacyInfo.xcprivacy */,
 			);
 			name = VoiceFit;
 			sourceTree = "<group>";
@@ -70,19 +70,9 @@
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				BA693B37C5A4DE6E25C8C36A /* libPods-VoiceFit.a */,
+				03B73EC8CCDF38819FB65E7D /* libPods-VoiceFit.a */,
 			);
 			name = Frameworks;
-			sourceTree = "<group>";
-		};
-		4E4349044CD99BCF54EC5BB1 /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				15434B726FC1A5D708A9861E /* Pods-VoiceFit.debug.xcconfig */,
-				F9F478AF68746A1308003388 /* Pods-VoiceFit.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		832341AE1AAA6A7D00B99B32 /* Libraries */ = {
@@ -99,8 +89,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				4E4349044CD99BCF54EC5BB1 /* Pods */,
-				A7444DF5D480BB861E320828 /* ExpoModulesProviders */,
+				B7FAFC9E40E6C6D36364C66F /* Pods */,
+				1364677FEF3423CBAEB05BD4 /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -115,12 +105,14 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A7444DF5D480BB861E320828 /* ExpoModulesProviders */ = {
+		B7FAFC9E40E6C6D36364C66F /* Pods */ = {
 			isa = PBXGroup;
 			children = (
-				014092A55D234BB90663ACBF /* VoiceFit */,
+				8D7C962E525DF163A3ABAD79 /* Pods-VoiceFit.debug.xcconfig */,
+				6D3D808A424C7FC356124368 /* Pods-VoiceFit.release.xcconfig */,
 			);
-			name = ExpoModulesProviders;
+			name = Pods;
+			path = Pods;
 			sourceTree = "<group>";
 		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
@@ -132,6 +124,14 @@
 			path = VoiceFit/Supporting;
 			sourceTree = "<group>";
 		};
+		E6C2A347B264A0BD49924B5F /* VoiceFit */ = {
+			isa = PBXGroup;
+			children = (
+				F4DA375FFDF9CDCB87CF4A8B /* ExpoModulesProvider.swift */,
+			);
+			name = VoiceFit;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -140,12 +140,13 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "VoiceFit" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				D9D9EC861E7F427A1272B721 /* [Expo] Configure project */,
+				D0C07713FC3D1036F01C6EAC /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
+				5E3B1569F38A4E0278D3F26F /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -195,7 +196,7 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				331BDC652B7454D489384973 /* PrivacyInfo.xcprivacy in Resources */,
+				0C5F05F7D099E503A059EEB0 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -237,6 +238,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		5E3B1569F38A4E0278D3F26F /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-VoiceFit/Pods-VoiceFit-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VoiceFit/Pods-VoiceFit-frameworks.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
 		800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */ = {
@@ -283,7 +302,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-VoiceFit/Pods-VoiceFit-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		D9D9EC861E7F427A1272B721 /* [Expo] Configure project */ = {
+		D0C07713FC3D1036F01C6EAC /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -310,7 +329,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				68B74F50731A81D0C850474A /* ExpoModulesProvider.swift in Sources */,
+				CC355C68B33093F9845AB692 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -319,7 +338,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 15434B726FC1A5D708A9861E /* Pods-VoiceFit.debug.xcconfig */;
+			baseConfigurationReference = 8D7C962E525DF163A3ABAD79 /* Pods-VoiceFit.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -355,7 +374,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F9F478AF68746A1308003388 /* Pods-VoiceFit.release.xcconfig */;
+			baseConfigurationReference = 6D3D808A424C7FC356124368 /* Pods-VoiceFit.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;

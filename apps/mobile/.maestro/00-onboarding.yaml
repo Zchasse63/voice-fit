@@ -1,0 +1,64 @@
+appId: com.voicefit.app
+---
+# Test: User Onboarding and Signup Flow
+# This test verifies new user registration and onboarding
+
+- launchApp
+- assertVisible: "Sign In"
+
+# Navigate to signup
+- tapOn: "Don't have an account? Sign Up"
+
+# Verify we're on signup screen
+- assertVisible: "Create Account"
+
+# Fill in registration form
+- tapOn: "Email"
+- inputText: "newuser_${randomInt}@voicefit.app"
+
+- tapOn: "Password"
+- inputText: "NewUser2025!"
+
+- tapOn: "Confirm Password"
+- inputText: "NewUser2025!"
+
+# Optional: Display name if available
+- tapOn:
+    text: "Name"
+    optional: true
+- inputText:
+    text: "Test User"
+    optional: true
+
+# Submit signup
+- tapOn: "Create Account"
+
+# Wait for onboarding or main screen
+- extendedWaitUntil:
+    visible:
+      - "Welcome to VoiceFit"
+      - "Home"
+    timeout: 10000
+
+# If onboarding screens exist, go through them
+- tapOn:
+    text: "Next"
+    optional: true
+- tapOn:
+    text: "Next"
+    optional: true
+- tapOn:
+    text: "Get Started"
+    optional: true
+
+# Verify we reach the main app
+- assertVisible:
+    text: "Home"
+    timeout: 5000
+
+# Verify bottom navigation
+- assertVisible: "Run"
+- assertVisible: "Chat"
+
+# Success!
+- runScript: echo "✅ Onboarding flow completed!"

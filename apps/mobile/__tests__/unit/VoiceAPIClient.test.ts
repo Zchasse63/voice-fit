@@ -1,3 +1,9 @@
+jest.mock("expo-analytics-amplitude", () => ({
+  initializeAsync: jest.fn(),
+  setUserIdAsync: jest.fn(),
+  logEventAsync: jest.fn(),
+}));
+
 /**
  * Unit Tests for Voice API Client
  *
@@ -9,7 +15,7 @@
  */
 
 import { VoiceAPIClient, VoiceAPIError } from '../../src/services/api/VoiceAPIClient';
-import type { VoiceParseResponse } from '../../src/services/api/types';
+import { apiClient, APIError, type VoiceParseResponse } from '../../src/services/api/config';
 
 // Mock fetch globally
 global.fetch = jest.fn();
@@ -21,206 +27,122 @@ describe('VoiceAPIClient', () => {
     // Reset mocks before each test
     jest.clearAllMocks();
 
-    // Create client instance with short timeouts for testing
-    client = new VoiceAPIClient({
-      baseUrl: 'http://localhost:8000',
-      timeout: 500, // Short timeout for tests (500ms)
-      maxRetries: 2,
-      retryDelay: 50, // Short delay for tests (50ms)
-    });
+    // Use default client (config is handled by apiClient)
+    client = new VoiceAPIClient();
   });
 
-  describe('parseVoiceCommand', () => {
-    it('should successfully parse a voice command', async () => {
+  describe('parseVoiceInput', () => {
+    it('should successfully parse voice input via apiClient', async () => {
       const mockResponse: VoiceParseResponse = {
-        exercise_id: '123',
-        exercise_name: 'Bench Press',
-        weight: 225,
-        weight_unit: 'lbs',
-        reps: 10,
-        rpe: 8,
-        confidence: 0.95,
-        requires_confirmation: false,
-        model_used: 'ft:gpt-4o-mini',
-        latency_ms: 85,
+        success: true,
+        data: {
+          exercise_name: 'Bench Press',
+          weight: 225,
+          reps: 10,
+        },
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
+      const postSpy = jest
+        .spyOn(apiClient, 'post')
+        .mockResolvedValueOnce(mockResponse);
+
+      const result = await client.parseVoiceInput('bench press 225 for 10', {
+        userId: 'user-1',
+        context: { current_exercise: 'Bench Press' },
       });
 
-      const result = await client.parseVoiceCommand({
-        transcript: 'bench press 225 for 10',
+      expect(postSpy).toHaveBeenCalledWith('/api/voice/parse', {
+        text: 'bench press 225 for 10',
+        user_id: 'user-1',
+        context: { current_exercise: 'Bench Press' },
       });
-
       expect(result).toEqual(mockResponse);
-      expect(global.fetch).toHaveBeenCalledTimes(1);
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/api/voice/parse',
+    });
+
+    it('should wrap APIError into VoiceAPIError', async () => {
+      const apiError = new APIError('Invalid request', 400, {
+        error: 'Invalid request',
+      });
+      jest.spyOn(apiClient, 'post').mockRejectedValueOnce(apiError);
+
+      await expect(
+        client.parseVoiceInput('bad input', { userId: 'user-1' })
+      ).rejects.toEqual(
         expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ transcript: 'bench press 225 for 10' }),
+          name: 'VoiceAPIError',
+          message: 'Invalid request',
+          statusCode: 400,
+          details: { error: 'Invalid request' },
         })
       );
     });
 
-    it('should handle 4xx client errors', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({
-        ok: false,
-        status: 400,
-        json: async () => ({ detail: 'Invalid request' }),
-      });
+    it('should wrap unknown errors into generic VoiceAPIError', async () => {
+      jest
+        .spyOn(apiClient, 'post')
+        .mockRejectedValueOnce(new Error('fetch failed'));
 
       await expect(
-        client.parseVoiceCommand({ transcript: '' })
-      ).rejects.toThrow(VoiceAPIError);
-
-      await expect(
-        client.parseVoiceCommand({ transcript: '' })
-      ).rejects.toThrow('Invalid request');
-    });
-
-    it('should retry on 5xx server errors', async () => {
-      // First call fails with 500, second succeeds
-      let callCount = 0;
-      (global.fetch as jest.Mock).mockImplementation(async () => {
-        callCount++;
-        if (callCount === 1) {
-          return {
-            ok: false,
-            status: 500,
-            json: async () => ({ detail: 'Internal server error' }),
-          };
-        }
-        return {
-          ok: true,
-          json: async () => ({
-            exercise_id: '123',
-            exercise_name: 'Squat',
-            confidence: 0.9,
-            requires_confirmation: false,
-            model_used: 'ft:gpt-4o-mini',
-            latency_ms: 100,
-          }),
-        };
-      });
-
-      const result = await client.parseVoiceCommand({
-        transcript: 'squat 315 for 5',
-      });
-
-      expect(result.exercise_name).toBe('Squat');
-      expect(callCount).toBe(2); // Initial + 1 retry
-    });
-
-    it('should fail after max retries on 5xx errors', async () => {
-      let callCount = 0;
-      (global.fetch as jest.Mock).mockImplementation(async () => {
-        callCount++;
-        return {
-          ok: false,
-          status: 500,
-          json: async () => ({ detail: 'Internal server error' }),
-        };
-      });
-
-      await expect(
-        client.parseVoiceCommand({ transcript: 'deadlift 405 for 3' })
-      ).rejects.toThrow(VoiceAPIError);
-
-      // Should try at least 2 times (initial + at least 1 retry before timeout)
-      expect(callCount).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should handle network errors', async () => {
-      let callCount = 0;
-      (global.fetch as jest.Mock).mockImplementation(() => {
-        callCount++;
-        return Promise.reject(new Error('fetch failed'));
-      });
-
-      await expect(
-        client.parseVoiceCommand({ transcript: 'bench press 225 for 10' })
-      ).rejects.toThrow(VoiceAPIError);
-
-      await expect(
-        client.parseVoiceCommand({ transcript: 'bench press 225 for 10' })
-      ).rejects.toThrow('Network error');
-
-      // Should retry on network errors (at least 2 attempts per call = 4 total minimum)
-      expect(callCount).toBeGreaterThanOrEqual(4);
-    });
-
-    it('should handle timeout', async () => {
-      // Mock a slow response that never resolves (simulates timeout)
-      (global.fetch as jest.Mock).mockImplementation(
-        (url, options) =>
-          new Promise((resolve, reject) => {
-            // Listen for abort signal
-            const signal = options?.signal;
-            if (signal) {
-              signal.addEventListener('abort', () => {
-                const error = new Error('The operation was aborted.');
-                error.name = 'AbortError';
-                reject(error);
-              });
-            }
-            // Never resolve - will be aborted by timeout (500ms in test config)
-          })
+        client.parseVoiceInput('bench press 225 for 10')
+      ).rejects.toEqual(
+        expect.objectContaining({
+          name: 'VoiceAPIError',
+          message: 'Failed to parse voice input',
+          statusCode: 500,
+        })
       );
-
-      const error = await client.parseVoiceCommand({
-        transcript: 'bench press 225 for 10'
-      }).catch(e => e);
-
-      expect(error).toBeInstanceOf(VoiceAPIError);
-      expect(error.message).toBe('Request timeout');
-    }, 5000); // 5 second test timeout
+    });
   });
 
-  describe('healthCheck', () => {
-    it('should successfully check health', async () => {
+  describe('getVoiceHistory', () => {
+    it('should fetch voice history via apiClient', async () => {
       const mockResponse = {
-        status: 'healthy',
-        timestamp: '2025-11-05T00:00:00.000Z',
-        model: 'ft:gpt-4o-mini',
+        history: [
+          {
+            id: '1',
+            voice_input: 'bench press 225 for 10',
+            parsed_data: {
+              exercise_name: 'Bench Press',
+              weight: 225,
+              reps: 10,
+            },
+            timestamp: '2025-11-05T00:00:00.000Z',
+            success: true,
+          },
+        ],
+        total: 1,
       };
 
-      (global.fetch as jest.Mock).mockResolvedValueOnce({
-        ok: true,
-        json: async () => mockResponse,
+      const getSpy = jest
+        .spyOn(apiClient, 'get')
+        .mockResolvedValueOnce(mockResponse);
+
+      const result = await client.getVoiceHistory('user-1', { limit: 10 });
+
+      expect(getSpy).toHaveBeenCalledWith('/api/voice/history/user-1', {
+        params: { limit: 10 },
       });
-
-      const result = await client.healthCheck();
-
       expect(result).toEqual(mockResponse);
-      expect(global.fetch).toHaveBeenCalledWith(
-        'http://localhost:8000/health',
-        expect.objectContaining({
-          method: 'GET',
-        })
-      );
     });
 
-    it('should handle health check failure', async () => {
-      (global.fetch as jest.Mock).mockImplementation(async () => ({
-        ok: false,
-        status: 503,
-        json: async () => ({ detail: 'Service unavailable' }),
-      }));
+    it('should wrap APIError into VoiceAPIError for history', async () => {
+      const apiError = new APIError('Failed', 500);
+      jest.spyOn(apiClient, 'get').mockRejectedValueOnce(apiError);
 
-      await expect(client.healthCheck()).rejects.toThrow(VoiceAPIError);
+      await expect(client.getVoiceHistory('user-1')).rejects.toEqual(
+        expect.objectContaining({
+          name: 'VoiceAPIError',
+          message: 'Failed',
+          statusCode: 500,
+        })
+      );
     });
   });
 
   describe('VoiceAPIError', () => {
     it('should create error with status code', () => {
       const error = new VoiceAPIError('Test error', 400);
-      
+
       expect(error.message).toBe('Test error');
       expect(error.statusCode).toBe(400);
       expect(error.name).toBe('VoiceAPIError');
@@ -229,8 +151,8 @@ describe('VoiceAPIClient', () => {
     it('should create error with response', () => {
       const response = { detail: 'Invalid input' };
       const error = new VoiceAPIError('Test error', 400, response);
-      
-      expect(error.response).toEqual(response);
+
+      expect(error.details).toEqual(response);
     });
   });
 });

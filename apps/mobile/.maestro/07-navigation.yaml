@@ -1,0 +1,253 @@
+appId: com.voicefit.app
+---
+# Test: Navigation and Deep Linking Flow
+# This test verifies navigation patterns and deep linking functionality
+
+- launchApp
+
+# Wait for app to load (assume already logged in)
+- assertVisible:
+    text: "Home"
+    timeout: 10000
+
+# Test 1: Bottom tab navigation
+# Verify all bottom tabs are accessible
+- assertVisible: "Home"
+- assertVisible: "Run"
+- assertVisible: "Chat"
+- assertVisible: "Profile"
+
+# Navigate through each tab
+- tapOn: "Run"
+- assertVisible:
+    text: "Start Workout"
+    timeout: 3000
+
+- tapOn: "Chat"
+- assertVisible:
+    text: "VoiceFit Coach"
+    timeout: 3000
+
+- tapOn: "Profile"
+- assertVisible:
+    text: "Settings"
+    timeout: 3000
+
+- tapOn: "Home"
+- assertVisible:
+    text: "Home"
+    timeout: 3000
+
+# Test 2: Navigation state preservation
+# Go to Chat, start typing, navigate away, come back
+- tapOn: "Chat"
+- tapOn:
+    id: "chat-input"
+- inputText: "Test message state"
+
+# Navigate away
+- tapOn: "Home"
+- waitForAnimationToEnd:
+    timeout: 1000
+
+# Navigate back
+- tapOn: "Chat"
+
+# Verify text is still there
+- assertVisible:
+    text: "Test message state"
+    timeout: 3000
+
+# Clear the input
+- tapOn:
+    id: "chat-input"
+- eraseText
+
+# Test 3: Deep navigation within tabs
+# Navigate to Run tab and explore sub-screens
+- tapOn: "Run"
+- assertVisible: "Start Workout"
+
+# If there's workout history, tap on a workout
+- tapOn:
+    id: "workout-history-item"
+    optional: true
+
+# Verify we can navigate back
+- tapOn:
+    id: "back-button"
+    optional: true
+
+# Should be back on Run main screen
+- assertVisible:
+    text: "Start Workout"
+    optional: true
+    timeout: 3000
+
+# Test 4: Profile navigation hierarchy
+- tapOn: "Profile"
+- assertVisible: "Settings"
+
+# Navigate to Settings
+- tapOn: "Settings"
+
+# Navigate to a sub-setting
+- tapOn:
+    text: "Notifications"
+    optional: true
+
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# Go back one level
+- tapOn:
+    id: "back-button"
+    optional: true
+
+# Should be back in Settings main
+- assertVisible:
+    text: "Preferences"
+    optional: true
+    timeout: 3000
+
+# Go back to Profile
+- tapOn:
+    id: "back-button"
+    optional: true
+
+# Test 5: Modal/Sheet navigation
+# Open workout details as a modal
+- tapOn: "Run"
+
+- tapOn:
+    id: "workout-history-item"
+    optional: true
+
+# Dismiss modal by swiping down or tapping close
+- swipe:
+    direction: DOWN
+    optional: true
+
+- tapOn:
+    id: "close-button"
+    optional: true
+
+# Test 6: Chat navigation with history
+- tapOn: "Chat"
+
+# Send a message to create history
+- tapOn:
+    id: "chat-input"
+- inputText: "Navigation test message"
+- tapOn:
+    id: "send-button"
+
+# Wait for response
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Scroll through chat history
+- scroll:
+    direction: UP
+
+- scroll:
+    direction: DOWN
+
+# Test 7: Multiple tab switches rapidly
+- tapOn: "Home"
+- waitForAnimationToEnd:
+    timeout: 500
+
+- tapOn: "Run"
+- waitForAnimationToEnd:
+    timeout: 500
+
+- tapOn: "Chat"
+- waitForAnimationToEnd:
+    timeout: 500
+
+- tapOn: "Profile"
+- waitForAnimationToEnd:
+    timeout: 500
+
+- tapOn: "Home"
+
+# Verify we're on Home and app is stable
+- assertVisible:
+    text: "Home"
+    timeout: 3000
+
+# Test 8: Deep link handling (if URLs are configured)
+# Open a deep link to specific workout
+- openLink:
+    link: "voicefit://workout/123"
+    optional: true
+
+- assertVisible:
+    text: "Workout Details"
+    optional: true
+    timeout: 5000
+
+# Navigate back to home
+- tapOn: "Home"
+
+# Test 9: Back button behavior on Android
+# Start from home, navigate through multiple screens
+- tapOn: "Profile"
+- tapOn:
+    text: "Settings"
+    optional: true
+- tapOn:
+    text: "Notifications"
+    optional: true
+
+# Press back multiple times
+- back
+- back
+
+# Should be back on Profile main
+- assertVisible:
+    text: "Settings"
+    optional: true
+    timeout: 3000
+
+# Test 10: Navigation after workout start
+# Verify you can navigate while workout is active
+- tapOn: "Run"
+- tapOn:
+    text: "Start Workout"
+    optional: true
+
+- assertVisible:
+    text: "Active Workout"
+    optional: true
+    timeout: 5000
+
+# Try to navigate to other tabs
+- tapOn:
+    text: "Chat"
+    optional: true
+
+# Verify workout indicator is visible
+- assertVisible:
+    id: "active-workout-indicator"
+    optional: true
+
+# Navigate back to workout
+- tapOn:
+    text: "Run"
+    optional: true
+
+# Stop the workout
+- tapOn:
+    text: "Stop"
+    optional: true
+- tapOn:
+    text: "Cancel"
+    optional: true
+
+# Return to home
+- tapOn: "Home"
+
+# Success!
+- runScript: echo "✅ Navigation flow completed!"

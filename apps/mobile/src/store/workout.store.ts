@@ -1,11 +1,14 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import { Platform } from "react-native";
 import { database } from "../services/database/watermelon/database";
 import WorkoutLog from "../services/database/watermelon/models/WorkoutLog";
 import Set from "../services/database/watermelon/models/Set";
 import { useAuthStore } from "./auth.store";
 import { syncService } from "../services/sync/SyncService";
 import { workoutNotificationManager } from "../services/workoutNotification/WorkoutNotificationManager";
+import { AnalyticsService } from "../services/analytics/AnalyticsService";
+import { AnalyticsEvents } from "../services/analytics/events";
 
 interface Set {
   id: string;
@@ -22,13 +25,17 @@ interface ActiveWorkout {
   startTime: Date;
 }
 
+interface AddSetInput extends Omit<Set, "id" | "timestamp"> {
+  loggingMethod?: "manual" | "quick_log" | "voice";
+}
+
 interface WorkoutState {
   activeWorkout: ActiveWorkout | null;
   sets: Set[];
   isLoading: boolean;
   error: string | null;
   startWorkout: (name: string) => void;
-  addSet: (set: Omit<Set, "id" | "timestamp">) => void;
+  addSet: (set: AddSetInput) => void;
   removeSet: (setId: string) => void;
   completeWorkout: () => Promise<void>;
   cancelWorkout: () => void;
@@ -58,11 +65,13 @@ export const useWorkoutStore = create<WorkoutState>()(
 
       startWorkout: (name) => {
         const workoutId = generateUUID();
+        const startTime = new Date();
+
         set({
           activeWorkout: {
             id: workoutId,
             name,
-            startTime: new Date(),
+            startTime,
           },
           sets: [],
           error: null,
@@ -72,14 +81,22 @@ export const useWorkoutStore = create<WorkoutState>()(
         workoutNotificationManager.start(name, workoutId).catch((error) => {
           console.error("Failed to start workout notification:", error);
         });
+
+        AnalyticsService.logEvent(AnalyticsEvents.WORKOUT_STARTED, {
+          workout_id: workoutId,
+          workout_name: name,
+          platform: Platform.OS,
+        });
       },
 
       addSet: (newSet) => {
+        const { loggingMethod, ...setWithoutLogging } = newSet;
+
         set((state) => {
           const updatedSets = [
             ...state.sets,
             {
-              ...newSet,
+              ...setWithoutLogging,
               id: generateUUID(),
               timestamp: new Date(),
             },
@@ -87,13 +104,13 @@ export const useWorkoutStore = create<WorkoutState>()(
 
           // Update workout notification with latest set
           workoutNotificationManager
-            .updateLastSet(newSet.weight, newSet.reps, newSet.rpe)
+            .updateLastSet(setWithoutLogging.weight, setWithoutLogging.reps, setWithoutLogging.rpe)
             .catch((error) => {
               console.error("Failed to update workout notification:", error);
             });
 
           // Update exercise and set counts
-          const currentExercise = newSet.exerciseName;
+          const currentExercise = setWithoutLogging.exerciseName;
           const exerciseSets = updatedSets.filter(
             (s) => s.exerciseName === currentExercise,
           );
@@ -108,6 +125,20 @@ export const useWorkoutStore = create<WorkoutState>()(
             });
 
           return { sets: updatedSets };
+        });
+
+        const { activeWorkout, sets } = get();
+        const loggedSet = sets[sets.length - 1];
+
+        AnalyticsService.logEvent(AnalyticsEvents.SET_LOGGED, {
+          workout_id: activeWorkout?.id ?? null,
+          workout_name: activeWorkout?.name ?? null,
+          exercise_name: loggedSet?.exerciseName,
+          weight: loggedSet?.weight,
+          reps: loggedSet?.reps,
+          rpe: loggedSet?.rpe,
+          logging_method: loggingMethod ?? "manual",
+          platform: Platform.OS,
         });
       },
 
@@ -176,6 +207,21 @@ export const useWorkoutStore = create<WorkoutState>()(
               console.error("Failed to end workout notification:", error);
             });
 
+          const durationSeconds =
+            activeWorkout?.startTime
+              ? Math.floor(
+                  (Date.now() - activeWorkout.startTime.getTime()) / 1000,
+                )
+              : null;
+
+          AnalyticsService.logEvent(AnalyticsEvents.WORKOUT_COMPLETED, {
+            workout_id: activeWorkout.id,
+            workout_name: activeWorkout.name,
+            total_sets: sets.length,
+            duration_seconds: durationSeconds,
+            platform: Platform.OS,
+          });
+
           set({
             activeWorkout: null,
             sets: [],
@@ -191,6 +237,8 @@ export const useWorkoutStore = create<WorkoutState>()(
       },
 
       cancelWorkout: () => {
+        const { activeWorkout, sets } = get();
+
         // End workout notification
         workoutNotificationManager
           .end({
@@ -199,6 +247,13 @@ export const useWorkoutStore = create<WorkoutState>()(
           .catch((error) => {
             console.error("Failed to end workout notification:", error);
           });
+
+        AnalyticsService.logEvent(AnalyticsEvents.WORKOUT_CANCELLED, {
+          workout_id: activeWorkout?.id ?? null,
+          workout_name: activeWorkout?.name ?? null,
+          total_sets: sets.length,
+          platform: Platform.OS,
+        });
 
         set({
           activeWorkout: null,

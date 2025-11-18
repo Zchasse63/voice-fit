@@ -336,6 +336,10 @@ export default function HomeScreen({ navigation }: any) {
               trend="up"
               trendValue="+1"
               variant="compact"
+              onPress={() => {
+                // Navigate to analytics/weekly view
+                console.log('Navigate to weekly goal details');
+              }}
             />
           </View>
           <View style={{ flex: 1 }}>
@@ -346,6 +350,10 @@ export default function HomeScreen({ navigation }: any) {
               icon={Zap}
               iconColor={colors.accent.orange}
               variant="compact"
+              onPress={() => {
+                // Navigate to streak details
+                console.log('Navigate to streak details');
+              }}
             />
           </View>
         </View>
@@ -370,7 +378,8 @@ export default function HomeScreen({ navigation }: any) {
               ...tokens.shadows.sm,
             }}
             onPress={() => {
-              // Navigate to today's program
+              // TODO: Navigate to program detail when screen is ready
+              console.log("Navigate to today's program");
             }}
           >
             <View
@@ -451,7 +460,8 @@ export default function HomeScreen({ navigation }: any) {
                   iconBackgroundColor={colors.accent.blue + "20"}
                   isLast={index === recentWorkouts.length - 1}
                   onPress={() => {
-                    // Navigate to workout detail
+                    // TODO: Navigate to workout detail when screen is ready
+                    console.log('Navigate to workout:', workout.id);
                   }}
                 />
               ))}
@@ -480,7 +490,8 @@ export default function HomeScreen({ navigation }: any) {
             </Text>
             <Pressable
               onPress={() => {
-                // Navigate to PRs screen
+                // TODO: Navigate to PRs screen when ready
+                console.log('Navigate to Personal Records');
               }}
             >
               <Text
@@ -503,7 +514,8 @@ export default function HomeScreen({ navigation }: any) {
             trend="up"
             trendValue="+10 lbs"
             onPress={() => {
-              // Navigate to PRs
+              // TODO: Navigate to PRs detail when screen is ready
+              console.log('Navigate to PR detail');
             }}
           />
         </View>

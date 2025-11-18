@@ -706,6 +706,225 @@ Okay, I think we need to make a push to GitHub to see if that syntax error... ..
 
 ---
 
+## New Feature Concepts (2025 Additions)
+
+### A. Enterprise & B2B: Web Dashboard for Trainers/Coaches/Gyms
+
+**Status:** Idea – not yet prioritized
+
+**Purpose:** Allow coaches, trainers, gyms, and corporate wellness programs to upload and manage structured training programs for their clients through a web dashboard.
+
+**Target Users:**
+- B2B: Personal trainers, online coaches, gyms/studios, physical therapy clinics, corporate wellness teams
+- B2C: Power users who want more advanced program authoring (possible higher pricing tier)
+
+**Core Capabilities:**
+- Multi-format program upload:
+  - CSV / Excel / Google Sheets
+  - Natural language descriptions ("12-week glute hypertrophy program for intermediate lifter")
+  - Links to existing programs (landing pages, PDFs) with parsing/import
+  - Photo-based upload of printed sheets (OCR + structure extraction)
+  - Manual entry with rich editor
+- AI-assisted upload & mapping instead of schema errors:
+  - Detect columns like exercise, sets, reps, load, RPE, tempo, rest
+  - Prompt-style corrections ("Did you mean to put RPE here?" / "These rows look like warm-ups—keep or discard?")
+  - Validate dates, frequencies, and progressions before publishing
+- Program management:
+  - Versioning of programs and templates
+  - Assign programs to individual athletes, groups, or entire companies
+  - Optional white-label branding for gyms/corporate clients
+
+**Synergies & Dependencies:**
+- Extends **Phase 11: Enterprise & B2B Features** (gym/studio integration, corporate wellness)
+- Reuses **Program Scheduling & Calendar View** for assigning uploaded plans to the calendar
+- Provides rich data inputs for **AI Health Intelligence Engine** (Phase 7)
+
+**Business Impact:**
+- Direct B2B revenue via coach/gym/corporate plans
+- Increases stickiness for high-value users and organizations
+
+### B. Athlete Experience During Workouts (Apple Watch, Quick Logging, Music)
+
+#### B1. Apple Watch Quick Actions
+
+**Goal:** Minimize friction during active workouts on Apple Watch.
+
+**Features:**
+- Single-tap "Accept / Log as Prescribed" button (checkmark)
+- Dedicated microphone button to capture adjustments via voice (weight, reps, RPE, substitutions) without opening the phone
+- Tight integration with existing **Lock Screen Widget & Live Activity** work so phone and watch states stay in sync
+
+**Synergies:** Builds on Phase 3 voice processing and lock-screen/live-activity work; complements Phase 10 voice-first features.
+
+#### B2. In-App Quick Logging Interface
+
+**Location:** Within or anchored to the bottom of the chat/workout interface.
+
+**Features:**
+- "Accept" button to log the set exactly as prescribed
+- + / – controls for quick adjustments to weight, reps, and RPE
+- Optimized for one-hand use as an alternative to voice
+- Could share components with Apple Watch quick actions for consistency
+
+**Synergies:**
+- Uses the same logging backend as current workout completion flows
+- Pairs naturally with voice interactions (voice for complex changes, quick UI for small tweaks)
+
+#### B3. Workout Push to Wearables (Garmin-style)
+
+**Goal:** Author workouts in VoiceFit and push them to wearables so the watch can act as the primary coach during the session.
+
+**Features:**
+- Export structured workouts (intervals, distances, target paces/heart-rate zones) to:
+  - Apple Watch
+  - Garmin devices
+  - Other compatible wearables over time
+- On-watch experience:
+  - Interval countdowns, split previews, and next-step hints
+  - Simple cues ("800m @ 6:30 pace – 2 of 6")
+
+**Research Needed:**
+- Apple Watch workout APIs and HealthKit support for scheduled workouts
+- Garmin Connect / Training API capabilities and developer program requirements
+
+**Synergies:**
+- Uses the same programmed workouts from the calendar view
+- Feeds back splits and compliance data into AI Health Intelligence and running analytics
+
+#### B4. Music Integration
+
+**Goal:** Make VoiceFit the single hub during workouts by exposing basic music controls and smart music choices.
+
+**Features:**
+- Inline music controls (play/pause/skip) at the top of the workout screen
+- Support for Apple Music, Spotify, and YouTube Music (where platform policies allow)
+- Smart recommendations:
+  - Match playlist tempo/energy to workout type (tempo run vs easy run vs heavy strength day)
+  - Learn preferences over time and/or from onboarding questionnaire
+- Apple Watch integration for music controls while phone stays in pocket
+
+**Synergies:**
+- Pairs well with running voice coaching (intense segments → higher-energy music)
+- Enhances lock-screen and live-activity experiences
+
+### C. Running & Cardio Intelligence
+
+#### C1. Running/Cardio Voice Coaching System
+
+**Goal:** Provide live, context-aware audio coaching for running and other cardio workouts.
+
+**Core Behaviors:**
+- Start-of-workout briefing and interval summaries
+- Auto-pause on full stops (configurable); do **not** auto-pause during walking intervals
+- Distance alerts (e.g., 0.25/0.5/1 mile) with:
+  - Current pace
+  - Average pace and projected finish time
+- Interval-aware pace coaching:
+  - "You’re at 6:40 pace, pick it up to hit 6:30"
+  - "You’re at 6:20, ease back slightly toward 6:30"
+
+**Settings:**
+- Toggles for voice feedback and auto-pause
+- Configurable distance/interval alerts and verbosity
+
+**Synergies:**
+- Extends **Phase 10: Voice-First Enhancements** from strength to cardio
+- Uses wearable and GPS data (ties into "Wearables Beyond Fitness" backlog)
+- Valuable input stream for AI Health Intelligence and running performance models
+
+#### C2. Running Shoe Tracking & Analytics
+
+**Goal:** Track shoe mileage and performance impact rather than just logging which pair was used.
+
+**Features:**
+- Log which shoes are used for each run (with simple selection and defaults)
+- Automatic mileage tracking and replacement alerts
+- Correlate shoe usage with:
+  - Split times and pacing patterns
+  - Heart-rate and effort (RPE)
+  - Subjective feedback (soreness, comfort, perceived quality of the session)
+
+**Unique Value:**
+- Move beyond simple "shoe mileage" to shoe **performance** feedback, which most competitors do not provide.
+
+**Synergies:**
+- Natural pairing with Stryd and AI Health Intelligence for deeper performance modeling
+- Support for e-commerce/affiliate opportunities later (recommended replacement models)
+
+#### C3. Stryd Integration
+
+**Goal:** Ingest Stryd power data to better understand running mechanics and training load.
+
+**Features:**
+- Import running power, cadence, form power, and related Stryd metrics
+- Correlate these signals with:
+  - Shoe selection and surface type
+  - Interval vs steady-state sessions
+  - Injury history and recovery
+
+**Synergies:**
+- Enhances running shoe analytics and cardio coaching quality
+- Feeds directly into AI Health Intelligence (better predictors for running performance and injury risk)
+
+### D. Engagement, Community & Insights
+
+#### D1. Community/Social Feed (Optional)
+
+**Goal:** Lightweight, optional social layer primarily for cardio and mixed-modal athletes.
+
+**Features:**
+- Feed combining:
+  - VoiceFit platform announcements (feature launches, education)
+  - Auto-generated, Strava-style workout posts (opt-in only)
+- Strong privacy controls (global opt-out + per-workout controls)
+- Best suited for running, HYROX, CrossFit, and hybrid workouts; less critical for pure strength users.
+
+**Synergies:**
+- Extends "Phase 9: Community & Social Features" beyond substitution-specific content
+- Potential cross-posting with other platforms in future
+
+#### D2. Analytics & User Behavior Tracking
+
+**Goal:** Build a robust analytics layer to understand real usage and inform product decisions.
+
+**Data to Track:**
+- Navigation flows and drop-off points
+- Feature and button usage (e.g., voice vs quick logging vs manual edits)
+- Adoption of new features (e.g., shoe tracking, watch quick actions)
+
+**Business Value:**
+- Identify features to improve, simplify, or remove
+- Support A/B experiments and pricing/packaging decisions
+- Provide quantitative input to the prioritization framework already defined in this document
+
+**Synergies:**
+- Underpins evaluation criteria and Tier prioritization in this file
+- Required foundation for proving impact of AI Health Intelligence, enterprise features, and community features
+
+#### D3. Demo Mode for Investors/Stakeholders
+
+**Goal:** Provide a guided, zero-setup way to demonstrate VoiceFit without needing a live account.
+
+**Features:**
+- Scripted flows that showcase:
+  - Onboarding and injury-aware questions
+  - Program creation and calendar scheduling
+  - Voice interactions, substitutions, and logging flows
+- Configurable "storylines" (runner-focused, strength-focused, enterprise/gym-focused)
+
+**Use Cases:**
+- Investor pitches and accelerator demos
+- Sales calls with gyms, corporate wellness teams, and PT clinics
+
+### Near-Term Candidate Features (High-Impact / Lower Complexity)
+
+While this document is **not** a committed roadmap, the following stand out as high-impact, relatively low-complexity candidates:
+
+1. **In-App Quick Logging Interface (B2)** – Mostly front-end work reusing existing workout logging APIs; immediately reduces friction and makes both voice and watch flows more usable.
+2. **Analytics & User Behavior Tracking (D2)** – Foundational instrumentation that improves every future prioritization decision and can be rolled out incrementally with minimal user-facing risk.
+
+---
+
 ## Research & Innovation Backlog
 
 ### Machine Learning
@@ -791,7 +1010,7 @@ Add to this document with:
 
 ---
 
-**Last Updated:** 2025-01-24  
-**Next Review:** 2025-04-24  
-**Owner:** Product Team  
+**Last Updated:** 2025-11-17
+**Next Review:** 2026-02-17
+**Owner:** Product Team
 **Status:** Living document

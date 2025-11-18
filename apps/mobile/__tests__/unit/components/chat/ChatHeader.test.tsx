@@ -11,9 +11,12 @@ jest.mock("../../../../src/theme/ThemeContext", () => ({
 }));
 
 // Mock Avatar component exported from ../profile to a simple identifiable element
-jest.mock("../../../../src/components/profile", () => ({
-  Avatar: () => <Text testID="mock-avatar">AV</Text>,
-}));
+jest.mock("../../../../src/components/profile", () => {
+  const React = require("react");
+  const { Text } = require("react-native");
+  const Avatar = (props: any) => React.createElement(Text, { testID: "mock-avatar", ...props }, "AV");
+  return { Avatar };
+});
 
 describe("ChatHeader component", () => {
   it("renders the provided title", () => {

@@ -1,4 +1,11 @@
 // Polyfill localStorage for Zustand persist (createJSONStorage(() => localStorage))
+jest.mock("expo-analytics-amplitude", () => ({
+  initializeAsync: jest.fn(),
+  setUserIdAsync: jest.fn(),
+  logEventAsync: jest.fn(),
+}));
+
+
 const createMemoryStorage = () => {
   let store: Record<string, string> = {};
   return {

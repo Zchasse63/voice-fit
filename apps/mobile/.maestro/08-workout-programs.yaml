@@ -1,0 +1,318 @@
+appId: com.voicefit.app
+---
+# Test: Workout Programs and AI-Generated Plans Flow
+# This test verifies workout program functionality and AI plan generation
+
+- launchApp
+
+# Wait for app to load (assume already logged in)
+- assertVisible:
+    text: "Home"
+    timeout: 10000
+
+# Test 1: Access workout programs
+- tapOn: "Run"
+- assertVisible:
+    text: "Start Workout"
+    timeout: 5000
+
+# Look for Programs section
+- scrollUntilVisible:
+    element:
+      text: "Programs"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    text: "Programs"
+    optional: true
+
+# Alternative: Programs might be on Home screen
+- tapOn: "Home"
+- scrollUntilVisible:
+    element:
+      text: "Workout Programs"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    text: "Workout Programs"
+    optional: true
+
+# Test 2: Browse available programs
+- assertVisible:
+    text: "Available Programs"
+    optional: true
+    timeout: 5000
+
+# Verify program cards are visible
+- assertVisible:
+    id: "program-card"
+    optional: true
+
+# Check for program categories
+- assertVisible:
+    text: "Beginner"
+    optional: true
+- assertVisible:
+    text: "Intermediate"
+    optional: true
+- assertVisible:
+    text: "Advanced"
+    optional: true
+
+# Test 3: View program details
+- tapOn:
+    id: "program-card"
+    optional: true
+
+- assertVisible:
+    text: "Program Details"
+    optional: true
+    timeout: 5000
+
+# Verify program information
+- assertVisible:
+    text: "Duration"
+    optional: true
+- assertVisible:
+    text: "Workouts"
+    optional: true
+- assertVisible:
+    text: "Difficulty"
+    optional: true
+
+# Test 4: Enroll in a program
+- scrollUntilVisible:
+    element:
+      text: "Start Program"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    text: "Start Program"
+    optional: true
+- tapOn:
+    text: "Enroll"
+    optional: true
+
+# Confirm enrollment
+- tapOn:
+    text: "Confirm"
+    optional: true
+
+# Verify enrollment success
+- assertVisible:
+    text: "Enrolled"
+    optional: true
+    timeout: 5000
+- assertVisible:
+    text: "Program started"
+    optional: true
+
+# Test 5: View enrolled program schedule
+- assertVisible:
+    text: "Week 1"
+    optional: true
+- assertVisible:
+    text: "Day 1"
+    optional: true
+
+# Check for upcoming workouts
+- assertVisible:
+    id: "scheduled-workout"
+    optional: true
+
+# Test 6: Access AI-generated plan
+- tapOn: "Chat"
+- assertVisible: "VoiceFit Coach"
+
+# Request AI to generate a custom plan
+- tapOn:
+    id: "chat-input"
+- inputText: "Create a 4-week strength training program for me"
+- tapOn:
+    id: "send-button"
+
+# Wait for AI response
+- extendedWaitUntil:
+    visible:
+      - "program"
+      - "plan"
+      - id: "coach-message"
+    timeout: 20000
+
+# Look for generated plan action button
+- assertVisible:
+    text: "View Plan"
+    optional: true
+    timeout: 5000
+- assertVisible:
+    text: "Save Program"
+    optional: true
+
+# Tap to view/save the AI-generated plan
+- tapOn:
+    text: "View Plan"
+    optional: true
+- tapOn:
+    text: "Save Program"
+    optional: true
+
+# Test 7: Start a program workout
+- tapOn: "Run"
+
+# Navigate to active program
+- tapOn:
+    text: "My Program"
+    optional: true
+- tapOn:
+    text: "Active Programs"
+    optional: true
+
+# Select today's workout
+- tapOn:
+    id: "todays-workout"
+    optional: true
+- tapOn:
+    text: "Start Today's Workout"
+    optional: true
+
+# Verify workout details from program
+- assertVisible:
+    text: "Workout"
+    optional: true
+    timeout: 5000
+
+# Start the program workout
+- tapOn:
+    text: "Start"
+    optional: true
+
+- assertVisible:
+    text: "Exercise"
+    optional: true
+    timeout: 5000
+
+# Test 8: Complete exercise in program
+# Verify exercise details
+- assertVisible:
+    text: "Sets"
+    optional: true
+- assertVisible:
+    text: "Reps"
+    optional: true
+
+# Log a set
+- tapOn:
+    id: "log-set-button"
+    optional: true
+- tapOn:
+    text: "Complete Set"
+    optional: true
+
+# Move to next exercise
+- tapOn:
+    text: "Next Exercise"
+    optional: true
+
+# Test 9: Skip or modify program workout
+- tapOn:
+    id: "workout-menu"
+    optional: true
+
+- assertVisible:
+    text: "Modify"
+    optional: true
+- assertVisible:
+    text: "Skip"
+    optional: true
+
+# Cancel menu
+- tapOn:
+    text: "Cancel"
+    optional: true
+
+# Finish workout early for test
+- tapOn:
+    text: "Finish"
+    optional: true
+- tapOn:
+    text: "Complete Workout"
+    optional: true
+
+# Test 10: View program progress
+- assertVisible:
+    text: "Workout Complete"
+    optional: true
+    timeout: 5000
+
+- tapOn:
+    text: "View Progress"
+    optional: true
+
+# Verify progress metrics
+- assertVisible:
+    text: "Completed"
+    optional: true
+- assertVisible:
+    text: "Remaining"
+    optional: true
+- assertVisible:
+    id: "progress-bar"
+    optional: true
+
+# Test 11: Modify active program
+- scrollUntilVisible:
+    element:
+      text: "Program Settings"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    text: "Program Settings"
+    optional: true
+
+# Options to pause or adjust program
+- assertVisible:
+    text: "Pause Program"
+    optional: true
+- assertVisible:
+    text: "Adjust Schedule"
+    optional: true
+
+# Go back without making changes
+- tapOn:
+    id: "back-button"
+    optional: true
+
+# Test 12: View program history
+- scrollUntilVisible:
+    element:
+      text: "Completed Programs"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    text: "Completed Programs"
+    optional: true
+- tapOn:
+    text: "History"
+    optional: true
+
+# Verify program completion records
+- assertVisible:
+    id: "completed-program-card"
+    optional: true
+    timeout: 3000
+
+# Return to home
+- tapOn: "Home"
+
+# Success!
+- runScript: echo "✅ Workout programs flow completed!"

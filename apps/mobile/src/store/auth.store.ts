@@ -4,6 +4,9 @@ import { supabase } from "../services/database/supabase.client";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as WebBrowser from "expo-web-browser";
+import { Platform } from "react-native";
+import { AnalyticsService } from "../services/analytics/AnalyticsService";
+import { AnalyticsEvents } from "../services/analytics/events";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -11,6 +14,7 @@ interface User {
   id: string;
   email: string;
   name?: string;
+  tier?: "free" | "premium" | "admin";
 }
 
 interface AuthState {
@@ -28,10 +32,30 @@ interface AuthState {
 
 const mapSupabaseUser = (supabaseUser: SupabaseUser | null): User | null => {
   if (!supabaseUser) return null;
+
+  const userMetadata: any = supabaseUser.user_metadata || {};
+  const appMetadata: any = (supabaseUser as any).app_metadata || {};
+
+  const rawTier =
+    userMetadata.tier ??
+    userMetadata.subscription_tier ??
+    appMetadata.tier ??
+    appMetadata.subscription_tier ??
+    "free";
+
+  let tier: "free" | "premium" | "admin" = "free";
+  if (typeof rawTier === "string") {
+    const normalized = rawTier.toLowerCase();
+    if (normalized === "premium" || normalized === "admin") {
+      tier = normalized;
+    }
+  }
+
   return {
     id: supabaseUser.id,
     email: supabaseUser.email || "",
-    name: supabaseUser.user_metadata?.name,
+    name: userMetadata.name || supabaseUser.user_metadata?.name,
+    tier,
   };
 };
 
@@ -51,14 +75,23 @@ export const useAuthStore = create<AuthState>()(
               password,
             });
             if (error) throw error;
-            set({ user: mapSupabaseUser(data.user), isLoading: false });
+
+            const user = mapSupabaseUser(data.user);
+            set({ user, isLoading: false });
+
+            if (user) {
+              AnalyticsService.logEvent(AnalyticsEvents.USER_LOGGED_IN, {
+                auth_method: "password",
+                platform: Platform.OS,
+              });
+            }
           } catch (error) {
             const message =
               error && typeof error === "object" && "message" in error
                 ? (error as any).message
                 : "Sign in failed";
             set({ error: message, isLoading: false });
-            throw error;
+            throw new Error(message);
           }
         },
 
@@ -75,14 +108,23 @@ export const useAuthStore = create<AuthState>()(
               },
             });
             if (error) throw error;
-            set({ user: mapSupabaseUser(data.user), isLoading: false });
+
+            const user = mapSupabaseUser(data.user);
+            set({ user, isLoading: false });
+
+            if (user) {
+              AnalyticsService.logEvent(AnalyticsEvents.USER_SIGNED_UP, {
+                auth_method: "password",
+                platform: Platform.OS,
+              });
+            }
           } catch (error) {
             const message =
               error && typeof error === "object" && "message" in error
                 ? (error as any).message
                 : "Sign up failed";
             set({ error: message, isLoading: false });
-            throw error;
+            throw new Error(message);
           }
         },
 
@@ -103,7 +145,15 @@ export const useAuthStore = create<AuthState>()(
               });
 
               if (error) throw error;
-              set({ user: mapSupabaseUser(data.user), isLoading: false });
+              const user = mapSupabaseUser(data.user);
+              set({ user, isLoading: false });
+
+              if (user) {
+                AnalyticsService.logEvent(AnalyticsEvents.USER_LOGGED_IN, {
+                  auth_method: "apple",
+                  platform: Platform.OS,
+                });
+              }
             } else {
               throw new Error("No identity token returned from Apple");
             }
@@ -113,7 +163,7 @@ export const useAuthStore = create<AuthState>()(
                 ? (error as any).message
                 : "Apple sign in failed";
             set({ error: message, isLoading: false });
-            throw error;
+            throw new Error(message);
           }
         },
 
@@ -137,7 +187,7 @@ export const useAuthStore = create<AuthState>()(
                 ? (error as any).message
                 : "Google sign in failed";
             set({ error: message, isLoading: false });
-            throw error;
+            throw new Error(message);
           }
         },
 
@@ -153,7 +203,7 @@ export const useAuthStore = create<AuthState>()(
                 ? (error as any).message
                 : "Sign out failed";
             set({ error: message, isLoading: false });
-            throw error;
+            throw new Error(message);
           }
         },
 

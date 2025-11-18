@@ -11,7 +11,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: 'html',
-  
+
   use: {
     baseURL: 'http://localhost:19006',
     trace: 'on-first-retry',
@@ -26,10 +26,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'npm run web',
+    command: 'EXPO_METRO_PORT=8082 npm run web',
     url: 'http://localhost:19006',
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
   },
 });
-

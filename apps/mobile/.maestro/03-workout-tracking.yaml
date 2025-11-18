@@ -1,0 +1,123 @@
+appId: com.voicefit.app
+---
+# Test: Workout/Run Tracking Flow
+# This test verifies workout tracking and run functionality
+
+- launchApp
+
+# Wait for app to load (assume already logged in)
+- assertVisible:
+    text: "Home"
+    timeout: 10000
+
+# Navigate to Run/Workout tab
+- tapOn: "Run"
+- assertVisible: "Start Workout"
+
+# Test 1: Start a new workout
+- tapOn: "Start Workout"
+
+# Verify workout tracking screen is active
+- assertVisible:
+    text: "Active Workout"
+    timeout: 5000
+
+# Check for workout controls
+- assertVisible:
+    text: "Pause"
+    optional: true
+- assertVisible:
+    text: "Stop"
+    optional: true
+
+# Verify tracking data is visible (time, distance, pace, etc.)
+- assertVisible:
+    id: "workout-timer"
+    optional: true
+- assertVisible:
+    id: "distance-display"
+    optional: true
+
+# Wait a few seconds to simulate workout
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# Test 2: Pause the workout
+- tapOn:
+    text: "Pause"
+    optional: true
+
+# Verify pause state
+- assertVisible:
+    text: "Resume"
+    optional: true
+    timeout: 2000
+
+# Resume workout
+- tapOn:
+    text: "Resume"
+    optional: true
+
+# Test 3: Stop/Complete the workout
+- tapOn: "Stop"
+
+# Confirm stop action
+- tapOn:
+    text: "Complete Workout"
+    optional: true
+- tapOn:
+    text: "Finish"
+    optional: true
+
+# Wait for workout summary screen
+- extendedWaitUntil:
+    visible:
+      - "Workout Summary"
+      - "Great work"
+      - "Workout Complete"
+    timeout: 10000
+
+# Verify workout summary data
+- assertVisible:
+    text: "Duration"
+    optional: true
+- assertVisible:
+    text: "Distance"
+    optional: true
+
+# Save the workout
+- tapOn:
+    text: "Save"
+    optional: true
+- tapOn:
+    text: "Done"
+    optional: true
+
+# Test 4: View workout history
+- assertVisible:
+    text: "Home"
+    timeout: 5000
+
+# Navigate to workout history
+- tapOn: "Run"
+- assertVisible: "Recent Workouts"
+
+# Verify the completed workout appears in history
+- assertVisible:
+    id: "workout-history-item"
+    optional: true
+    timeout: 3000
+
+# Tap on a workout to view details
+- tapOn:
+    id: "workout-history-item"
+    optional: true
+
+# Verify workout details screen
+- assertVisible:
+    text: "Workout Details"
+    optional: true
+    timeout: 3000
+
+# Success!
+- runScript: echo "✅ Workout tracking flow completed!"

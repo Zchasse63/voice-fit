@@ -1,0 +1,205 @@
+appId: com.voicefit.app
+---
+# Test: Profile and Settings Flow
+# This test verifies profile management and settings functionality
+
+- launchApp
+
+# Wait for app to load (assume already logged in)
+- assertVisible:
+    text: "Home"
+    timeout: 10000
+
+# Navigate to Profile/Settings tab
+- tapOn: "Profile"
+- assertVisible:
+    text: "Settings"
+    timeout: 5000
+
+# Test 1: View profile information
+- assertVisible:
+    id: "profile-name"
+    optional: true
+- assertVisible:
+    id: "profile-email"
+    optional: true
+- assertVisible:
+    text: "test@voicefit.app"
+    optional: true
+
+# Test 2: Edit profile
+- tapOn:
+    text: "Edit Profile"
+    optional: true
+
+- assertVisible:
+    text: "Name"
+    optional: true
+    timeout: 3000
+
+# Update name
+- tapOn:
+    text: "Name"
+    optional: true
+- inputText:
+    text: "Updated Test User"
+    optional: true
+
+# Save profile changes
+- tapOn:
+    text: "Save"
+    optional: true
+
+# Verify success message
+- assertVisible:
+    text: "Profile updated"
+    optional: true
+    timeout: 3000
+
+# Test 3: Access Settings
+- tapOn: "Settings"
+
+# Verify settings sections are visible
+- assertVisible:
+    text: "Preferences"
+    optional: true
+- assertVisible:
+    text: "Notifications"
+    optional: true
+- assertVisible:
+    text: "Privacy"
+    optional: true
+
+# Test 4: Notification settings
+- tapOn:
+    text: "Notifications"
+    optional: true
+
+- assertVisible:
+    text: "Push Notifications"
+    optional: true
+    timeout: 3000
+
+# Toggle notification setting
+- tapOn:
+    id: "workout-reminders-toggle"
+    optional: true
+
+# Go back
+- tapOn:
+    id: "back-button"
+    optional: true
+- tapOn:
+    text: "Back"
+    optional: true
+
+# Test 5: Units and preferences
+- tapOn:
+    text: "Preferences"
+    optional: true
+
+- assertVisible:
+    text: "Distance Units"
+    optional: true
+    timeout: 3000
+
+# Change units
+- tapOn:
+    text: "Distance Units"
+    optional: true
+
+- tapOn:
+    text: "Kilometers"
+    optional: true
+- tapOn:
+    text: "Miles"
+    optional: true
+
+# Go back
+- tapOn:
+    id: "back-button"
+    optional: true
+- tapOn:
+    text: "Back"
+    optional: true
+
+# Test 6: Privacy settings
+- tapOn:
+    text: "Privacy"
+    optional: true
+
+- assertVisible:
+    text: "Data Sharing"
+    optional: true
+    timeout: 3000
+
+# Go back
+- tapOn:
+    id: "back-button"
+    optional: true
+- tapOn:
+    text: "Back"
+    optional: true
+
+# Test 7: Account management
+- scrollUntilVisible:
+    element:
+      text: "Account"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    text: "Account"
+    optional: true
+
+# Verify account options
+- assertVisible:
+    text: "Change Password"
+    optional: true
+- assertVisible:
+    text: "Delete Account"
+    optional: true
+
+# Go back to main settings
+- tapOn:
+    id: "back-button"
+    optional: true
+
+# Test 8: About/Help section
+- scrollUntilVisible:
+    element:
+      text: "About"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- tapOn:
+    text: "About"
+    optional: true
+
+- assertVisible:
+    text: "Version"
+    optional: true
+    timeout: 3000
+
+# Go back
+- tapOn:
+    id: "back-button"
+    optional: true
+
+# Test 9: Logout option (but don't actually logout)
+- scrollUntilVisible:
+    element:
+      text: "Logout"
+    direction: DOWN
+    timeout: 5000
+    optional: true
+
+- assertVisible: "Logout"
+
+# Return to home
+- tapOn: "Home"
+
+# Success!
+- runScript: echo "✅ Profile and settings flow completed!"

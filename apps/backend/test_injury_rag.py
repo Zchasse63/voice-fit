@@ -9,8 +9,42 @@ Usage:
 """
 
 import asyncio
+import os
 
 from injury_detection_rag_service import InjuryDetectionRAGService
+
+REQUIRED_ENV_VARS = [
+    "UPSTASH_SEARCH_REST_URL",
+    "UPSTASH_SEARCH_REST_TOKEN",
+    "XAI_API_KEY",
+]
+
+
+def _check_env() -> bool:
+    """Ensure required env vars are present before hitting external services."""
+    missing = [name for name in REQUIRED_ENV_VARS if not os.getenv(name)]
+    if missing:
+        print("=" * 80)
+        print("Injury Detection RAG Service - Environment Not Configured")
+        print("=" * 80)
+        print("Skipping injury RAG tests because required env variables are missing:")
+        for name in missing:
+            print(f"  - {name}")
+        print(
+            "\nSet these variables and re-run `python test_injury_rag.py` to exercise the pipeline."
+        )
+        return False
+    return True
+
+
+def _analyze_injury_sync(service: InjuryDetectionRAGService, test_case: dict):
+    async def _inner():
+        return await service.analyze_injury(
+            notes=test_case["notes"], user_context=test_case["user_context"]
+        )
+
+    return asyncio.run(_inner())
+
 
 
 def test_injury_detection():
@@ -20,6 +54,9 @@ def test_injury_detection():
     print("INJURY DETECTION RAG SERVICE TEST")
     print("=" * 80)
     print()
+
+    if not _check_env():
+        return
 
     # Initialize service
     print("Initializing Injury Detection RAG Service...")
@@ -82,9 +119,7 @@ def test_injury_detection():
         try:
             # Analyze injury
             print("Analyzing with Grok 4 Fast Reasoning + RAG...")
-            analysis, metadata = service.analyze_injury(
-                notes=test_case["notes"], user_context=test_case["user_context"]
-            )
+            analysis, metadata = _analyze_injury_sync(service, test_case)
 
             # Display results
             print("\n📊 RESULTS:")

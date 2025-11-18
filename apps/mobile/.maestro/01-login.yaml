@@ -1,0 +1,35 @@
+appId: com.voicefit.app
+---
+# Test: User Login Flow
+# This test verifies that a user can successfully log in to the app
+
+- launchApp
+
+# Verify we're on the login screen
+- assertVisible: "Welcome Back"
+- assertVisible: "Sign in with Apple"
+- assertVisible: "Sign in with Google"
+
+# Tap on email input field using placeholder
+- tapOn: "your@email.com"
+- inputText: "test@voicefit.app"
+
+# Tap on password input field using placeholder
+- tapOn: "••••••••"
+- inputText: "TestUser2025!"
+
+# Submit login
+- tapOn: "Sign In"
+
+# Wait for login to complete and navigation to home
+- extendedWaitUntil:
+    visible: "Home"
+    timeout: 20000
+
+# Verify bottom navigation tabs are present
+- assertVisible: "Run"
+- assertVisible: "Chat"
+
+# Verify home screen content
+- assertVisible: "This Week"
+- assertVisible: "Start Workout"

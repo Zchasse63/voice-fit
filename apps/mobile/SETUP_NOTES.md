@@ -250,16 +250,131 @@ cp app.json app.json.backup
 cp .env .env.backup
 ```
 
+## Xcode Build Issues & Fixes (2025-11-17)
+
+### Issue 1: Sandbox Script Execution Error
+**Error**: `Sandbox: bash(2019) deny(1) file-read-data .../expo-configure-project.sh: Operation not permitted`
+
+**Cause**: Xcode build phase was using `bash -l -c` with backslash-escaped paths, causing macOS sandbox to block file access.
+
+**Solution**: Modified the Xcode build script in `VoiceFit.xcodeproj/project.pbxproj` to inline the expo-configure script directly instead of calling an external file. This bypasses sandbox restrictions.
+
+### Issue 2: Target Name Mismatch (HelloWorld vs VoiceFit)
+**Error**: `Unable to find a target named 'VoiceFit' in project, did find 'HelloWorld'`
+
+**Cause**: The Xcode project still referenced the default Expo template name "HelloWorld" instead of "VoiceFit".
+
+**Solution**: 
+1. Updated `ios/Podfile`: Changed `target 'HelloWorld'` to `target 'VoiceFit'`
+2. Renamed all occurrences in `VoiceFit.xcodeproj/project.pbxproj` from HelloWorld to VoiceFit
+3. Updated scheme file: `ios/VoiceFit.xcodeproj/xcshareddata/xcschemes/VoiceFit.xcscheme`
+4. Ran `pod install` to regenerate with correct target name
+
+### Issue 3: WatermelonDB JSI Initialization Error
+**Error**: `TypeError: Cannot read property 'initializeJSI' of null`
+
+**Cause**: WatermelonDB was configured with `jsi: true` but the native JSI bindings weren't properly initialized in the new React Native 0.79.6 + Expo 53 architecture.
+
+**Solution**: Temporarily disabled JSI mode in `src/services/database/watermelon/database.ts`:
+```typescript
+const adapter = new SQLiteAdapter({
+  schema,
+  migrations,
+  dbName: "VoiceFit",
+  jsi: false, // JSI disabled for compatibility - can re-enable after native setup fixed
+  onSetUpError: (error) => {
+    console.error("[WatermelonDB] Setup error:", error);
+  },
+});
+```
+
+**Note**: WatermelonDB works in synchronous mode. JSI can be re-enabled later for performance improvements after proper native module setup.
+
+### Issue 4: React Navigation Version Incompatibility
+**Error**: `Cannot read property 'reduce' of undefined` in NativeStackView.native.js
+
+**Cause**: Version mismatch between React Navigation packages:
+- `@react-navigation/native@6.1.18`
+- `@react-navigation/native-stack@7.6.2` ❌ (incompatible with v6)
+
+**Solution**: Downgraded native-stack to compatible version:
+```bash
+npm install @react-navigation/native-stack@^6.11.0 --legacy-peer-deps
+```
+
+**Current Compatible Versions**:
+- `@react-navigation/native@6.1.18`
+- `@react-navigation/native-stack@6.11.0` ✅
+- `@react-navigation/bottom-tabs@6.6.1` ✅
+
+### Issue 5: Nested NavigationContainer
+**Error**: Same "reduce of undefined" error persisted after version fix
+
+**Cause**: `RootNavigator.tsx` was wrapping its Stack.Navigator in its own NavigationContainer, creating nested containers which breaks React Navigation's state management.
+
+**Solution**: Removed the NavigationContainer wrapper from RootNavigator.tsx. Only App.tsx should have the top-level NavigationContainer.
+
+### Complete Build Process (When Starting Fresh)
+
+1. **Clean environment**:
+   ```bash
+   rm -rf ios/Pods ios/Podfile.lock
+   rm -rf ~/Library/Developer/Xcode/DerivedData/*
+   ```
+
+2. **Install dependencies**:
+   ```bash
+   npm install --legacy-peer-deps
+   ```
+
+3. **Verify Podfile has correct target and simdjson**:
+   ```ruby
+   target 'VoiceFit' do
+     use_expo_modules!
+     
+     # WatermelonDB dependency - use vendored simdjson
+     pod 'simdjson', :path => '../node_modules/@nozbe/simdjson'
+     # ... rest of config
+   end
+   ```
+
+4. **Install pods**:
+   ```bash
+   cd ios
+   /opt/homebrew/bin/pod install
+   cd ..
+   ```
+
+5. **Start Metro bundler** (in separate terminal):
+   ```bash
+   npx expo start --clear
+   ```
+
+6. **Build in Xcode**:
+   - Open `ios/VoiceFit.xcworkspace` (not .xcodeproj!)
+   - Select iPhone simulator (e.g., iPhone 17 Pro)
+   - Clean Build Folder: ⌘+Shift+K
+   - Build: ⌘+B
+   - Run: ⌘+R
+
+### Key Takeaways
+- Always use `.xcworkspace` file when opening in Xcode (not `.xcodeproj`)
+- React Navigation package versions must be compatible within the same major version
+- Only one NavigationContainer should exist in the entire app (in App.tsx)
+- WatermelonDB can work without JSI, though it's slower
+- After renaming a project, all references must be updated (Podfile, Xcode project, schemes)
+
 ## Next Steps for Development
 
 1. **UI Implementation**: Apply Figma design system to components
 2. **Voice Features**: Implement voice recognition with @react-native-voice/voice
 3. **Offline Storage**: Set up WatermelonDB schemas and sync
 4. **Testing**: Set up Playwright (web) and Maestro (iOS) for E2E tests
+5. **WatermelonDB JSI**: Re-enable JSI mode for better performance (requires proper native module initialization)
 
 ---
 
-**Last Updated**: 2025-11-14 (Recovery Session)
-**Status**: ✅ App successfully recovered and running on iPhone 17 Pro Max simulator
-**Recovery Completed**: 4:41 PM EST
+**Last Updated**: 2025-11-17 (Xcode Build Fixes)
+**Status**: ✅ App successfully building and running on iPhone 17 Pro simulator
+**Build Issues Resolved**: 10:30 AM EST
 

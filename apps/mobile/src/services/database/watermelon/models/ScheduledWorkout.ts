@@ -64,9 +64,7 @@ export default class ScheduledWorkout extends Model {
   }
 
   get isFuture(): boolean {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return this.scheduledDateObject > today;
+    return !this.isPast && !this.isToday;
   }
 
   get dayOfWeekName(): string {
