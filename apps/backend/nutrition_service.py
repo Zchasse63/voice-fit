@@ -170,4 +170,42 @@ class NutritionService:
             
         return summary
 
+    def sync_nutrition_summary(self, user_id: str, log_date: str, summary: Dict[str, float]) -> Dict[str, Any]:
+        """
+        Sync daily nutrition summary from external source (Apple Health).
+        Replaces any existing sync entry for the given date.
+        """
+        if not self.supabase:
+             raise ValueError("Supabase client not initialized")
+
+        # Delete existing sync entries for this date
+        self.supabase.table("nutrition_logs")\
+            .delete()\
+            .eq("user_id", user_id)\
+            .eq("log_date", log_date)\
+            .eq("meal_type", "apple_health_sync")\
+            .execute()
+            
+        # Insert new sync entry
+        data = {
+            "user_id": user_id,
+            "log_date": log_date,
+            "meal_type": "apple_health_sync",
+            "items": [{"name": "Apple Health Sync", "quantity": "1 day"}], # Dummy item
+            "total_calories": int(summary.get("calories", 0)),
+            "protein_g": int(summary.get("protein", 0)),
+            "carbs_g": int(summary.get("carbs", 0)),
+            "fats_g": int(summary.get("fat", 0))
+        }
+        
+        response = self.supabase.table("nutrition_logs").insert(data).execute()
+        
+        if not response.data:
+            raise Exception("Failed to insert nutrition sync log")
+            
+        return {
+            "success": True,
+            "log_id": response.data[0]["id"]
+        }
+
 nutrition_service = NutritionService()

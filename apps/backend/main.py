@@ -91,6 +91,8 @@ from models import (
     NutritionLogResponse,
     NutritionParseRequest,
     NutritionParseResponse,
+    NutritionSyncRequest,
+    NutritionSyncResponse,
 )
 from monitoring_service import get_monitoring_service
 from onboarding_service import OnboardingService
@@ -3573,6 +3575,26 @@ async def parse_nutrition_text(
         raise HTTPException(
             status_code=500, detail=f"Failed to parse nutrition text: {str(e)}"
         )
+
+
+@app.post("/api/nutrition/sync", response_model=NutritionSyncResponse)
+async def sync_nutrition(
+    request: NutritionSyncRequest,
+    user: dict = Depends(verify_token),
+):
+    """
+    Sync daily nutrition summary from Apple Health.
+    """
+    try:
+        result = nutrition_service.sync_nutrition_summary(
+            request.user_id,
+            request.date,
+            request.summary
+        )
+        return NutritionSyncResponse(**result)
+    except Exception as e:
+        print(f"Error syncing nutrition: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":

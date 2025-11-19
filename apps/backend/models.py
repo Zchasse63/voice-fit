@@ -1272,3 +1272,35 @@ class NutritionParseResponse(BaseModel):
                 "message": "Successfully parsed nutrition text",
             }
         }
+
+
+class NutritionSyncRequest(BaseModel):
+    """Request model for nutrition sync endpoint"""
+
+    user_id: str = Field(..., description="User ID")
+    date: str = Field(..., description="Date of the sync (YYYY-MM-DD)")
+    summary: Dict[str, float] = Field(
+        ..., description="Daily nutrition summary (calories, protein, carbs, fat)"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": "user_123",
+                "date": "2025-11-19",
+                "summary": {
+                    "calories": 2500,
+                    "protein": 180,
+                    "carbs": 250,
+                    "fat": 80,
+                },
+            }
+        }
+
+
+class NutritionSyncResponse(BaseModel):
+    """Response model for nutrition sync endpoint"""
+
+    success: bool
+    log_id: str
+    message: Optional[str] = None

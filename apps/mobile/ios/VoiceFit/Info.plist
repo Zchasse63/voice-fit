@@ -58,6 +58,10 @@
     <string>Allow Voice Fit to recognize your speech for workout logging.</string>
     <key>NSSupportsLiveActivities</key>
     <true/>
+    <key>NSHealthShareUsageDescription</key>
+    <string>Allow Voice Fit to read your nutrition data to provide personalized coaching.</string>
+    <key>NSHealthUpdateUsageDescription</key>
+    <string>Allow Voice Fit to update your health data.</string>
     <key>UIBackgroundModes</key>
     <array>
       <string>location</string>

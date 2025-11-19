@@ -1,4 +1,5 @@
 import { apiClient } from './api/config';
+import HealthKitService from './HealthKitService';
 
 export interface NutritionItem {
     name: string;
@@ -69,6 +70,37 @@ export class NutritionService {
         } catch (error) {
             console.error('Error getting nutrition summary:', error);
             throw error;
+        }
+    }
+    /**
+     * Sync nutrition data from Apple Health.
+     */
+    async syncWithAppleHealth(userId: string): Promise<boolean> {
+        try {
+            const authorized = await HealthKitService.requestAuthorization();
+            if (!authorized) {
+                console.warn('HealthKit authorization denied');
+                return false;
+            }
+
+            const data = await HealthKitService.getNutritionData(new Date());
+
+            if (!data || Object.keys(data).length === 0) {
+                console.log('No nutrition data found in HealthKit for today');
+                return true;
+            }
+
+            // Send to backend
+            await apiClient.post('/api/nutrition/sync', {
+                user_id: userId,
+                date: new Date().toISOString().split('T')[0],
+                summary: data
+            });
+
+            return true;
+        } catch (error) {
+            console.error('Error syncing with Apple Health:', error);
+            return false;
         }
     }
 }
