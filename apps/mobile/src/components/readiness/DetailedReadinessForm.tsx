@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, TextInput } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { useAuthStore } from '../../store/auth.store';
 import { readinessService, DetailedReadinessInput } from '../../services/readiness/ReadinessService';
 import { InjuryDetectionService, InjuryDetectionResult } from '../../services/injury/InjuryDetectionService';
@@ -26,6 +27,8 @@ interface SliderConfig {
 
 export default function DetailedReadinessForm({ onComplete }: { onComplete?: () => void }) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = colors.accent;
   const user = useAuthStore((state) => state.user);
 
   const [sleepQuality, setSleepQuality] = useState(7);
@@ -41,28 +44,28 @@ export default function DetailedReadinessForm({ onComplete }: { onComplete?: () 
     {
       key: 'sleepQuality',
       label: 'Sleep Quality',
-      icon: <Moon color={isDark ? '#4A9B6F' : '#2C5F3D'} size={20} />,
+      icon: <Moon color={accentColors.green} size={20} />,
       lowLabel: 'Poor',
       highLabel: 'Excellent',
     },
     {
       key: 'soreness',
       label: 'Muscle Soreness',
-      icon: <Zap color={isDark ? '#F9AC60' : '#DD7B57'} size={20} />,
+      icon: <Zap color={accentColors.orange} size={20} />,
       lowLabel: 'None',
       highLabel: 'Very Sore',
     },
     {
       key: 'stress',
       label: 'Stress Level',
-      icon: <Brain color={isDark ? '#86F4EE' : '#36625E'} size={20} />,
+      icon: <Brain color={accentColors.teal} size={20} />,
       lowLabel: 'Calm',
       highLabel: 'High',
     },
     {
       key: 'energy',
       label: 'Energy Level',
-      icon: <Battery color={isDark ? '#4A9B6F' : '#2C5F3D'} size={20} />,
+      icon: <Battery color={accentColors.green} size={20} />,
       lowLabel: 'Low',
       highLabel: 'High',
     },
@@ -125,12 +128,31 @@ export default function DetailedReadinessForm({ onComplete }: { onComplete?: () 
   };
 
   return (
-    <View className={`p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+    <View
+      style={{
+        padding: tokens.spacing.md,
+        borderRadius: tokens.borderRadius.lg,
+        backgroundColor: colors.background.secondary,
+      }}
+    >
       {/* Header */}
-      <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <Text
+        style={{
+          fontSize: tokens.typography.fontSize.xl,
+          fontWeight: tokens.typography.fontWeight.bold,
+          marginBottom: tokens.spacing.sm,
+          color: colors.text.primary,
+        }}
+      >
         Detailed Readiness Check
       </Text>
-      <Text className={`text-sm mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <Text
+        style={{
+          fontSize: tokens.typography.fontSize.sm,
+          marginBottom: tokens.spacing.lg,
+          color: colors.text.secondary,
+        }}
+      >
         Rate each factor from 1-10 for a personalized readiness score
       </Text>
 
@@ -140,15 +162,37 @@ export default function DetailedReadinessForm({ onComplete }: { onComplete?: () 
         const setValue = setters[slider.key];
 
         return (
-          <View key={slider.key} className="mb-6">
+          <View
+            key={slider.key}
+            style={{ marginBottom: tokens.spacing.lg }}
+          >
             {/* Label and Icon */}
-            <View className="flex-row items-center mb-2">
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: tokens.spacing.xs,
+              }}
+            >
               {slider.icon}
-              <Text className={`text-base font-bold ml-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.md,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  marginLeft: tokens.spacing.sm,
+                  color: colors.text.primary,
+                }}
+              >
                 {slider.label}
               </Text>
-              <View className="flex-1" />
-              <Text className={`text-lg font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+              <View style={{ flex: 1 }} />
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: accentColors.blue,
+                }}
+              >
                 {value}
               </Text>
             </View>
@@ -161,17 +205,33 @@ export default function DetailedReadinessForm({ onComplete }: { onComplete?: () 
               step={1}
               value={value}
               onValueChange={setValue}
-              minimumTrackTintColor={isDark ? '#4A9B6F' : '#2C5F3D'}
-              maximumTrackTintColor={isDark ? '#374151' : '#D1D5DB'}
-              thumbTintColor={isDark ? '#4A9B6F' : '#2C5F3D'}
+              minimumTrackTintColor={accentColors.green}
+              maximumTrackTintColor={colors.border.light}
+              thumbTintColor={accentColors.green}
             />
 
             {/* Labels */}
-            <View className="flex-row justify-between mt-1">
-              <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginTop: tokens.spacing.xs,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.tertiary,
+                }}
+              >
                 {slider.lowLabel}
               </Text>
-              <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.tertiary,
+                }}
+              >
                 {slider.highLabel}
               </Text>
             </View>
@@ -180,16 +240,26 @@ export default function DetailedReadinessForm({ onComplete }: { onComplete?: () 
       })}
 
       {/* Phase 3: Notes Input for Injury Detection */}
-      <View className="mb-4">
-        <Text className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <View style={{ marginBottom: tokens.spacing.md }}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.sm,
+            fontWeight: tokens.typography.fontWeight.medium,
+            marginBottom: tokens.spacing.xs,
+            color: colors.text.secondary,
+          }}
+        >
           Any pain, soreness, or concerns? (Optional)
         </Text>
         <TextInput
-          className={`p-3 rounded-lg ${
-            isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'
-          }`}
+          style={{
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.md,
+            backgroundColor: colors.background.tertiary,
+            color: colors.text.primary,
+          }}
           placeholder="e.g., 'Sharp pain in left shoulder during overhead press'"
-          placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
+          placeholderTextColor={colors.text.tertiary}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -197,31 +267,46 @@ export default function DetailedReadinessForm({ onComplete }: { onComplete?: () 
           textAlignVertical="top"
           editable={!isSaving}
         />
-        <Text className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.xs,
+            marginTop: tokens.spacing.xs,
+            color: colors.text.tertiary,
+          }}
+        >
           Premium: AI-powered injury analysis with personalized recommendations
         </Text>
       </View>
 
       {/* Submit Button */}
       <Pressable
-        className={`flex-row items-center justify-center p-4 rounded-xl mt-2 ${
-          isSaving
-            ? isDark
-              ? 'bg-gray-700'
-              : 'bg-gray-300'
-            : isDark
-            ? 'bg-primaryDark'
-            : 'bg-primary-500'
-        }`}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: tokens.spacing.md,
+          borderRadius: tokens.borderRadius.lg,
+          marginTop: tokens.spacing.sm,
+          backgroundColor: isSaving
+            ? colors.background.tertiary
+            : accentColors.green,
+          opacity: isSaving ? 0.7 : 1,
+        }}
         onPress={handleSubmit}
         disabled={isSaving}
         accessibilityLabel="Save Readiness Score"
         accessibilityRole="button"
       >
         {isSaving ? (
-          <ActivityIndicator size="small" color="white" />
+          <ActivityIndicator size="small" color={colors.text.primary} />
         ) : (
-          <Text className="text-base font-bold text-white">
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.md,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: tokens.colors.light.text.primary,
+            }}
+          >
             Save Readiness Score
           </Text>
         )}

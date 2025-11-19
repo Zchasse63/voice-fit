@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, Text, Modal, Pressable, ScrollView } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { AlertTriangle, TrendingDown, TrendingUp, CheckCircle, X } from 'lucide-react-native';
 import { LoadAdjustment } from '../../services/autoregulation/AutoRegulationService';
 
@@ -35,6 +36,8 @@ export default function AutoRegulationModal({
   reasons = [],
 }: AutoRegulationModalProps) {
   const { isDark } = useTheme();
+  const themeColors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = themeColors.accent;
 
   const isReduction = adjustment.adjustmentPercentage < 0;
   const isIncrease = adjustment.adjustmentPercentage > 0;
@@ -46,55 +49,103 @@ export default function AutoRegulationModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 justify-center items-center p-6">
-        <View className={`w-full max-w-md rounded-xl shadow-xl p-6 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: themeColors.overlay.scrim,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: tokens.spacing.lg,
+        }}
+      >
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 480,
+            borderRadius: tokens.borderRadius.lg,
+            padding: tokens.spacing.lg,
+            backgroundColor: themeColors.background.secondary,
+            ...tokens.shadows.lg,
+          }}
+        >
           {/* Header */}
-          <View className="flex-row items-center justify-between mb-4">
-            <View className="flex-row items-center">
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: tokens.spacing.md,
+            }}
+          >
+            <View
+              style={{ flexDirection: 'row', alignItems: 'center' }}
+            >
               <AlertTriangle
-                color={isReduction ? '#F9AC60' : '#4A9B6F'}
+                color={isReduction ? accentColors.orange : accentColors.green}
                 size={24}
               />
-              <Text className={`text-xl font-bold ml-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xl,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  marginLeft: tokens.spacing.sm,
+                  color: themeColors.text.primary,
+                }}
+              >
                 Auto-Regulation Suggestion
               </Text>
             </View>
             <Pressable
               onPress={onClose}
-              className="p-2 min-w-[44px] min-h-[44px] items-center justify-center"
               accessibilityLabel="Close modal"
+              style={{
+                padding: tokens.spacing.sm,
+                minWidth: 44,
+                minHeight: 44,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <X color={isDark ? '#9CA3AF' : '#6B7280'} size={24} />
+              <X color={themeColors.text.tertiary} size={24} />
             </Pressable>
           </View>
 
           {/* Adjustment Badge */}
           <View
-            className={`flex-row items-center justify-center p-3 rounded-xl mb-4 ${
-              isReduction
-                ? 'bg-orange-100 dark:bg-orange-900/30'
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: tokens.spacing.sm,
+              borderRadius: tokens.borderRadius.md,
+              marginBottom: tokens.spacing.md,
+              backgroundColor: themeColors.background.tertiary,
+              borderWidth: 1,
+              borderColor: isReduction
+                ? accentColors.orange
                 : isIncrease
-                ? 'bg-green-100 dark:bg-green-900/30'
-                : 'bg-gray-100 dark:bg-gray-700'
-            }`}
+                ? accentColors.green
+                : themeColors.border.light,
+            }}
           >
             {isReduction ? (
-              <TrendingDown color="#F9AC60" size={20} />
+              <TrendingDown color={accentColors.orange} size={20} />
             ) : isIncrease ? (
-              <TrendingUp color="#4A9B6F" size={20} />
+              <TrendingUp color={accentColors.green} size={20} />
             ) : (
-              <CheckCircle color="#4A9B6F" size={20} />
+              <CheckCircle color={accentColors.green} size={20} />
             )}
             <Text
-              className={`text-lg font-bold ml-2 ${
-                isReduction
-                  ? 'text-orange-600 dark:text-orange-400'
+              style={{
+                fontSize: tokens.typography.fontSize.lg,
+                fontWeight: tokens.typography.fontWeight.bold,
+                marginLeft: tokens.spacing.sm,
+                color: isReduction
+                  ? accentColors.orange
                   : isIncrease
-                  ? 'text-green-600 dark:text-green-400'
-                  : isDark
-                  ? 'text-gray-300'
-                  : 'text-gray-700'
-              }`}
+                  ? accentColors.green
+                  : themeColors.text.secondary,
+              }}
             >
               {adjustment.adjustmentPercentage > 0 ? '+' : ''}
               {adjustment.adjustmentPercentage}% Load Adjustment
@@ -103,34 +154,79 @@ export default function AutoRegulationModal({
 
           {/* Exercise Info */}
           {exerciseName && currentWeight && newWeight && (
-            <View className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <Text className={`text-sm font-body-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <View
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.md,
+                marginBottom: tokens.spacing.md,
+                backgroundColor: isDark
+                  ? themeColors.background.tertiary
+                  : themeColors.background.secondary,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  marginBottom: tokens.spacing.sm,
+                  color: themeColors.text.secondary,
+                }}
+              >
                 {exerciseName}
               </Text>
-              <View className="flex-row items-center justify-between">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
                 <View>
-                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: themeColors.text.tertiary,
+                    }}
+                  >
                     Current Weight
                   </Text>
-                  <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.lg,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: themeColors.text.primary,
+                    }}
+                  >
                     {currentWeight} lbs
                   </Text>
                 </View>
-                <Text className={`text-2xl ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>→</Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize['2xl'],
+                    color: themeColors.text.tertiary,
+                  }}
+                >
+                  →
+                </Text>
                 <View>
-                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: themeColors.text.tertiary,
+                    }}
+                  >
                     Recommended Weight
                   </Text>
                   <Text
-                    className={`text-lg font-bold ${
-                      isReduction
-                        ? 'text-orange-500'
+                    style={{
+                      fontSize: tokens.typography.fontSize.lg,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: isReduction
+                        ? accentColors.orange
                         : isIncrease
-                        ? 'text-green-500'
-                        : isDark
-                        ? 'text-gray-200'
-                        : 'text-gray-800'
-                    }`}
+                        ? accentColors.green
+                        : themeColors.text.primary,
+                    }}
                   >
                     {newWeight} lbs
                   </Text>
@@ -140,27 +236,69 @@ export default function AutoRegulationModal({
           )}
 
           {/* Reason */}
-          <View className="mb-4">
-            <Text className={`text-sm font-body-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+          <View
+            style={{ marginBottom: tokens.spacing.md }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                marginBottom: tokens.spacing.xs,
+                color: themeColors.text.secondary,
+              }}
+            >
               Why this adjustment?
             </Text>
-            <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                color: themeColors.text.tertiary,
+              }}
+            >
               {adjustment.reason}
             </Text>
           </View>
 
           {/* Additional Reasons */}
           {reasons.length > 0 && (
-            <View className="mb-4">
-              <Text className={`text-sm font-body-semibold mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <View
+              style={{ marginBottom: tokens.spacing.md }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  marginBottom: tokens.spacing.xs,
+                  color: themeColors.text.secondary,
+                }}
+              >
                 Additional Factors:
               </Text>
               {reasons.map((reason, index) => (
-                <View key={index} className="flex-row items-start mb-2">
-                  <Text className={`text-sm mr-2 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                <View
+                  key={index}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    marginBottom: tokens.spacing.xs,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.sm,
+                      marginRight: tokens.spacing.xs,
+                      color: themeColors.text.tertiary,
+                    }}
+                  >
                     •
                   </Text>
-                  <Text className={`text-sm flex-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.sm,
+                      flex: 1,
+                      color: themeColors.text.tertiary,
+                    }}
+                  >
                     {reason}
                   </Text>
                 </View>
@@ -169,40 +307,93 @@ export default function AutoRegulationModal({
           )}
 
           {/* Recommended Action */}
-          <View className={`p-3 rounded-xl mb-6 ${isDark ? 'bg-primaryDark/20' : 'bg-primary-500/10'}`}>
-            <Text className={`text-sm font-body-semibold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+          <View
+            style={{
+              padding: tokens.spacing.sm,
+              borderRadius: tokens.borderRadius.md,
+              marginBottom: tokens.spacing.lg,
+              backgroundColor: themeColors.background.tertiary,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: accentColors.blue,
+              }}
+            >
               💡 {adjustment.recommendedAction}
             </Text>
           </View>
 
           {/* Action Buttons */}
-          <View className="flex-row space-x-3">
+          <View
+            style={{
+              flexDirection: 'row',
+            }}
+          >
             <Pressable
-              className={`flex-1 p-4 rounded-xl border-2 ${
-                isDark ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'
-              }`}
               onPress={onReject}
               accessibilityLabel="Reject adjustment"
+              style={{
+                flex: 1,
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.md,
+                borderWidth: 2,
+                borderColor: themeColors.border.light,
+                backgroundColor: themeColors.background.tertiary,
+                marginRight: tokens.spacing.sm,
+              }}
             >
-              <Text className={`text-center font-bold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: themeColors.text.primary,
+                }}
+              >
                 Keep Current
               </Text>
             </Pressable>
 
             <Pressable
-              className={`flex-1 p-4 rounded-xl ${isDark ? 'bg-primaryDark' : 'bg-primary-500'}`}
               onPress={onApprove}
               accessibilityLabel="Approve adjustment"
+              style={{
+                flex: 1,
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.md,
+                backgroundColor: accentColors.green,
+              }}
             >
-              <Text className="text-center font-bold text-white">
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: tokens.colors.light.text.primary,
+                }}
+              >
                 Apply Adjustment
               </Text>
             </Pressable>
           </View>
 
           {/* Premium Badge */}
-          <View className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-            <Text className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          <View
+            style={{
+              marginTop: tokens.spacing.md,
+              paddingTop: tokens.spacing.sm,
+              borderTopWidth: 1,
+              borderTopColor: themeColors.border.light,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                textAlign: 'center',
+                color: themeColors.text.tertiary,
+              }}
+            >
               ⭐ Premium Auto-Regulation Feature
             </Text>
           </View>

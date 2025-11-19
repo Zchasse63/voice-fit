@@ -54,7 +54,7 @@ export default function RunScreen() {
     if (!hasPermission) {
       Alert.alert(
         "Location Permission Required",
-        "VoiceFit needs access to your location to track your runs.",
+        "This app needs access to your location to track your runs.",
         [
           { text: "Cancel", style: "cancel" },
           { text: "Grant Permission", onPress: () => requestPermissions() },
@@ -147,7 +147,7 @@ export default function RunScreen() {
             textAlign: "center",
           }}
         >
-          VoiceFit needs access to your location to track your runs and outdoor
+          This app needs access to your location to track your runs and outdoor
           workouts.
         </Text>
         <Pressable
@@ -214,8 +214,8 @@ export default function RunScreen() {
             left: tokens.spacing.lg,
             right: tokens.spacing.lg,
             backgroundColor: isDark
-              ? "rgba(30, 30, 30, 0.95)"
-              : "rgba(255, 255, 255, 0.95)",
+              ? 'rgba(30, 30, 30, 0.95)'
+              : 'rgba(255, 255, 255, 0.95)',
             borderRadius: tokens.borderRadius.xl,
             padding: tokens.spacing.lg,
             ...tokens.shadows.lg,

@@ -136,52 +136,152 @@ export default function WorkoutAdjustmentModal({
     return 'Lower Similarity';
   };
 
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      transparent
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 justify-end">
-        <View className="bg-white rounded-t-3xl max-h-[85%]">
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.overlay.scrim,
+          justifyContent: 'flex-end',
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: colors.background.secondary,
+            borderTopLeftRadius: tokens.borderRadius['3xl'],
+            borderTopRightRadius: tokens.borderRadius['3xl'],
+            maxHeight: '85%',
+          }}
+        >
           {/* Header */}
-          <View className="p-6 border-b border-gray-200">
-            <Text className="text-2xl font-bold text-gray-900">
+          <View
+            style={{
+              padding: tokens.spacing.lg,
+              borderBottomWidth: 1,
+              borderBottomColor: colors.border.subtle,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize['2xl'],
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
               Workout Adjustments
             </Text>
-            <Text className="text-sm text-gray-600 mt-1">
+            <Text
+              style={{
+                marginTop: tokens.spacing.xs,
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+              }}
+            >
               Protecting your {injuredBodyPart.replace('_', ' ')}
             </Text>
           </View>
 
           {/* Content */}
-          <ScrollView className="flex-1 px-6">
+          <ScrollView
+            style={{ flex: 1, paddingHorizontal: tokens.spacing.lg }}
+            contentContainerStyle={{ paddingVertical: tokens.spacing.md }}
+          >
             {loading ? (
-              <View className="py-12 items-center">
-                <ActivityIndicator size="large" color="#3b82f6" />
-                <Text className="text-gray-600 mt-4">Finding safe alternatives...</Text>
+              <View
+                style={{
+                  paddingVertical: tokens.spacing.xl,
+                  alignItems: 'center',
+                }}
+              >
+                <ActivityIndicator
+                  size="large"
+                  color={isDark ? tokens.colors.dark.accent.blue : tokens.colors.light.accent.blue}
+                />
+                <Text
+                  style={{
+                    marginTop: tokens.spacing.sm,
+                    fontSize: tokens.typography.fontSize.sm,
+                    color: colors.text.secondary,
+                  }}
+                >
+                  Finding safe alternatives...
+                </Text>
               </View>
             ) : (
-              <View className="py-4">
+              <View style={{ paddingVertical: tokens.spacing.sm }}>
                 {affectedExercises.map((exercise, index) => {
                   const result = substitutionResults.get(exercise.exerciseName);
                   const hasSubstitutes = result && result.substitutes.length > 0;
 
                   return (
-                    <View key={index} className="mb-6">
+                    <View
+                      key={index}
+                      style={{ marginBottom: tokens.spacing.lg }}
+                    >
                       {/* Original Exercise */}
-                      <View className="bg-red-50 p-4 rounded-lg mb-3">
-                        <View className="flex-row items-center mb-1">
-                          <View className="w-2 h-2 bg-red-500 rounded-full mr-2" />
-                          <Text className="text-sm font-semibold text-red-700">
+                      <View
+                        style={{
+                          backgroundColor: isDark
+                            ? `${tokens.colors.dark.state.danger}10`
+                            : `${tokens.colors.light.state.danger}10`,
+                          padding: tokens.spacing.md,
+                          borderRadius: tokens.borderRadius.xl,
+                          marginBottom: tokens.spacing.sm,
+                        }}
+                      >
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            marginBottom: tokens.spacing.xs,
+                          }}
+                        >
+                          <View
+                            style={{
+                              width: 8,
+                              height: 8,
+                              borderRadius: 999,
+                              marginRight: tokens.spacing.xs,
+                              backgroundColor: isDark
+                                ? tokens.colors.dark.state.danger
+                                : tokens.colors.light.state.danger,
+                            }}
+                          />
+                          <Text
+                            style={{
+                              fontSize: tokens.typography.fontSize.xs,
+                              fontWeight: tokens.typography.fontWeight.semibold,
+                              color: isDark
+                                ? tokens.colors.dark.state.danger
+                                : tokens.colors.light.state.danger,
+                            }}
+                          >
                             AFFECTED EXERCISE
                           </Text>
                         </View>
-                        <Text className="text-lg font-bold text-gray-900">
+                        <Text
+                          style={{
+                            fontSize: tokens.typography.fontSize.lg,
+                            fontWeight: tokens.typography.fontWeight.bold,
+                            color: colors.text.primary,
+                          }}
+                        >
                           {exercise.exerciseName}
                         </Text>
-                        <Text className="text-sm text-gray-600">
+                        <Text
+                          style={{
+                            marginTop: 2,
+                            fontSize: tokens.typography.fontSize.sm,
+                            color: colors.text.secondary,
+                          }}
+                        >
                           {exercise.sets} sets × {exercise.reps} reps
                         </Text>
                       </View>
@@ -189,33 +289,83 @@ export default function WorkoutAdjustmentModal({
                       {/* Substitution Options */}
                       {hasSubstitutes ? (
                         <View>
-                          <Text className="text-sm font-semibold text-gray-700 mb-2">
+                          <Text
+                            style={{
+                              marginBottom: tokens.spacing.xs,
+                              fontSize: tokens.typography.fontSize.sm,
+                              fontWeight: tokens.typography.fontWeight.semibold,
+                              color: colors.text.primary,
+                            }}
+                          >
                             Safe Alternatives:
                           </Text>
                           {result.substitutes.map((substitute, subIndex) => {
-                            const isSelected = selectedSubstitutions.get(exercise.exerciseName) === substitute.substitute_name;
-                            const similarityColor = getSimilarityColor(substitute.similarity_score);
+                            const isSelected =
+                              selectedSubstitutions.get(exercise.exerciseName) ===
+                              substitute.substitute_name;
+                            const similarityColor = getSimilarityColor(
+                              substitute.similarity_score,
+                            );
 
                             return (
                               <Pressable
                                 key={subIndex}
-                                onPress={() => handleSelectSubstitution(exercise.exerciseName, substitute.substitute_name)}
-                                className={`mb-3 p-4 rounded-lg border-2 ${
-                                  isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-white'
-                                }`}
+                                onPress={() =>
+                                  handleSelectSubstitution(
+                                    exercise.exerciseName,
+                                    substitute.substitute_name,
+                                  )
+                                }
+                                style={{
+                                  marginBottom: tokens.spacing.sm,
+                                  padding: tokens.spacing.md,
+                                  borderRadius: tokens.borderRadius.xl,
+                                  borderWidth: 2,
+                                  borderColor: isSelected
+                                    ? isDark
+                                      ? tokens.colors.dark.accent.blue
+                                      : tokens.colors.light.accent.blue
+                                    : colors.border.subtle,
+                                  backgroundColor: isSelected
+                                    ? isDark
+                                      ? `${tokens.colors.dark.accent.blue}10`
+                                      : `${tokens.colors.light.accent.blue}10`
+                                    : colors.background.primary,
+                                }}
                               >
                                 {/* Substitute Header */}
-                                <View className="flex-row items-center justify-between mb-2">
-                                  <Text className="text-base font-bold text-gray-900 flex-1">
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    marginBottom: tokens.spacing.xs,
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      flex: 1,
+                                      fontSize: tokens.typography.fontSize.base,
+                                      fontWeight: tokens.typography.fontWeight.bold,
+                                      color: colors.text.primary,
+                                    }}
+                                  >
                                     {substitute.substitute_name}
                                   </Text>
                                   <View
-                                    className="px-3 py-1 rounded-full"
-                                    style={{ backgroundColor: `${similarityColor}20` }}
+                                    style={{
+                                      paddingHorizontal: tokens.spacing.sm,
+                                      paddingVertical: tokens.spacing.xs,
+                                      borderRadius: 999,
+                                      backgroundColor: `${similarityColor}20`,
+                                    }}
                                   >
                                     <Text
-                                      className="text-xs font-semibold"
-                                      style={{ color: similarityColor }}
+                                      style={{
+                                        fontSize: tokens.typography.fontSize.xs,
+                                        fontWeight: tokens.typography.fontWeight.semibold,
+                                        color: similarityColor,
+                                      }}
                                     >
                                       {Math.round(substitute.similarity_score * 100)}%
                                     </Text>
@@ -223,31 +373,86 @@ export default function WorkoutAdjustmentModal({
                                 </View>
 
                                 {/* Similarity Label */}
-                                <Text className="text-xs text-gray-600 mb-2">
+                                <Text
+                                  style={{
+                                    marginBottom: tokens.spacing.xs,
+                                    fontSize: tokens.typography.fontSize.xs,
+                                    color: colors.text.secondary,
+                                  }}
+                                >
                                   {getSimilarityLabel(substitute.similarity_score)}
                                 </Text>
 
                                 {/* Exercise Details */}
-                                <View className="flex-row flex-wrap gap-2 mb-2">
-                                  <View className="bg-gray-100 px-2 py-1 rounded">
-                                    <Text className="text-xs text-gray-700">
+                                <View
+                                  style={{
+                                    flexDirection: 'row',
+                                    flexWrap: 'wrap',
+                                    gap: 6,
+                                    marginBottom: tokens.spacing.xs,
+                                  }}
+                                >
+                                  <View
+                                    style={{
+                                      backgroundColor: colors.background.tertiary,
+                                      paddingHorizontal: tokens.spacing.xs,
+                                      paddingVertical: 2,
+                                      borderRadius: tokens.borderRadius.lg,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: tokens.typography.fontSize.xs,
+                                        color: colors.text.secondary,
+                                      }}
+                                    >
                                       {substitute.equipment_required}
                                     </Text>
                                   </View>
-                                  <View className="bg-gray-100 px-2 py-1 rounded">
-                                    <Text className="text-xs text-gray-700">
+                                  <View
+                                    style={{
+                                      backgroundColor: colors.background.tertiary,
+                                      paddingHorizontal: tokens.spacing.xs,
+                                      paddingVertical: 2,
+                                      borderRadius: tokens.borderRadius.lg,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: tokens.typography.fontSize.xs,
+                                        color: colors.text.secondary,
+                                      }}
+                                    >
                                       {substitute.difficulty_level}
                                     </Text>
                                   </View>
-                                  <View className="bg-gray-100 px-2 py-1 rounded">
-                                    <Text className="text-xs text-gray-700">
+                                  <View
+                                    style={{
+                                      backgroundColor: colors.background.tertiary,
+                                      paddingHorizontal: tokens.spacing.xs,
+                                      paddingVertical: 2,
+                                      borderRadius: tokens.borderRadius.lg,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: tokens.typography.fontSize.xs,
+                                        color: colors.text.secondary,
+                                      }}
+                                    >
                                       {substitute.movement_pattern.replace('_', ' ')}
                                     </Text>
                                   </View>
                                 </View>
 
                                 {/* Scientific Notes (Short Preview) */}
-                                <Text className="text-xs text-gray-600 leading-4">
+                                <Text
+                                  style={{
+                                    fontSize: tokens.typography.fontSize.xs,
+                                    color: colors.text.secondary,
+                                    lineHeight: 16,
+                                  }}
+                                >
                                   {substitute.notes.length > 120
                                     ? `${substitute.notes.substring(0, 120)}...`
                                     : substitute.notes}
@@ -255,29 +460,81 @@ export default function WorkoutAdjustmentModal({
 
                                 {/* Why? Button */}
                                 <Pressable
-                                  onPress={() => toggleExplanation(exercise.exerciseName, substitute)}
-                                  className="mt-3 self-start"
+                                  onPress={() =>
+                                    toggleExplanation(exercise.exerciseName, substitute)
+                                  }
+                                  style={{
+                                    marginTop: tokens.spacing.sm,
+                                    alignSelf: 'flex-start',
+                                  }}
                                 >
-                                  <Text className="text-sm font-semibold text-blue-600">
-                                    {expandedExplanations.has(`${exercise.exerciseName}-${substitute.substitute_name}`)
+                                  <Text
+                                    style={{
+                                      fontSize: tokens.typography.fontSize.sm,
+                                      fontWeight: tokens.typography.fontWeight.semibold,
+                                      color: isDark
+                                        ? tokens.colors.dark.accent.blue
+                                        : tokens.colors.light.accent.blue,
+                                    }}
+                                  >
+                                    {expandedExplanations.has(
+                                      `${exercise.exerciseName}-${substitute.substitute_name}`,
+                                    )
                                       ? '▼ Hide Explanation'
                                       : '▶ Why is this recommended?'}
                                   </Text>
                                 </Pressable>
 
                                 {/* Expanded Explanation */}
-                                {expandedExplanations.has(`${exercise.exerciseName}-${substitute.substitute_name}`) && (
-                                  <View className="mt-3 pt-3 border-t border-gray-200 bg-gray-50 p-3 rounded-lg">
-                                    <Text className="text-xs text-gray-700 leading-5">
-                                      {explanations.get(`${exercise.exerciseName}-${substitute.substitute_name}`)?.explanation || 'Loading explanation...'}
+                                {expandedExplanations.has(
+                                  `${exercise.exerciseName}-${substitute.substitute_name}`,
+                                ) && (
+                                  <View
+                                    style={{
+                                      marginTop: tokens.spacing.sm,
+                                      paddingTop: tokens.spacing.sm,
+                                      borderTopWidth: 1,
+                                      borderTopColor: colors.border.subtle,
+                                      backgroundColor: colors.background.tertiary,
+                                      padding: tokens.spacing.sm,
+                                      borderRadius: tokens.borderRadius.lg,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: tokens.typography.fontSize.xs,
+                                        color: colors.text.primary,
+                                        lineHeight: 18,
+                                      }}
+                                    >
+                                      {explanations.get(
+                                        `${exercise.exerciseName}-${substitute.substitute_name}`,
+                                      )?.explanation || 'Loading explanation...'}
                                     </Text>
                                   </View>
                                 )}
 
                                 {/* Selection Indicator */}
                                 {isSelected && (
-                                  <View className="mt-3 pt-3 border-t border-blue-200">
-                                    <Text className="text-sm font-semibold text-blue-600">
+                                  <View
+                                    style={{
+                                      marginTop: tokens.spacing.sm,
+                                      paddingTop: tokens.spacing.sm,
+                                      borderTopWidth: 1,
+                                      borderTopColor: isDark
+                                        ? `${tokens.colors.dark.accent.blue}40`
+                                        : `${tokens.colors.light.accent.blue}40`,
+                                    }}
+                                  >
+                                    <Text
+                                      style={{
+                                        fontSize: tokens.typography.fontSize.sm,
+                                        fontWeight: tokens.typography.fontWeight.semibold,
+                                        color: isDark
+                                          ? tokens.colors.dark.accent.blue
+                                          : tokens.colors.light.accent.blue,
+                                      }}
+                                    >
                                       ✓ Selected as replacement
                                     </Text>
                                   </View>
@@ -287,8 +544,19 @@ export default function WorkoutAdjustmentModal({
                           })}
                         </View>
                       ) : (
-                        <View className="bg-gray-50 p-4 rounded-lg">
-                          <Text className="text-sm text-gray-600">
+                        <View
+                          style={{
+                            backgroundColor: colors.background.tertiary,
+                            padding: tokens.spacing.md,
+                            borderRadius: tokens.borderRadius.xl,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: tokens.typography.fontSize.sm,
+                              color: colors.text.secondary,
+                            }}
+                          >
                             No substitutions available for this exercise.
                           </Text>
                         </View>
@@ -301,25 +569,70 @@ export default function WorkoutAdjustmentModal({
           </ScrollView>
 
           {/* Footer Actions */}
-          <View className="p-6 border-t border-gray-200 bg-white">
-            <View className="flex-row gap-3">
+          <View
+            style={{
+              padding: tokens.spacing.lg,
+              borderTopWidth: 1,
+              borderTopColor: colors.border.subtle,
+              backgroundColor: colors.background.secondary,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                columnGap: tokens.spacing.sm,
+              }}
+            >
               <Pressable
                 onPress={onClose}
-                className="flex-1 bg-gray-100 py-4 rounded-xl items-center"
+                style={{
+                  flex: 1,
+                  paddingVertical: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.xl,
+                  alignItems: 'center',
+                  backgroundColor: colors.background.tertiary,
+                }}
               >
-                <Text className="text-base font-semibold text-gray-700">
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.primary,
+                  }}
+                >
                   Cancel
                 </Text>
               </Pressable>
               <Pressable
                 onPress={handleAcceptSubstitutions}
                 disabled={selectedSubstitutions.size === 0}
-                className={`flex-1 py-4 rounded-xl items-center ${
-                  selectedSubstitutions.size > 0 ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
+                style={{
+                  flex: 1,
+                  paddingVertical: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.xl,
+                  alignItems: 'center',
+                  backgroundColor:
+                    selectedSubstitutions.size > 0
+                      ? isDark
+                        ? tokens.colors.dark.accent.blue
+                        : tokens.colors.light.accent.blue
+                      : colors.background.tertiary,
+                }}
               >
-                <Text className="text-base font-semibold text-white">
-                  Accept {selectedSubstitutions.size > 0 ? `(${selectedSubstitutions.size})` : ''}
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color:
+                      selectedSubstitutions.size > 0
+                        ? tokens.colors.shared.static.white
+                        : colors.text.secondary,
+                  }}
+                >
+                  Accept
+                  {selectedSubstitutions.size > 0
+                    ? ` (${selectedSubstitutions.size})`
+                    : ''}
                 </Text>
               </Pressable>
             </View>

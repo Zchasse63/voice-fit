@@ -206,7 +206,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: tokens.colors.light.overlay.scrimStrong,
   },
   modalContent: {
     width: width * 0.9,

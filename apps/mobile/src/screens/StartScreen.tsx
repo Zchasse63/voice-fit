@@ -7,6 +7,7 @@ import VoiceFAB from '../components/voice/VoiceFAB';
 import AutoRegulationModal from '../components/autoregulation/AutoRegulationModal';
 import { useAutoRegulation } from '../hooks/useAutoRegulation';
 import { useTheme } from '../theme/ThemeContext';
+import { tokens } from '../theme/tokens';
 
 type WorkoutType = 'workout' | 'run' | null;
 
@@ -17,6 +18,7 @@ type StartScreenNavigationProp = {
 
 export default function StartScreen() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [selectedType, setSelectedType] = useState<WorkoutType>(null);
   const startWorkout = useWorkoutStore((state) => state.startWorkout);
   const navigation = useNavigation<StartScreenNavigationProp>();
@@ -58,72 +60,127 @@ export default function StartScreen() {
   };
 
   return (
-    <ScrollView className={`flex-1 ${isDark ? 'bg-background-dark' : 'bg-background-light'}`}>
-      <View className="p-6">
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.background.primary }}
+      contentContainerStyle={{ padding: tokens.spacing.lg }}
+    >
+      <View>
         {/* Header */}
-        <Text className={`text-3xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>START</Text>
-        <Text className={`text-base mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize['2xl'],
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
+        >
+          START
+        </Text>
+        <Text
+          style={{
+            marginTop: tokens.spacing.xs,
+            fontSize: tokens.typography.fontSize.sm,
+            color: colors.text.secondary,
+          }}
+        >
           Begin a new workout or run
         </Text>
 
         {/* Type Selector */}
-        <View className="mt-6">
-          <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+        <View
+          style={{
+            marginTop: tokens.spacing.lg,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.md,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: colors.text.primary,
+              marginBottom: tokens.spacing.sm,
+            }}
+          >
             Choose Activity Type
           </Text>
 
-          <View className="flex-row gap-3">
+          <View
+            style={{
+              flexDirection: 'row',
+              columnGap: tokens.spacing.sm,
+            }}
+          >
             <Pressable
-              className={`flex-1 p-6 rounded-xl active:opacity-80 ${
-                selectedType === 'workout'
-                  ? isDark ? 'bg-primaryDark' : 'bg-primary-500'
-                  : isDark ? 'bg-gray-800' : 'bg-white'
-              }`}
               onPress={() => setSelectedType('workout')}
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  padding: tokens.spacing.lg,
+                  borderRadius: tokens.borderRadius.xl,
+                  backgroundColor:
+                    selectedType === 'workout'
+                      ? colors.accent.blue
+                      : colors.background.secondary,
+                },
+                pressed && { opacity: 0.8 },
+              ]}
             >
               <Dumbbell
-                color={selectedType === 'workout' ? 'white' : isDark ? '#4A9B6F' : '#2C5F3D'}
+                color={selectedType === 'workout' ? colors.icon.onAccent : colors.accent.blue}
                 size={32}
               />
               <Text
-                className={`text-lg font-bold mt-3 ${
-                  selectedType === 'workout' ? 'text-white' : isDark ? 'text-gray-200' : 'text-gray-800'
-                }`}
+                style={{
+                  marginTop: tokens.spacing.xs,
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: selectedType === 'workout' ? colors.text.onAccent : colors.text.primary,
+                }}
               >
                 Workout
               </Text>
               <Text
-                className={`text-sm mt-1 ${
-                  selectedType === 'workout' ? 'text-white/80' : isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}
+                style={{
+                  marginTop: 2,
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: selectedType === 'workout' ? colors.text.onAccent : colors.text.secondary,
+                }}
               >
                 Strength training
               </Text>
             </Pressable>
 
             <Pressable
-              className={`flex-1 p-6 rounded-xl active:opacity-80 ${
-                selectedType === 'run'
-                  ? isDark ? 'bg-info-dark' : 'bg-info-light'
-                  : isDark ? 'bg-gray-800' : 'bg-white'
-              }`}
               onPress={() => setSelectedType('run')}
+              style={({ pressed }) => [
+                {
+                  flex: 1,
+                  padding: tokens.spacing.lg,
+                  borderRadius: tokens.borderRadius.xl,
+                  backgroundColor:
+                    selectedType === 'run' ? colors.accent.teal : colors.background.secondary,
+                },
+                pressed && { opacity: 0.8 },
+              ]}
             >
               <Play
-                color={selectedType === 'run' ? 'white' : isDark ? '#5DADE2' : '#3498DB'}
+                color={selectedType === 'run' ? colors.text.onAccent : colors.accent.teal}
                 size={32}
               />
               <Text
-                className={`text-lg font-bold mt-3 ${
-                  selectedType === 'run' ? 'text-white' : isDark ? 'text-gray-200' : 'text-gray-800'
-                }`}
+                style={{
+                  marginTop: tokens.spacing.xs,
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: selectedType === 'run' ? colors.text.onAccent : colors.text.primary,
+                }}
               >
                 Run
               </Text>
               <Text
-                className={`text-sm mt-1 ${
-                  selectedType === 'run' ? 'text-white/80' : isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}
+                style={{
+                  marginTop: 2,
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: selectedType === 'run' ? colors.text.onAccent : colors.text.secondary,
+                }}
               >
                 Cardio session
               </Text>
@@ -133,29 +190,68 @@ export default function StartScreen() {
 
         {/* Quick Start Options */}
         {selectedType && (
-          <View className="mt-6">
-            <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+          <View
+            style={{
+              marginTop: tokens.spacing.lg,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.md,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: colors.text.primary,
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
               Quick Start
             </Text>
 
             <Pressable
-              className={`p-4 rounded-xl mb-3 active:opacity-80 ${isDark ? 'bg-primaryDark' : 'bg-primary-500'}`}
               onPress={() => handleQuickStart(selectedType)}
               disabled={isChecking}
+              style={({ pressed }) => [
+                {
+                  padding: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.xl,
+                  backgroundColor: colors.accent.blue,
+                },
+                pressed && { opacity: 0.85 },
+              ]}
             >
               {isChecking ? (
-                <View className="flex-row items-center justify-center">
-                  <ActivityIndicator size="small" color="white" />
-                  <Text className="text-lg font-bold text-white ml-2">
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <ActivityIndicator size="small" color={colors.text.onAccent} />
+                  <Text
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      fontSize: tokens.typography.fontSize.sm,
+                      fontWeight: tokens.typography.fontWeight.semibold,
+                      color: colors.text.onAccent,
+                    }}
+                  >
                     Checking readiness...
                   </Text>
                 </View>
               ) : (
                 <>
-                  <Text className="text-lg font-bold text-white">
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.md,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: colors.text.onAccent,
+                    }}
+                  >
                     Start {selectedType === 'workout' ? 'Workout' : 'Run'} Now
                   </Text>
-                  <Text className="text-sm text-white/80 mt-1">
+                  <Text
+                    style={{
+                      marginTop: 2,
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: colors.text.onAccent,
+                    }}
+                  >
                     Begin immediately with voice guidance
                   </Text>
                 </>
@@ -166,19 +262,54 @@ export default function StartScreen() {
 
         {/* Program Selector Placeholder */}
         {selectedType === 'workout' && (
-          <View className="mt-6">
-            <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+          <View
+            style={{
+              marginTop: tokens.spacing.lg,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.md,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: colors.text.primary,
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
               Training Programs
             </Text>
 
-            <View className={`p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-              <View className="flex-row items-center mb-2">
-                <Calendar color={isDark ? '#4A9B6F' : '#2C5F3D'} size={20} />
-                <Text className={`text-lg font-bold ml-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+            <View
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                backgroundColor: colors.background.secondary,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: tokens.spacing.xs,
+                }}
+              >
+                <Calendar color={colors.accent.blue} size={20} />
+                <Text
+                  style={{
+                    marginLeft: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.primary,
+                  }}
+                >
                   Today's Program
                 </Text>
               </View>
-              <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                }}
+              >
                 Program selection coming in Phase 4
               </Text>
             </View>

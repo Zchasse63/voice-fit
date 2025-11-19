@@ -8,6 +8,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { useAuthStore } from '../../store/auth.store';
 import { chartDataService, ReadinessDataPoint } from '../../services/charts/ChartDataService';
 import { CartesianChart, Line, useChartPressState } from 'victory-native';
@@ -15,6 +16,8 @@ import { Circle } from '@shopify/react-native-skia';
 
 const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = colors.accent;
   const user = useAuthStore((state) => state.user);
   const [data, setData] = useState<ReadinessDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -59,38 +62,91 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
     }));
   }, [data]);
 
-  // Determine readiness status color (score-based, not theme-based)
+  // Determine readiness status color (score-based, using token accent colors)
   const getStatusColor = (score: number) => {
-    if (score >= 70) return '#4A9B6F'; // Green - Good
-    if (score >= 50) return '#F9AC60'; // Orange - Moderate
-    return '#FF6B6B'; // Red - Low
+    if (score >= 70) return accentColors.green; // Good
+    if (score >= 50) return accentColors.orange; // Moderate
+    return accentColors.red; // Low
   };
 
   if (isLoading) {
     return (
-      <View className={`p-4 rounded-xl shadow-md ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-        <Text className={`text-lg font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <View
+        style={{
+          padding: tokens.spacing.md,
+          borderRadius: tokens.borderRadius.lg,
+          marginBottom: tokens.spacing.md,
+          backgroundColor: colors.background.secondary,
+          ...tokens.shadows.lg,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            marginBottom: tokens.spacing.sm,
+            color: colors.text.primary,
+          }}
+        >
           7-Day Readiness Trend
         </Text>
-        <View className="h-48 items-center justify-center">
-          <ActivityIndicator size="small" color={isDark ? '#4A9B6F' : '#2C5F3D'} />
+        <View
+          style={{
+            height: 192,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ActivityIndicator size="small" color={accentColors.green} />
         </View>
       </View>
     );
   }
 
   return (
-    <View className={`p-4 rounded-xl shadow-md ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+    <View
+      style={{
+        padding: tokens.spacing.md,
+        borderRadius: tokens.borderRadius.lg,
+        marginBottom: tokens.spacing.md,
+        backgroundColor: colors.background.secondary,
+        ...tokens.shadows.lg,
+      }}
+    >
       {/* Header */}
-      <View className="flex-row justify-between items-center mb-4">
-        <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: tokens.spacing.md,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
+        >
           7-Day Readiness Trend
         </Text>
-        <View className="items-end">
-          <Text className={`text-2xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize['2xl'],
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: accentColors.blue,
+            }}
+          >
             {averageScore}%
           </Text>
-          <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
             Average
           </Text>
         </View>
@@ -98,13 +154,24 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
 
       {/* Chart */}
       {data.length === 0 ? (
-        <View className="h-48 items-center justify-center">
-          <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            height: 192,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+            }}
+          >
             No readiness data yet. Check in daily to see your trend!
           </Text>
         </View>
       ) : (
-        <View className="h-48">
+        <View style={{ height: 192 }}>
           <CartesianChart
             data={chartData}
             xKey="x"
@@ -135,12 +202,38 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
 
           {/* Display current value on press */}
           {isActive && (
-            <View className="absolute top-0 left-0 right-0 items-center">
-              <View className={`px-3 py-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <Text className={`text-sm font-bold`} style={{ color: getStatusColor(state.y.score.value) }}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+              }}
+            >
+              <View
+                style={{
+                  paddingHorizontal: tokens.spacing.sm,
+                  paddingVertical: tokens.spacing.xs,
+                  borderRadius: tokens.borderRadius.md,
+                  backgroundColor: colors.background.tertiary,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: getStatusColor(state.y.score.value),
+                  }}
+                >
                   {Math.round(state.y.score.value)}% Readiness
                 </Text>
-                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                  }}
+                >
                   {formatDate(new Date(state.x.value).toISOString())}
                 </Text>
               </View>
@@ -151,8 +244,20 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
 
       {/* 7-Day Average Summary */}
       {data.length > 0 && (
-        <View className={`mt-4 p-3 rounded-lg ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
-          <Text className={`text-sm ${isDark ? 'text-blue-400' : 'text-blue-800'}`}>
+        <View
+          style={{
+            marginTop: tokens.spacing.md,
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.md,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: accentColors.blue,
+            }}
+          >
             7-Day Average: {averageScore}%
           </Text>
         </View>
@@ -160,22 +265,68 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
 
       {/* Legend */}
       {data.length > 0 && (
-        <View className="flex-row items-center justify-center mt-4 space-x-4">
-          <View className="flex-row items-center">
-            <View className="w-3 h-3 rounded-full mr-1 bg-[#2C5F3D]" />
-            <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: tokens.spacing.md,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: tokens.spacing.xs }}>
+            <View
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 9999,
+                marginRight: tokens.spacing.xs,
+                backgroundColor: accentColors.green,
+              }}
+            />
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                color: colors.text.secondary,
+              }}
+            >
               Good (70+)
             </Text>
           </View>
-          <View className="flex-row items-center ml-3">
-            <View className="w-3 h-3 rounded-full mr-1 bg-[#DD7B57]" />
-            <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: tokens.spacing.xs }}>
+            <View
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 9999,
+                marginRight: tokens.spacing.xs,
+                backgroundColor: accentColors.orange,
+              }}
+            />
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                color: colors.text.secondary,
+              }}
+            >
               Moderate (50-69)
             </Text>
           </View>
-          <View className="flex-row items-center ml-3">
-            <View className="w-3 h-3 rounded-full mr-1 bg-[#DC2626]" />
-            <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: tokens.spacing.xs }}>
+            <View
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 9999,
+                marginRight: tokens.spacing.xs,
+                backgroundColor: accentColors.red,
+              }}
+            />
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                color: colors.text.secondary,
+              }}
+            >
               Low (&lt;50)
             </Text>
           </View>
@@ -183,8 +334,21 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
       )}
 
       {/* Premium Badge */}
-      <View className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <Text className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+      <View
+        style={{
+          marginTop: tokens.spacing.md,
+          paddingTop: tokens.spacing.sm,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.light,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.xs,
+            textAlign: 'center',
+            color: colors.text.tertiary,
+          }}
+        >
           ⭐ Premium Feature
         </Text>
       </View>

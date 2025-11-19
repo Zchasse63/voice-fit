@@ -8,6 +8,7 @@ import React from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import { VictoryLine, VictoryChart, VictoryTheme, VictoryAxis } from 'victory-native';
 import { VolumeTrend, VolumeByMuscle } from '../../services/api/AnalyticsAPIClient';
+import { tokens } from '../../theme/tokens';
 import { useTheme } from '../../hooks/useTheme';
 
 interface VolumeChartProps {
@@ -59,17 +60,39 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
     .sort(([, a], [, b]) => b.sets - a.sets)
     .slice(0, 5); // Top 5 muscle groups
 
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
   return (
-    <View className="mb-6">
+    <View
+      style={{
+        marginBottom: tokens.spacing.lg,
+      }}
+    >
       {/* Header */}
-      <View className="flex-row justify-between items-center mb-4">
-        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: tokens.spacing.md,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
+        >
           Volume Trend
         </Text>
-        <View className="flex-row items-center">
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Text
-            className="text-sm font-semibold"
-            style={{ color: getTrendColor() }}
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: getTrendColor(),
+            }}
           >
             {getTrendText()}
           </Text>
@@ -88,16 +111,27 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
             tickValues={chartData.map((d) => d.x)}
             tickFormat={chartData.map((d) => d.label)}
             style={{
-              axis: { stroke: isDark ? '#4b5563' : '#d1d5db' },
-              tickLabels: { fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 10 },
+              axis: { stroke: colors.border.subtle },
+              tickLabels: {
+                fill: colors.text.tertiary,
+                fontSize: 10,
+              },
             }}
           />
           <VictoryAxis
             dependentAxis
             style={{
-              axis: { stroke: isDark ? '#4b5563' : '#d1d5db' },
-              tickLabels: { fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 10 },
-              grid: { stroke: isDark ? '#374151' : '#e5e7eb', strokeDasharray: '4,4' },
+              axis: { stroke: colors.border.subtle },
+              tickLabels: {
+                fill: colors.text.tertiary,
+                fontSize: 10,
+              },
+              grid: {
+                stroke: isDark
+                  ? tokens.colors.dark.border.subtle
+                  : tokens.colors.light.border.subtle,
+                strokeDasharray: '4,4',
+              },
             }}
           />
           <VictoryLine
@@ -109,49 +143,114 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
           />
         </VictoryChart>
       ) : (
-        <View className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <Text className={`text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            padding: tokens.spacing.lg,
+            borderRadius: tokens.borderRadius['2xl'],
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+            }}
+          >
             No volume data available
           </Text>
         </View>
       )}
 
       {/* Average Weekly Sets */}
-      <View className={`mt-4 p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-        <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <View
+        style={{
+          marginTop: tokens.spacing.md,
+          padding: tokens.spacing.md,
+          borderRadius: tokens.borderRadius.xl,
+          backgroundColor: colors.background.tertiary,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.sm,
+            color: colors.text.secondary,
+          }}
+        >
           Average Weekly Sets
         </Text>
-        <Text className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize['2xl'],
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
+        >
           {volumeTrend.avg_weekly_sets.toFixed(1)}
         </Text>
       </View>
 
       {/* Top Muscle Groups */}
       {sortedMuscles.length > 0 && (
-        <View className="mt-4">
-          <Text className={`text-sm font-semibold mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View style={{ marginTop: tokens.spacing.md }}>
+          <Text
+            style={{
+              marginBottom: tokens.spacing.sm,
+              fontSize: tokens.typography.fontSize.sm,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: colors.text.secondary,
+            }}
+          >
             Top Muscle Groups This Week
           </Text>
           {sortedMuscles.map(([muscle, data]) => (
             <View
               key={muscle}
-              className={`flex-row justify-between items-center p-3 mb-2 rounded-xl ${
-                isDark ? 'bg-gray-800' : 'bg-gray-100'
-              }`}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: tokens.spacing.sm,
+                marginBottom: tokens.spacing.xs,
+                borderRadius: tokens.borderRadius.xl,
+                backgroundColor: colors.background.tertiary,
+              }}
             >
-              <View className="flex-1">
-                <Text className={`font-semibold capitalize ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    textTransform: 'capitalize',
+                    color: colors.text.primary,
+                  }}
+                >
                   {muscle}
                 </Text>
-                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                  }}
+                >
                   {data.total_reps} total reps
                 </Text>
               </View>
-              <View className="items-end">
-                <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.lg,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
+                >
                   {data.sets}
                 </Text>
-                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                  }}
+                >
                   sets
                 </Text>
               </View>

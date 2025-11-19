@@ -758,6 +758,8 @@ Okay, I think we need to make a push to GitHub to see if that syntax error... ..
 
 #### B2. In-App Quick Logging Interface
 
+**Status:** ✅ COMPLETE (Implemented in mobile app – Quick Log bar + chat integration, 2025-11-18)
+
 **Location:** Within or anchored to the bottom of the chat/workout interface.
 
 **Features:**
@@ -885,6 +887,8 @@ Okay, I think we need to make a push to GitHub to see if that syntax error... ..
 
 #### D2. Analytics & User Behavior Tracking
 
+**Status:** ✅ COMPLETE (Initial instrumentation + backend analytics endpoints, 2025-11-18)
+
 **Goal:** Build a robust analytics layer to understand real usage and inform product decisions.
 
 **Data to Track:**
@@ -920,8 +924,8 @@ Okay, I think we need to make a push to GitHub to see if that syntax error... ..
 
 While this document is **not** a committed roadmap, the following stand out as high-impact, relatively low-complexity candidates:
 
-1. **In-App Quick Logging Interface (B2)** – Mostly front-end work reusing existing workout logging APIs; immediately reduces friction and makes both voice and watch flows more usable.
-2. **Analytics & User Behavior Tracking (D2)** – Foundational instrumentation that improves every future prioritization decision and can be rolled out incrementally with minimal user-facing risk.
+1. [x] **In-App Quick Logging Interface (B2)** – Mostly front-end work reusing existing workout logging APIs; immediately reduces friction and makes both voice and watch flows more usable.
+2. [x] **Analytics & User Behavior Tracking (D2)** – Foundational instrumentation that improves every future prioritization decision and can be rolled out incrementally with minimal user-facing risk.
 
 ---
 

@@ -75,15 +75,33 @@ export default function ActiveInjuryBanner({
     return daysSinceCheckIn >= 7;
   };
 
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
   return (
-    <View className="mb-4">
+    <View
+      style={{
+        marginBottom: tokens.spacing.md,
+      }}
+    >
       {/* Header */}
-      <View className="flex-row items-center mb-2">
-        <AlertTriangle color={isDark ? '#F59E0B' : '#D97706'} size={20} />
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: tokens.spacing.xs,
+        }}
+      >
+        <AlertTriangle
+          color={isDark ? tokens.colors.dark.accent.orange : tokens.colors.light.accent.orange}
+          size={20}
+        />
         <Text
-          className={`text-base font-bold ml-2 ${
-            isDark ? 'text-gray-200' : 'text-gray-800'
-          }`}
+          style={{
+            marginLeft: tokens.spacing.xs,
+            fontSize: tokens.typography.fontSize.base,
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
         >
           Active Injuries ({injuries.length})
         </Text>
@@ -93,7 +111,7 @@ export default function ActiveInjuryBanner({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        className="space-x-3"
+        contentContainerStyle={{ columnGap: tokens.spacing.sm }}
       >
         {injuries.map((injury) => {
           const daysInRecovery = getDaysInRecovery(injury.reportedAt);
@@ -102,34 +120,58 @@ export default function ActiveInjuryBanner({
           return (
             <Pressable
               key={injury.id}
-              className={`p-4 rounded-xl mr-3 ${
-                isDark ? 'bg-gray-800' : 'bg-white'
-              }`}
-              style={{ width: 280 }}
               onPress={() => onInjuryPress(injury)}
               accessibilityLabel={`View ${injury.bodyPart} injury details`}
+              style={{
+                width: 280,
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.xl,
+                marginRight: tokens.spacing.sm,
+                backgroundColor: colors.background.secondary,
+              }}
             >
               {/* Severity Badge */}
-              <View className="flex-row justify-between items-start mb-2">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  marginBottom: tokens.spacing.xs,
+                }}
+              >
                 <View
-                  className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: getSeverityColor(injury.severity) + '20' }}
+                  style={{
+                    paddingHorizontal: tokens.spacing.sm,
+                    paddingVertical: tokens.spacing.xs,
+                    borderRadius: 999,
+                    backgroundColor: `${getSeverityColor(injury.severity)}20`,
+                  }}
                 >
                   <Text
-                    className="text-xs font-bold"
-                    style={{ color: getSeverityColor(injury.severity) }}
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: getSeverityColor(injury.severity),
+                    }}
                   >
                     {injury.severity.toUpperCase()}
                   </Text>
                 </View>
 
                 <View
-                  className="px-3 py-1 rounded-full"
-                  style={{ backgroundColor: getStatusColor(injury.status) + '20' }}
+                  style={{
+                    paddingHorizontal: tokens.spacing.sm,
+                    paddingVertical: tokens.spacing.xs,
+                    borderRadius: 999,
+                    backgroundColor: `${getStatusColor(injury.status)}20`,
+                  }}
                 >
                   <Text
-                    className="text-xs font-bold"
-                    style={{ color: getStatusColor(injury.status) }}
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: getStatusColor(injury.status),
+                    }}
                   >
                     {injury.status.toUpperCase()}
                   </Text>
@@ -138,9 +180,12 @@ export default function ActiveInjuryBanner({
 
               {/* Body Part */}
               <Text
-                className={`text-lg font-bold mb-1 ${
-                  isDark ? 'text-gray-200' : 'text-gray-800'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  marginBottom: 2,
+                  color: colors.text.primary,
+                }}
               >
                 {injury.bodyPart}
               </Text>
@@ -148,61 +193,90 @@ export default function ActiveInjuryBanner({
               {/* Description */}
               {injury.description && (
                 <Text
-                  className={`text-sm mb-3 ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
                   numberOfLines={2}
+                  style={{
+                    marginBottom: tokens.spacing.sm,
+                    fontSize: tokens.typography.fontSize.sm,
+                    color: colors.text.secondary,
+                  }}
                 >
                   {injury.description}
                 </Text>
               )}
 
               {/* Recovery Info */}
-              <View className="flex-row items-center mb-3">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: tokens.spacing.sm,
+                }}
+              >
                 <Clock
-                  color={isDark ? '#9CA3AF' : '#6B7280'}
+                  color={isDark ? tokens.colors.dark.text.tertiary : tokens.colors.light.text.tertiary}
                   size={14}
                 />
                 <Text
-                  className={`text-xs ml-1 ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
+                  style={{
+                    marginLeft: 4,
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                  }}
                 >
                   Day {daysInRecovery} of recovery
                 </Text>
               </View>
 
               {/* Check-In Button */}
-              {requiresCheckIn && (
+              {requiresCheckIn ? (
                 <Pressable
-                  className={`flex-row items-center justify-center p-3 rounded-lg ${
-                    isDark ? 'bg-primaryDark' : 'bg-primary-500'
-                  }`}
                   onPress={(e) => {
                     e.stopPropagation();
                     onCheckInPress(injury);
                   }}
                   accessibilityLabel="Weekly recovery check-in"
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: tokens.spacing.sm,
+                    borderRadius: tokens.borderRadius.lg,
+                    backgroundColor: isDark
+                      ? tokens.colors.dark.accent.green
+                      : tokens.colors.light.accent.green,
+                  }}
                 >
-                  <TrendingUp color="white" size={16} />
-                  <Text className="text-sm font-bold text-white ml-2">
+                  <TrendingUp color={tokens.colors.shared.static.white} size={16} />
+                  <Text
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      fontSize: tokens.typography.fontSize.sm,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: tokens.colors.shared.static.white,
+                    }}
+                  >
                     Weekly Check-In Due
                   </Text>
                 </Pressable>
-              )}
-
-              {!requiresCheckIn && (
+              ) : (
                 <View
-                  className={`flex-row items-center justify-center p-3 rounded-lg ${
-                    isDark ? 'bg-gray-700' : 'bg-gray-100'
-                  }`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: tokens.spacing.sm,
+                    borderRadius: tokens.borderRadius.lg,
+                    backgroundColor: colors.background.tertiary,
+                  }}
                 >
                   <Text
-                    className={`text-xs ${
-                      isDark ? 'text-gray-400' : 'text-gray-600'
-                    }`}
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: colors.text.secondary,
+                    }}
                   >
-                    Next check-in in {7 - getDaysInRecovery(injury.lastCheckInAt || injury.reportedAt)} days
+                    Next check-in in{' '}
+                    {7 - getDaysInRecovery(injury.lastCheckInAt || injury.reportedAt)} days
                   </Text>
                 </View>
               )}
@@ -213,9 +287,11 @@ export default function ActiveInjuryBanner({
 
       {/* Disclaimer */}
       <Text
-        className={`text-xs mt-2 ${
-          isDark ? 'text-gray-500' : 'text-gray-400'
-        }`}
+        style={{
+          marginTop: tokens.spacing.xs,
+          fontSize: tokens.typography.fontSize.xs,
+          color: colors.text.tertiary,
+        }}
       >
         Tap an injury for details • Weekly check-ins track recovery progress
       </Text>

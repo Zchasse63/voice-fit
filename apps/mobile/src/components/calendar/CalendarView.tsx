@@ -137,38 +137,91 @@ export default function CalendarView() {
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
   return (
-    <View className={`p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+    <View
+      style={{
+        padding: tokens.spacing.md,
+        borderRadius: tokens.borderRadius.xl,
+        backgroundColor: colors.background.secondary,
+      }}
+    >
       {/* Header */}
-      <View className="flex-row items-center justify-between mb-4">
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: tokens.spacing.md,
+        }}
+      >
         <Pressable
           onPress={goToPreviousMonth}
-          className="p-3 min-w-[48px] min-h-[48px] items-center justify-center active:opacity-60"
           accessibilityLabel="Previous Month"
           accessibilityRole="button"
+          style={{
+            padding: tokens.spacing.sm,
+            minWidth: 48,
+            minHeight: 48,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <ChevronLeft color={isDark ? '#4A9B6F' : '#2C5F3D'} size={24} />
+          <ChevronLeft
+            color={isDark ? tokens.colors.dark.accent.green : tokens.colors.light.accent.green}
+            size={24}
+          />
         </Pressable>
 
-        <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
+        >
           {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
         </Text>
 
         <Pressable
           onPress={goToNextMonth}
-          className="p-3 min-w-[48px] min-h-[48px] items-center justify-center active:opacity-60"
           accessibilityLabel="Next Month"
           accessibilityRole="button"
+          style={{
+            padding: tokens.spacing.sm,
+            minWidth: 48,
+            minHeight: 48,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
         >
-          <ChevronRight color={isDark ? '#4A9B6F' : '#2C5F3D'} size={24} />
+          <ChevronRight
+            color={isDark ? tokens.colors.dark.accent.green : tokens.colors.light.accent.green}
+            size={24}
+          />
         </Pressable>
       </View>
 
       {/* Day Names */}
-      <View className="flex-row mb-2">
+      <View
+        style={{
+          flexDirection: 'row',
+          marginBottom: tokens.spacing.xs,
+        }}
+      >
         {dayNames.map((day) => (
-          <View key={day} className="flex-1 items-center">
-            <Text className={`text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View
+            key={day}
+            style={{ flex: 1, alignItems: 'center' }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: colors.text.secondary,
+              }}
+            >
               {day}
             </Text>
           </View>
@@ -176,50 +229,65 @@ export default function CalendarView() {
       </View>
 
       {/* Calendar Grid */}
-      <View className="flex-row flex-wrap">
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
         {calendarDays.map((day, index) => {
           const today = isToday(day.date);
           const selected = isSelected(day.date);
+
+          const baseDayTextColor = !day.isCurrentMonth
+            ? colors.text.tertiary
+            : today
+            ? isDark
+              ? tokens.colors.dark.accent.green
+              : tokens.colors.light.accent.green
+            : colors.text.primary;
 
           return (
             <Pressable
               key={index}
               onPress={() => setSelectedDate(day.date)}
-              className={`w-[14.28%] aspect-square items-center justify-center mb-1 ${
-                selected
-                  ? isDark
-                    ? 'bg-primaryDark/20'
-                    : 'bg-primary-500/20'
-                  : ''
-              }`}
               accessibilityLabel={`${day.date.toLocaleDateString()}, ${
-                day.hasWorkout ? `${day.workoutCount} workout${day.workoutCount > 1 ? 's' : ''}` : 'No workouts'
+                day.hasWorkout
+                  ? `${day.workoutCount} workout${day.workoutCount > 1 ? 's' : ''}`
+                  : 'No workouts'
               }`}
               accessibilityRole="button"
+              style={{
+                width: '14.28%',
+                aspectRatio: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: 4,
+                backgroundColor: selected
+                  ? isDark
+                    ? `${tokens.colors.dark.accent.green}20`
+                    : `${tokens.colors.light.accent.green}20`
+                  : 'transparent',
+              }}
             >
-              <View className="items-center">
+              <View style={{ alignItems: 'center' }}>
                 <Text
-                  className={`text-sm ${
-                    !day.isCurrentMonth
-                      ? isDark
-                        ? 'text-gray-600'
-                        : 'text-gray-400'
-                      : today
-                      ? isDark
-                        ? 'text-primaryDark font-bold'
-                        : 'text-primary-500 font-bold'
-                      : isDark
-                      ? 'text-gray-200'
-                      : 'text-gray-800'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    color: baseDayTextColor,
+                    fontWeight: today
+                      ? tokens.typography.fontWeight.bold
+                      : tokens.typography.fontWeight.regular,
+                  }}
                 >
                   {day.date.getDate()}
                 </Text>
                 {day.hasWorkout && (
                   <View
-                    className={`w-1 h-1 rounded-full mt-1 ${
-                      isDark ? 'bg-primaryDark' : 'bg-primary-500'
-                    }`}
+                    style={{
+                      width: 4,
+                      height: 4,
+                      borderRadius: 999,
+                      marginTop: 4,
+                      backgroundColor: isDark
+                        ? tokens.colors.dark.accent.green
+                        : tokens.colors.light.accent.green,
+                    }}
                   />
                 )}
               </View>
@@ -229,9 +297,34 @@ export default function CalendarView() {
       </View>
 
       {/* Legend */}
-      <View className="flex-row items-center justify-center mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-        <View className={`w-2 h-2 rounded-full mr-2 ${isDark ? 'bg-primaryDark' : 'bg-primary-500'}`} />
-        <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginTop: tokens.spacing.md,
+          paddingTop: tokens.spacing.md,
+          borderTopWidth: 1,
+          borderTopColor: colors.border.subtle,
+        }}
+      >
+        <View
+          style={{
+            width: 8,
+            height: 8,
+            borderRadius: 999,
+            marginRight: tokens.spacing.xs,
+            backgroundColor: isDark
+              ? tokens.colors.dark.accent.green
+              : tokens.colors.light.accent.green,
+          }}
+        />
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.xs,
+            color: colors.text.secondary,
+          }}
+        >
           Workout completed
         </Text>
       </View>

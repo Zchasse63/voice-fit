@@ -13,6 +13,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 
 interface ConfirmationSheetProps {
   visible: boolean;
@@ -34,6 +35,7 @@ export default function ConfirmationSheet({
   data,
 }: ConfirmationSheetProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const translateY = useSharedValue(500);
 
   useEffect(() => {
@@ -51,66 +53,153 @@ export default function ConfirmationSheet({
   if (!visible) return null;
 
   return (
-    <View className="absolute inset-0 justify-end" pointerEvents="box-none">
+    <View
+      pointerEvents="box-none"
+      style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        top: 0,
+        bottom: 0,
+        justifyContent: 'flex-end',
+      }}
+    >
       {/* Backdrop */}
-      <Pressable 
-        className="absolute inset-0 bg-black/50"
+      <Pressable
         onPress={onCancel}
+        style={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          backgroundColor: colors.overlay.scrim,
+        }}
       />
 
       {/* Sheet */}
       <Animated.View
-        style={animatedStyle}
-        className={`rounded-t-3xl p-lg shadow-2xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}
+        style={[
+          animatedStyle,
+          {
+            borderTopLeftRadius: tokens.borderRadius.xl,
+            borderTopRightRadius: tokens.borderRadius.xl,
+            padding: tokens.spacing.lg,
+            backgroundColor: colors.background.secondary,
+          },
+        ]}
       >
-        <Text className={`text-xl font-heading mb-md ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.xl,
+            fontWeight: tokens.typography.fontWeight.bold,
+            marginBottom: tokens.spacing.md,
+            color: colors.text.primary,
+          }}
+        >
           Confirm Set
         </Text>
 
         {/* Exercise Data Display */}
-        <View className={`rounded-xl p-md mb-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-          <Text className={`text-2xl font-heading ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+        <View
+          style={{
+            borderRadius: tokens.borderRadius.xl,
+            padding: tokens.spacing.md,
+            marginBottom: tokens.spacing.lg,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize['2xl'],
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: colors.accent.blue,
+            }}
+          >
             {data.exerciseName}
           </Text>
-          <Text className={`text-lg font-body mt-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+          <Text
+            style={{
+              marginTop: tokens.spacing.xs,
+              fontSize: tokens.typography.fontSize.lg,
+              color: colors.text.secondary,
+            }}
+          >
             {data.weight && `${data.weight} ${data.weightUnit || 'lbs'}`}
             {data.reps && ` × ${data.reps} reps`}
           </Text>
           {data.rpe && (
-            <Text className={`text-base font-body mt-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <Text
+              style={{
+                marginTop: tokens.spacing.xs,
+                fontSize: tokens.typography.fontSize.base,
+                color: colors.text.tertiary,
+              }}
+            >
               RPE {data.rpe}
             </Text>
           )}
         </View>
 
         {/* Action Buttons */}
-        <View className="flex-row gap-md">
+        <View
+          style={{
+            flexDirection: 'row',
+            columnGap: tokens.spacing.sm,
+          }}
+        >
           <Pressable
-            className={`flex-1 p-md rounded-xl items-center active:opacity-80 min-h-[60px] ${
-              isDark ? 'bg-gray-600' : 'bg-gray-300'
-            }`}
             onPress={onCancel}
             accessibilityLabel="Cancel"
             accessibilityHint="Cancels logging this workout set"
             accessibilityRole="button"
             testID="confirmation-cancel-button"
+            style={{
+              flex: 1,
+              minHeight: 60,
+              borderRadius: tokens.borderRadius.xl,
+              padding: tokens.spacing.md,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.background.tertiary,
+            }}
           >
-            <Text className={`text-base font-heading ${isDark ? 'text-gray-200' : 'text-gray-700'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.base,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: colors.text.primary,
+              }}
+            >
               Cancel
             </Text>
           </Pressable>
 
           <Pressable
-            className={`flex-1 p-md rounded-xl items-center active:opacity-80 min-h-[60px] ${
-              isDark ? 'bg-primaryDark' : 'bg-primary-500'
-            }`}
             onPress={onConfirm}
             accessibilityLabel="Confirm"
             accessibilityHint="Confirms and logs this workout set"
             accessibilityRole="button"
             testID="confirmation-confirm-button"
+            style={{
+              flex: 1,
+              minHeight: 60,
+              borderRadius: tokens.borderRadius.xl,
+              padding: tokens.spacing.md,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: colors.accent.blue,
+            }}
           >
-            <Text className="text-base font-heading text-white">Confirm</Text>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.base,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: '#FFFFFF',
+              }}
+            >
+              Confirm
+            </Text>
           </Pressable>
         </View>
       </Animated.View>

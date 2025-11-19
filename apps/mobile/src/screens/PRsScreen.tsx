@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { tokens } from '../theme/tokens';
 import { Trophy, TrendingUp, Award } from 'lucide-react-native';
 import PRProgressionChart from '../components/charts/PRProgressionChart';
 import LoadingSpinner from '../components/common/LoadingSpinner';
@@ -37,6 +38,7 @@ const ITEMS_PER_PAGE = 20;
 
 export default function PRsScreen() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const user = useAuthStore((state) => state.user);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -157,15 +159,37 @@ export default function PRsScreen() {
   }
 
   return (
-    <ScrollView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-background-light'}`}>
-      <View className="p-6">
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.background.primary }}
+      contentContainerStyle={{ padding: tokens.spacing.lg }}
+    >
+      <View>
         {/* Header */}
-        <View className="flex-row justify-between items-start mb-2">
-          <View className="flex-1">
-            <Text className={`text-3xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            justifyContent: 'space-between',
+            marginBottom: tokens.spacing.sm,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize['2xl'],
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
               Personal Records
             </Text>
-            <Text className={`text-base mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <Text
+              style={{
+                marginTop: tokens.spacing.xs,
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+              }}
+            >
               Your best lifts and progression
             </Text>
           </View>
@@ -173,19 +197,44 @@ export default function PRsScreen() {
         </View>
 
         {/* Fitness Metrics */}
-        <View className="mt-6 flex-row justify-between">
+        <View
+          style={{
+            marginTop: tokens.spacing.lg,
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+          }}
+        >
           {metrics.map((metric, index) => {
             const Icon = metric.icon;
             return (
               <View
                 key={index}
-                className={`flex-1 p-4 rounded-xl mx-1 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
+                style={{
+                  flex: 1,
+                  padding: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.lg,
+                  marginHorizontal: 4,
+                  backgroundColor: colors.background.secondary,
+                }}
               >
-                <Icon color={isDark ? '#4A9B6F' : '#2C5F3D'} size={20} />
-                <Text className={`text-2xl font-bold mt-2 ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+                <Icon color={colors.accent.blue} size={20} />
+                <Text
+                  style={{
+                    marginTop: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.lg,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
+                >
                   {metric.value}
                 </Text>
-                <Text className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    marginTop: 2,
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                  }}
+                >
                   {metric.label}
                 </Text>
               </View>
@@ -194,20 +243,53 @@ export default function PRsScreen() {
         </View>
 
         {/* PR List */}
-        <View className="mt-6">
-          <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+        <View style={{ marginTop: tokens.spacing.xl }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.md,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: colors.text.primary,
+              marginBottom: tokens.spacing.sm,
+            }}
+          >
             Recent PRs
           </Text>
 
           {prs.length > 0 ? (
             prs.map((pr) => (
-              <View key={pr.id} className={`p-4 rounded-xl mb-3 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-                <View className="flex-row justify-between items-start">
-                  <View className="flex-1">
-                    <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <View
+                key={pr.id}
+                style={{
+                  padding: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.lg,
+                  marginBottom: tokens.spacing.xs,
+                  backgroundColor: colors.background.secondary,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.sm,
+                        fontWeight: tokens.typography.fontWeight.semibold,
+                        color: colors.text.primary,
+                      }}
+                    >
                       {pr.exercise}
                     </Text>
-                    <Text className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <Text
+                      style={{
+                        marginTop: 2,
+                        fontSize: tokens.typography.fontSize.xs,
+                        color: colors.text.secondary,
+                      }}
+                    >
                       {pr.date.toLocaleDateString('en-US', {
                         month: 'short',
                         day: 'numeric',
@@ -215,14 +297,31 @@ export default function PRsScreen() {
                       })}
                     </Text>
                   </View>
-                  <View className="items-end">
-                    <Text className={`text-2xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.md,
+                        fontWeight: tokens.typography.fontWeight.bold,
+                        color: colors.accent.blue,
+                      }}
+                    >
                       {pr.weight}
                     </Text>
-                    <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.xs,
+                        color: colors.text.secondary,
+                      }}
+                    >
                       {pr.reps} reps
                     </Text>
-                    <Text className="text-xs text-green-600 mt-1">
+                    <Text
+                      style={{
+                        marginTop: 2,
+                        fontSize: tokens.typography.fontSize.xs,
+                        color: colors.accent.green,
+                      }}
+                    >
                       {pr.improvement}
                     </Text>
                   </View>
@@ -230,8 +329,19 @@ export default function PRsScreen() {
               </View>
             ))
           ) : (
-            <View className={`p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-              <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                backgroundColor: colors.background.secondary,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 No PRs yet. Complete workouts to track your personal records!
               </Text>
             </View>
@@ -243,12 +353,24 @@ export default function PRsScreen() {
           <Pressable
             onPress={handleLoadMore}
             disabled={isLoadingMore}
-            className={`mt-4 p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-white'} items-center`}
+            style={{
+              marginTop: tokens.spacing.md,
+              padding: tokens.spacing.md,
+              borderRadius: tokens.borderRadius.lg,
+              alignItems: 'center',
+              backgroundColor: colors.background.secondary,
+            }}
           >
             {isLoadingMore ? (
-              <ActivityIndicator size="small" color={isDark ? '#4ADE80' : '#16A34A'} />
+              <ActivityIndicator size="small" color={colors.accent.green} />
             ) : (
-              <Text className={`text-base font-semibold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  color: colors.accent.blue,
+                }}
+              >
                 Load More PRs
               </Text>
             )}
@@ -257,7 +379,7 @@ export default function PRsScreen() {
 
         {/* Progress Chart */}
         {progression.length > 0 && prs.length > 0 && (
-          <View className="mt-6">
+          <View style={{ marginTop: tokens.spacing.lg }}>
             <PRProgressionChart data={progression} exerciseName={prs[0].exercise} />
           </View>
         )}

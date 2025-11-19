@@ -7,7 +7,7 @@
 
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { ArrowLeft } from "lucide-react-native";
+import { ArrowLeft, Calendar } from "lucide-react-native";
 import { Avatar } from "../profile";
 import tokens from "../../theme/tokens";
 import { useTheme } from "../../theme/ThemeContext";
@@ -65,11 +65,27 @@ export default function ChatHeader({
       </Text>
 
       {/* Right Side */}
-      {onAvatarPress && (
-        <Pressable onPress={onAvatarPress}>
-          <Avatar size="sm" />
-        </Pressable>
-      )}
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        {onWorkoutLogPress && (
+          <Pressable
+            onPress={onWorkoutLogPress}
+            style={({ pressed }) => [
+              {
+                padding: tokens.spacing.sm,
+                marginRight: tokens.spacing.sm,
+                opacity: pressed ? 0.6 : 1,
+              },
+            ]}
+          >
+            <Calendar color={colors.accent.blue} size={20} />
+          </Pressable>
+        )}
+        {onAvatarPress && (
+          <Pressable onPress={onAvatarPress}>
+            <Avatar size="sm" />
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }

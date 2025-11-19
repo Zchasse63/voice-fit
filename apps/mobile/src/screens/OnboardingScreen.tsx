@@ -15,6 +15,7 @@ import Animated, {
   Extrapolate,
 } from 'react-native-reanimated';
 import { useTheme } from '../theme/ThemeContext';
+import { tokens } from '../theme/tokens';
 import { Mic, TrendingUp, MessageCircle, ChevronRight } from 'lucide-react-native';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -57,6 +58,7 @@ interface OnboardingScreenProps {
 
 export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -79,16 +81,30 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
   };
 
   return (
-    <View className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-background-light'}`}>
+    <View
+      style={{ flex: 1, backgroundColor: colors.background.primary }}
+    >
       {/* Skip Button */}
-      <View className="absolute top-12 right-6 z-10">
+      <View
+        style={{
+          position: "absolute",
+          top: tokens.spacing.xl,
+          right: tokens.spacing.lg,
+          zIndex: 10,
+        }}
+      >
         <Pressable
           onPress={handleSkip}
           accessibilityLabel="Skip"
           accessibilityHint="Skips the onboarding and goes to the app"
           accessibilityRole="button"
         >
-          <Text className={`text-base ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.base,
+              color: colors.text.secondary,
+            }}
+          >
             Skip
           </Text>
         </Pressable>
@@ -103,31 +119,59 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
         scrollEventThrottle={16}
         onScroll={(event) => {
           scrollX.value = event.nativeEvent.contentOffset.x;
-          const index = Math.round(event.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+          const index = Math.round(
+            event.nativeEvent.contentOffset.x / SCREEN_WIDTH,
+          );
           setCurrentIndex(index);
         }}
       >
         {slides.map((slide) => (
           <View
             key={slide.id}
-            style={{ width: SCREEN_WIDTH }}
-            className="flex-1 items-center justify-center px-8"
+            style={{
+              width: SCREEN_WIDTH,
+              alignItems: "center",
+              justifyContent: "center",
+              paddingHorizontal: tokens.spacing.xl,
+            }}
           >
             {/* Icon */}
             <View
-              className="w-32 h-32 rounded-full items-center justify-center mb-8"
-              style={{ backgroundColor: `${slide.color}20` }}
+              style={{
+                width: 128,
+                height: 128,
+                borderRadius: 64,
+                alignItems: "center",
+                justifyContent: "center",
+                marginBottom: tokens.spacing.xl,
+                backgroundColor: `${slide.color}20`,
+              }}
             >
               <slide.icon color={slide.color} size={64} />
             </View>
 
             {/* Title */}
-            <Text className={`text-3xl font-bold text-center mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize["2xl"],
+                fontWeight: tokens.typography.fontWeight.bold,
+                textAlign: "center",
+                marginBottom: tokens.spacing.sm,
+                color: colors.text.primary,
+              }}
+            >
               {slide.title}
             </Text>
 
             {/* Description */}
-            <Text className={`text-lg text-center leading-7 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.lg,
+                textAlign: "center",
+                lineHeight: 24,
+                color: colors.text.secondary,
+              }}
+            >
               {slide.description}
             </Text>
           </View>
@@ -135,7 +179,13 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
       </ScrollView>
 
       {/* Pagination Dots */}
-      <View className="flex-row justify-center mb-8">
+      <View
+        style={{
+          flexDirection: "row",
+          justifyContent: "center",
+          marginBottom: tokens.spacing.xl,
+        }}
+      >
         {slides.map((_, index) => {
           const dotStyle = useAnimatedStyle(() => {
             const inputRange = [
@@ -148,14 +198,14 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
               scrollX.value,
               inputRange,
               [8, 24, 8],
-              Extrapolate.CLAMP
+              Extrapolate.CLAMP,
             );
 
             const opacity = interpolate(
               scrollX.value,
               inputRange,
               [0.3, 1, 0.3],
-              Extrapolate.CLAMP
+              Extrapolate.CLAMP,
             );
 
             return {
@@ -167,32 +217,60 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
           return (
             <Animated.View
               key={index}
-              className={`h-2 rounded-full mx-1 ${isDark ? 'bg-primaryDark' : 'bg-primary-500'}`}
-              style={dotStyle}
+              style={[
+                {
+                  height: 8,
+                  borderRadius: 999,
+                  marginHorizontal: 4,
+                  backgroundColor: colors.accent.blue,
+                },
+                dotStyle,
+              ]}
             />
           );
         })}
       </View>
 
       {/* Next/Get Started Button */}
-      <View className="px-8 pb-12">
+      <View
+        style={{
+          paddingHorizontal: tokens.spacing.xl,
+          paddingBottom: tokens.spacing["2xl"],
+        }}
+      >
         <Pressable
-          className={`flex-row items-center justify-center p-4 rounded-xl min-h-[60px] ${
-            isDark ? 'bg-primaryDark' : 'bg-primary-500'
-          }`}
+          style={({ pressed }) => ({
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: tokens.spacing.md,
+            borderRadius: tokens.borderRadius.xl,
+            minHeight: 60,
+            backgroundColor: colors.accent.blue,
+            opacity: pressed ? 0.9 : 1,
+          })}
           onPress={handleNext}
-          accessibilityLabel={currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
+          accessibilityLabel={
+            currentIndex === slides.length - 1 ? "Get Started" : "Next"
+          }
           accessibilityHint={
             currentIndex === slides.length - 1
-              ? 'Completes onboarding and starts using the app'
-              : 'Shows the next onboarding screen'
+              ? "Completes onboarding and starts using the app"
+              : "Shows the next onboarding screen"
           }
           accessibilityRole="button"
         >
-          <Text className="text-lg font-bold text-white mr-2">
-            {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.lg,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: colors.text.onAccent,
+              marginRight: tokens.spacing.xs,
+            }}
+          >
+            {currentIndex === slides.length - 1 ? "Get Started" : "Next"}
           </Text>
-          <ChevronRight color="white" size={24} />
+          <ChevronRight color={colors.text.onAccent} size={24} />
         </Pressable>
       </View>
     </View>

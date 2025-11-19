@@ -8,6 +8,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { useAuthStore } from '../../store/auth.store';
 import { chartDataService, PRDataPoint, PRPrediction } from '../../services/charts/ChartDataService';
 import { CartesianChart, Line, useChartPressState } from 'victory-native';
@@ -20,6 +21,8 @@ interface PRHistoryChartProps {
 
 const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exerciseName }: PRHistoryChartProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = colors.accent;
   const user = useAuthStore((state) => state.user);
   const [historicalData, setHistoricalData] = useState<PRDataPoint[]>([]);
   const [predictions, setPredictions] = useState<PRPrediction[]>([]);
@@ -83,43 +86,115 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
 
   if (isLoading) {
     return (
-      <View className={`p-4 rounded-xl shadow-md ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-        <Text className={`text-lg font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <View
+        style={{
+          padding: tokens.spacing.md,
+          borderRadius: tokens.borderRadius.lg,
+          marginBottom: tokens.spacing.md,
+          backgroundColor: colors.background.secondary,
+          ...tokens.shadows.lg,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            marginBottom: tokens.spacing.sm,
+            color: colors.text.primary,
+          }}
+        >
           PR History & Predictions
         </Text>
-        <View className="h-64 items-center justify-center">
-          <ActivityIndicator size="large" color={isDark ? '#4A9B6F' : '#2C5F3D'} />
+        <View
+          style={{
+            height: 256,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ActivityIndicator size="large" color={accentColors.blue} />
         </View>
       </View>
     );
   }
 
   return (
-    <View className={`p-4 rounded-xl shadow-md ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-      <Text className={`text-lg font-bold mb-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+    <View
+      style={{
+        padding: tokens.spacing.md,
+        borderRadius: tokens.borderRadius.lg,
+        marginBottom: tokens.spacing.md,
+        backgroundColor: colors.background.secondary,
+        ...tokens.shadows.lg,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: tokens.typography.fontSize.lg,
+          fontWeight: tokens.typography.fontWeight.bold,
+          marginBottom: tokens.spacing.xs,
+          color: colors.text.primary,
+        }}
+      >
         PR History & Predictions
       </Text>
-      <Text className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <Text
+        style={{
+          fontSize: tokens.typography.fontSize.sm,
+          marginBottom: tokens.spacing.md,
+          color: colors.text.secondary,
+        }}
+      >
         {exerciseName}
       </Text>
 
       {historicalData.length === 0 ? (
-        <View className="h-64 items-center justify-center">
-          <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            height: 256,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+              textAlign: 'center',
+            }}
+          >
             No PR data available for this exercise. Keep training to set your first PR!
           </Text>
         </View>
       ) : historicalData.length < 3 ? (
-        <View className="h-64 items-center justify-center">
-          <Text className={`text-sm text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            height: 256,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+              textAlign: 'center',
+            }}
+          >
             Need at least 3 PRs to generate predictions. Keep training!
           </Text>
-          <Text className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              marginTop: tokens.spacing.xs,
+              color: colors.text.tertiary,
+            }}
+          >
             Current PRs: {historicalData.length}
           </Text>
         </View>
       ) : (
-        <View className="h-64">
+        <View style={{ height: 256 }}>
           <CartesianChart
             data={[...historicalChartData, ...predictionChartData]}
             xKey="x"
@@ -131,7 +206,7 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
                 {/* Historical PRs - Solid Line */}
                 <Line
                   points={points.oneRM.slice(0, historicalChartData.length)}
-                  color={isDark ? '#3B82F6' : '#2563EB'}
+                  color={accentColors.blue}
                   strokeWidth={3}
                   curveType="natural"
                   animate={{ type: 'timing', duration: 300 }}
@@ -141,7 +216,7 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
                 {predictionChartData.length > 0 && (
                   <Line
                     points={points.oneRM.slice(historicalChartData.length - 1)}
-                    color={isDark ? '#10B981' : '#059669'}
+                    color={accentColors.green}
                     strokeWidth={3}
                     curveType="natural"
                     animate={{ type: 'timing', duration: 300 }}
@@ -154,7 +229,7 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
                     cx={state.x.position}
                     cy={state.y.oneRM.position}
                     r={8}
-                    color={isDark ? '#3B82F6' : '#2563EB'}
+                    color={accentColors.blue}
                     opacity={0.8}
                   />
                 )}
@@ -164,12 +239,38 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
 
           {/* Display current value on press */}
           {isActive && (
-            <View className="absolute top-0 left-0 right-0 items-center">
-              <View className={`px-3 py-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <Text className={`text-sm font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+              }}
+            >
+              <View
+                style={{
+                  paddingHorizontal: tokens.spacing.sm,
+                  paddingVertical: tokens.spacing.xs,
+                  borderRadius: tokens.borderRadius.md,
+                  backgroundColor: colors.background.tertiary,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: accentColors.blue,
+                  }}
+                >
                   {Math.round(state.y.oneRM.value)} lbs
                 </Text>
-                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                  }}
+                >
                   {formatDate(new Date(state.x.value).toISOString())}
                 </Text>
               </View>
@@ -180,21 +281,56 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
 
       {/* PR Improvement Stats */}
       {prImprovement && (
-        <View className={`mt-4 p-3 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
-          <View className="flex-row justify-between items-center">
+        <View
+          style={{
+            marginTop: tokens.spacing.md,
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.md,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <View>
-              <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                }}
+              >
                 Total Improvement
               </Text>
-              <Text className={`text-lg font-bold ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: accentColors.blue,
+                }}
+              >
                 +{prImprovement.improvement} lbs
               </Text>
             </View>
-            <View className="items-end">
-              <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                }}
+              >
                 Percentage Gain
               </Text>
-              <Text className={`text-lg font-bold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: accentColors.green,
+                }}
+              >
                 +{prImprovement.percentage}%
               </Text>
             </View>
@@ -204,14 +340,40 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
 
       {/* Prediction Summary */}
       {predictions.length > 0 && (
-        <View className={`mt-4 p-3 rounded-lg ${isDark ? 'bg-green-900/30' : 'bg-green-100'}`}>
-          <Text className={`text-sm font-semibold ${isDark ? 'text-green-400' : 'text-green-800'}`}>
+        <View
+          style={{
+            marginTop: tokens.spacing.md,
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.md,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: accentColors.green,
+            }}
+          >
             📈 Predicted 1RM in 12 weeks
           </Text>
-          <Text className={`text-2xl font-bold mt-1 ${isDark ? 'text-green-300' : 'text-green-700'}`}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize['2xl'],
+              fontWeight: tokens.typography.fontWeight.bold,
+              marginTop: tokens.spacing.xs,
+              color: accentColors.green,
+            }}
+          >
             {predictions[2].estimated1RM} lbs
           </Text>
-          <Text className={`text-xs mt-1 ${isDark ? 'text-green-300' : 'text-green-700'}`}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              marginTop: tokens.spacing.xs,
+              color: colors.text.secondary,
+            }}
+          >
             Based on your current progression rate
           </Text>
         </View>
@@ -219,17 +381,50 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
 
       {/* Legend */}
       {historicalData.length > 0 && (
-        <View className="flex-row items-center justify-center mt-4 space-x-4">
-          <View className="flex-row items-center">
-            <View className="w-3 h-3 rounded-full mr-2 bg-blue-500" />
-            <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: tokens.spacing.md,
+          }}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: tokens.spacing.xs }}>
+            <View
+              style={{
+                width: 12,
+                height: 12,
+                borderRadius: 9999,
+                marginRight: tokens.spacing.xs,
+                backgroundColor: accentColors.blue,
+              }}
+            />
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                color: colors.text.secondary,
+              }}
+            >
               Historical PRs
             </Text>
           </View>
           {predictions.length > 0 && (
-            <View className="flex-row items-center ml-4">
-              <View className="w-3 h-3 rounded-full mr-2 bg-green-500" />
-              <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: tokens.spacing.xs }}>
+              <View
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 9999,
+                  marginRight: tokens.spacing.xs,
+                  backgroundColor: accentColors.green,
+                }}
+              />
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                }}
+              >
                 Predictions
               </Text>
             </View>

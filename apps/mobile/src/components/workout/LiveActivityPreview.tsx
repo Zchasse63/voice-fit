@@ -9,6 +9,8 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, Animated, Platform } from 'react-native';
 import { Mic, Pause, Play, StopCircle, Dumbbell } from 'lucide-react-native';
 import { workoutNotificationManager } from '../../services/workoutNotification/WorkoutNotificationManager';
+import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 
 interface LiveActivityPreviewProps {
   workoutName: string;
@@ -41,6 +43,9 @@ export const LiveActivityPreview: React.FC<LiveActivityPreviewProps> = ({
   onResumePress,
   onStopPress,
 }) => {
+  const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
   const [pulseAnim] = useState(new Animated.Value(1));
   const notificationType = workoutNotificationManager.getNotificationType();
 
@@ -89,60 +94,147 @@ export const LiveActivityPreview: React.FC<LiveActivityPreviewProps> = ({
   };
 
   return (
-    <View className="mx-4 mb-4">
+    <View
+      style={{
+        marginHorizontal: tokens.spacing.lg,
+        marginBottom: tokens.spacing.lg,
+      }}
+    >
       {/* Header label */}
-      <View className="flex-row items-center justify-between mb-2">
-        <Text className="text-xs text-gray-500 font-medium">
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: tokens.spacing.xs,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.xs,
+            color: colors.text.tertiary,
+            fontWeight: tokens.typography.fontWeight.medium,
+          }}
+        >
           {getNotificationLabel()}
         </Text>
         {status === 'active' && (
-          <View className="flex-row items-center">
-            <View className="w-2 h-2 bg-green-500 rounded-full mr-1 animate-pulse" />
-            <Text className="text-xs text-green-600 font-medium">Active</Text>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+            }}
+          >
+            <View
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                marginRight: tokens.spacing.xs,
+                backgroundColor: colors.accent.green,
+              }}
+            />
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                color: colors.accent.green,
+                fontWeight: tokens.typography.fontWeight.medium,
+              }}
+            >
+              Active
+            </Text>
           </View>
         )}
       </View>
 
       {/* Live Activity Card */}
       <View
-        className={`rounded-3xl overflow-hidden shadow-lg ${
-          Platform.OS === 'ios'
-            ? 'bg-white/90 backdrop-blur-xl'
-            : 'bg-white'
-        }`}
         style={{
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.15,
-          shadowRadius: 12,
-          elevation: 8,
+          borderRadius: tokens.borderRadius.xl,
+          overflow: 'hidden',
+          backgroundColor: colors.background.secondary,
+          ...tokens.shadows.lg,
         }}
       >
         {/* Dynamic Island Style Bar (iOS) */}
         {Platform.OS === 'ios' && (
-          <View className="bg-gradient-to-r from-orange-500 to-red-500 h-1" />
+          <View
+            style={{
+              height: 4,
+              backgroundColor: colors.accent.orange,
+            }}
+          />
         )}
 
-        <View className="p-4">
+        <View
+          style={{
+            padding: tokens.spacing.md,
+          }}
+        >
           {/* Header Row */}
-          <View className="flex-row items-center justify-between mb-3">
-            <View className="flex-row items-center flex-1">
-              <View className="bg-orange-100 p-2 rounded-xl mr-3">
-                <Dumbbell size={20} color="#f97316" />
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: tokens.spacing.sm,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                flex: 1,
+              }}
+            >
+              <View
+                style={{
+                  padding: tokens.spacing.xs,
+                  borderRadius: tokens.borderRadius.md,
+                  marginRight: tokens.spacing.sm,
+                  backgroundColor: colors.backgroundSoft.warningAlt,
+                }}
+              >
+                <Dumbbell size={20} color={colors.accent.orange} />
               </View>
-              <View className="flex-1">
-                <Text className="text-base font-bold text-gray-900" numberOfLines={1}>
+              <View style={{ flex: 1 }}>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
+                >
                   {workoutName}
                 </Text>
-                <Text className="text-xs text-gray-500">
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                  }}
+                >
                   {currentSet} of {totalSets} sets
                 </Text>
               </View>
             </View>
 
             {/* Timer */}
-            <View className="bg-gray-100 px-3 py-1.5 rounded-full">
-              <Text className="text-sm font-semibold text-gray-900 font-mono">
+            <View
+              style={{
+                paddingHorizontal: tokens.spacing.sm,
+                paddingVertical: 6,
+                borderRadius: 999,
+                backgroundColor: colors.background.tertiary,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  color: colors.text.primary,
+                }}
+              >
                 {formatTime(elapsedTime)}
               </Text>
             </View>
@@ -150,9 +242,31 @@ export const LiveActivityPreview: React.FC<LiveActivityPreviewProps> = ({
 
           {/* Current Exercise */}
           {currentExercise && (
-            <View className="bg-gradient-to-r from-orange-50 to-red-50 p-3 rounded-xl mb-3">
-              <Text className="text-xs text-gray-500 mb-1">Current Exercise</Text>
-              <Text className="text-sm font-semibold text-gray-900" numberOfLines={1}>
+            <View
+              style={{
+                padding: tokens.spacing.sm,
+                borderRadius: tokens.borderRadius.md,
+                marginBottom: tokens.spacing.sm,
+                backgroundColor: colors.backgroundSoft.warning,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.tertiary,
+                  marginBottom: 2,
+                }}
+              >
+                Current Exercise
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  color: colors.text.primary,
+                }}
+              >
                 {currentExercise}
               </Text>
             </View>
@@ -160,23 +274,91 @@ export const LiveActivityPreview: React.FC<LiveActivityPreviewProps> = ({
 
           {/* Last Set Info */}
           {(lastSetWeight || lastSetReps) && (
-            <View className="flex-row items-center space-x-2 mb-3">
-              <View className="flex-1 bg-blue-50 p-2.5 rounded-lg">
-                <Text className="text-xs text-gray-500">Weight</Text>
-                <Text className="text-sm font-bold text-gray-900">
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
+              <View
+                style={{
+                  flex: 1,
+                  padding: tokens.spacing.sm,
+                  borderRadius: tokens.borderRadius.md,
+                  marginRight: tokens.spacing.xs,
+                  backgroundColor: colors.background.primary,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                  }}
+                >
+                  Weight
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
+                >
                   {lastSetWeight} lbs
                 </Text>
               </View>
-              <View className="flex-1 bg-green-50 p-2.5 rounded-lg">
-                <Text className="text-xs text-gray-500">Reps</Text>
-                <Text className="text-sm font-bold text-gray-900">
+              <View
+                style={{
+                  flex: 1,
+                  padding: tokens.spacing.sm,
+                  borderRadius: tokens.borderRadius.md,
+                  marginRight: tokens.spacing.xs,
+                  backgroundColor: colors.background.primary,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                  }}
+                >
+                  Reps
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
+                >
                   {lastSetReps}
                 </Text>
               </View>
               {lastSetRPE && (
-                <View className="flex-1 bg-purple-50 p-2.5 rounded-lg">
-                  <Text className="text-xs text-gray-500">RPE</Text>
-                  <Text className="text-sm font-bold text-gray-900">
+                <View
+                  style={{
+                    flex: 1,
+                    padding: tokens.spacing.sm,
+                    borderRadius: tokens.borderRadius.md,
+                    backgroundColor: colors.background.primary,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: colors.text.tertiary,
+                    }}
+                  >
+                    RPE
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.sm,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: colors.text.primary,
+                    }}
+                  >
                     {lastSetRPE}
                   </Text>
                 </View>
@@ -185,51 +367,96 @@ export const LiveActivityPreview: React.FC<LiveActivityPreviewProps> = ({
           )}
 
           {/* Action Buttons */}
-          <View className="flex-row items-center space-x-2">
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              columnGap: tokens.spacing.xs,
+            }}
+          >
             {/* Microphone Button */}
             <TouchableOpacity
               onPress={onMicPress}
-              className="flex-1 bg-gradient-to-r from-orange-500 to-red-500 p-3 rounded-xl flex-row items-center justify-center"
               activeOpacity={0.7}
+              style={{
+                flex: 1,
+                padding: tokens.spacing.sm,
+                borderRadius: tokens.borderRadius.md,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: colors.accent.orange,
+              }}
             >
               <Animated.View
                 style={{
                   transform: [{ scale: status === 'active' ? pulseAnim : 1 }],
                 }}
               >
-                <Mic size={20} color="white" />
+                <Mic size={20} color="#FFFFFF" />
               </Animated.View>
-              <Text className="text-white font-semibold ml-2">Log Set</Text>
+              <Text
+                style={{
+                  marginLeft: tokens.spacing.xs,
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  color: '#FFFFFF',
+                }}
+              >
+                Log Set
+              </Text>
             </TouchableOpacity>
 
             {/* Pause/Resume Button */}
             <TouchableOpacity
               onPress={status === 'active' ? onPausePress : onResumePress}
-              className="bg-gray-100 p-3 rounded-xl"
               activeOpacity={0.7}
+              style={{
+                padding: tokens.spacing.sm,
+                borderRadius: tokens.borderRadius.md,
+                backgroundColor: colors.background.tertiary,
+              }}
             >
               {status === 'active' ? (
-                <Pause size={20} color="#374151" />
+                <Pause size={20} color={colors.text.primary} />
               ) : (
-                <Play size={20} color="#374151" />
+                <Play size={20} color={colors.text.primary} />
               )}
             </TouchableOpacity>
 
             {/* Stop Button */}
             <TouchableOpacity
               onPress={onStopPress}
-              className="bg-red-50 p-3 rounded-xl"
               activeOpacity={0.7}
+              style={{
+                padding: tokens.spacing.sm,
+                borderRadius: tokens.borderRadius.md,
+                backgroundColor: colors.backgroundSoft.danger,
+              }}
             >
-              <StopCircle size={20} color="#dc2626" />
+              <StopCircle size={20} color={colors.accent.red} />
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Android Material Design Bottom Bar */}
         {Platform.OS === 'android' && (
-          <View className="bg-gray-50 px-4 py-2 border-t border-gray-200">
-            <Text className="text-xs text-gray-500 text-center">
+          <View
+            style={{
+              backgroundColor: colors.background.secondary,
+              paddingHorizontal: tokens.spacing.md,
+              paddingVertical: tokens.spacing.sm,
+              borderTopWidth: 1,
+              borderTopColor: colors.border.light,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                color: colors.text.tertiary,
+                textAlign: 'center',
+              }}
+            >
               Tap to return to workout
             </Text>
           </View>
@@ -238,7 +465,14 @@ export const LiveActivityPreview: React.FC<LiveActivityPreviewProps> = ({
 
       {/* Helper Text */}
       {workoutNotificationManager.isSupported() && (
-        <Text className="text-xs text-gray-400 text-center mt-2">
+        <Text
+          style={{
+            marginTop: tokens.spacing.sm,
+            fontSize: tokens.typography.fontSize.xs,
+            textAlign: 'center',
+            color: colors.text.tertiary,
+          }}
+        >
           {Platform.OS === 'ios'
             ? 'Visible on Lock Screen & Dynamic Island'
             : 'Persistent notification while workout is active'}

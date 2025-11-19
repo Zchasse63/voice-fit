@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, Text, Modal, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { Trophy, TrendingUp, X, Share2 } from 'lucide-react-native';
 import { PRData } from '../../services/pr/PRService';
 
@@ -25,6 +26,7 @@ export default function PRCelebrationModal({
   previousPR,
 }: PRCelebrationModalProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
   const improvement = previousPR ? prData.oneRM - previousPR : 0;
   const improvementPercent = previousPR ? ((improvement / previousPR) * 100).toFixed(1) : 0;
@@ -36,58 +38,170 @@ export default function PRCelebrationModal({
       animationType="slide"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 justify-center items-center p-6">
-        <View className={`w-full max-w-md rounded-xl shadow-xl p-6 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.overlay.scrim,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: tokens.spacing.lg,
+        }}
+      >
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 420,
+            borderRadius: tokens.borderRadius.xl,
+            padding: tokens.spacing.lg,
+            backgroundColor: colors.background.secondary,
+            ...tokens.shadows.lg,
+          }}
+        >
           {/* Close Button */}
           <Pressable
             onPress={onClose}
-            className="absolute top-4 right-4 z-10"
             accessibilityLabel="Close modal"
+            style={{
+              position: 'absolute',
+              top: tokens.spacing.md,
+              right: tokens.spacing.md,
+              zIndex: 10,
+            }}
           >
             <X color={isDark ? '#9CA3AF' : '#6B7280'} size={24} />
           </Pressable>
 
           {/* Confetti Effect (Visual) */}
-          <View className="items-center mb-4">
-            <View className="w-20 h-20 rounded-full bg-yellow-500/20 items-center justify-center">
+          <View
+            style={{
+              alignItems: 'center',
+              marginBottom: tokens.spacing.md,
+            }}
+          >
+            <View
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: colors.backgroundSoft.warning,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
               <Trophy color="#F59E0B" size={48} />
             </View>
           </View>
 
           {/* Celebration Header */}
-          <Text className={`text-3xl font-bold text-center mb-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize['3xl'],
+              fontWeight: tokens.typography.fontWeight.bold,
+              textAlign: 'center',
+              marginBottom: tokens.spacing.xs,
+              color: colors.text.primary,
+            }}
+          >
             🎉 New PR! 🎉
           </Text>
-          <Text className={`text-lg text-center mb-6 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.lg,
+              textAlign: 'center',
+              marginBottom: tokens.spacing.lg,
+              color: colors.text.secondary,
+            }}
+          >
             You just crushed a personal record!
           </Text>
 
           {/* Exercise Name */}
-          <View className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-            <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View
+            style={{
+              padding: tokens.spacing.md,
+              borderRadius: tokens.borderRadius.lg,
+              marginBottom: tokens.spacing.md,
+              backgroundColor: colors.background.tertiary,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                color: colors.text.tertiary,
+              }}
+            >
               Exercise
             </Text>
-            <Text className={`text-2xl font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+            <Text
+              style={{
+                marginTop: tokens.spacing.xs,
+                fontSize: tokens.typography.fontSize['2xl'],
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
               {prData.exerciseName}
             </Text>
           </View>
 
           {/* PR Details */}
-          <View className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-primaryDark/20' : 'bg-primary-500/10'}`}>
-            <View className="flex-row items-center justify-between mb-3">
+          <View
+            style={{
+              padding: tokens.spacing.md,
+              borderRadius: tokens.borderRadius.lg,
+              marginBottom: tokens.spacing.md,
+              backgroundColor: colors.backgroundSoft.success,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
               <View>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                  }}
+                >
                   Weight × Reps
                 </Text>
-                <Text className={`text-xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+                <Text
+                  style={{
+                    marginTop: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.xl,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.accent.blue,
+                  }}
+                >
                   {prData.weight} lbs × {prData.reps}
                 </Text>
               </View>
-              <View className="items-end">
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <View
+                style={{
+                  alignItems: 'flex-end',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                  }}
+                >
                   Estimated 1RM
                 </Text>
-                <Text className={`text-xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+                <Text
+                  style={{
+                    marginTop: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.xl,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.accent.blue,
+                  }}
+                >
                   {prData.oneRM} lbs
                 </Text>
               </View>
@@ -95,9 +209,25 @@ export default function PRCelebrationModal({
 
             {/* Improvement */}
             {previousPR && improvement > 0 && (
-              <View className="flex-row items-center justify-center pt-3 border-t border-gray-300 dark:border-gray-600">
-                <TrendingUp color={isDark ? '#4A9B6F' : '#2C5F3D'} size={20} />
-                <Text className={`text-base font-bold ml-2 ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingTop: tokens.spacing.sm,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border.subtle,
+                }}
+              >
+                <TrendingUp color={colors.accent.green} size={20} />
+                <Text
+                  style={{
+                    marginLeft: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.accent.green,
+                  }}
+                >
                   +{improvement.toFixed(1)} lbs ({improvementPercent}% improvement)
                 </Text>
               </View>
@@ -106,46 +236,99 @@ export default function PRCelebrationModal({
 
           {/* Previous PR */}
           {previousPR && (
-            <View className="mb-6">
-              <Text className={`text-sm text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            <View
+              style={{
+                marginBottom: tokens.spacing.lg,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  textAlign: 'center',
+                  color: colors.text.tertiary,
+                }}
+              >
                 Previous best: {previousPR} lbs
               </Text>
             </View>
           )}
 
           {/* Motivational Message */}
-          <View className={`p-3 rounded-xl mb-6 ${isDark ? 'bg-yellow-900/30' : 'bg-yellow-100'}`}>
-            <Text className={`text-sm text-center font-bold ${isDark ? 'text-yellow-400' : 'text-yellow-700'}`}>
+          <View
+            style={{
+              padding: tokens.spacing.sm,
+              borderRadius: tokens.borderRadius.lg,
+              marginBottom: tokens.spacing.lg,
+              backgroundColor: colors.backgroundSoft.warning,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                textAlign: 'center',
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: isDark ? '#FACC15' : '#92400E',
+              }}
+            >
               💪 Keep pushing! You're getting stronger every day!
             </Text>
           </View>
 
           {/* Action Buttons */}
-          <View className="space-y-3">
+          <View
+            style={{
+              rowGap: tokens.spacing.sm,
+            }}
+          >
             {/* Share Button */}
             <Pressable
-              className={`flex-row items-center justify-center p-4 rounded-xl border-2 ${
-                isDark ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'
-              }`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                borderWidth: 2,
+                borderColor: colors.border.subtle,
+                backgroundColor: colors.background.tertiary,
+              }}
               onPress={() => {
                 // TODO: Implement share functionality
                 console.log('Share PR:', prData);
               }}
               accessibilityLabel="Share PR"
             >
-              <Share2 color={isDark ? '#9CA3AF' : '#6B7280'} size={20} />
-              <Text className={`font-bold ml-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <Share2 color={colors.text.tertiary} size={20} />
+              <Text
+                style={{
+                  marginLeft: tokens.spacing.xs,
+                  fontSize: tokens.typography.fontSize.base,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
                 Share Achievement
               </Text>
             </Pressable>
 
             {/* Continue Button */}
             <Pressable
-              className={`p-4 rounded-xl ${isDark ? 'bg-primaryDark' : 'bg-primary-500'}`}
               onPress={onClose}
               accessibilityLabel="Continue"
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                backgroundColor: colors.accent.blue,
+              }}
             >
-              <Text className="text-center font-bold text-white text-lg">
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: '#FFFFFF',
+                }}
+              >
                 Continue
               </Text>
             </Pressable>

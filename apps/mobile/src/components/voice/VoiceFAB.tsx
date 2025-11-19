@@ -20,10 +20,12 @@ import { voiceAPIClient, VoiceAPIError } from '../../services/api';
 import { VoiceParseResponse } from '../../services/api/config';
 import { useWorkoutStore } from '../../store/workout.store';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { hapticsService } from '../../services/haptics';
 
 export default function VoiceFAB() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [showInput, setShowInput] = useState(false);
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -162,11 +164,26 @@ export default function VoiceFAB() {
     <>
       {/* Floating Action Button with Pulse Animation */}
       <Animated.View
-        style={[animatedStyle]}
-        className="absolute bottom-20 right-6"
+        style={[
+          animatedStyle,
+          {
+            position: 'absolute',
+            bottom: tokens.spacing['2xl'],
+            right: tokens.spacing.lg,
+          },
+        ]}
       >
         <Pressable
-          className="w-16 h-16 bg-[#2C5F3D] rounded-full items-center justify-center shadow-lg active:opacity-80"
+          style={({ pressed }) => ({
+            width: 64,
+            height: 64,
+            borderRadius: tokens.borderRadius.full,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.accent.blue,
+            opacity: pressed ? 0.9 : 1,
+            ...tokens.shadows.lg,
+          })}
           onPress={() => {
             hapticsService.medium();
             setShowInput(true);
@@ -176,17 +193,43 @@ export default function VoiceFAB() {
           accessibilityRole="button"
           testID="voice-fab"
         >
-          <Mic color="white" size={32} />
+          <Mic color="#FFFFFF" size={32} />
         </Pressable>
       </Animated.View>
 
       {/* Keyboard Input Modal (Web Testing) */}
       <Modal visible={showInput} transparent animationType="slide">
-        <View className="flex-1 justify-end bg-black/50">
-          <View className={`p-6 rounded-t-3xl ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'flex-end',
+            backgroundColor: colors.overlay.scrim,
+          }}
+        >
+          <View
+            style={{
+              padding: tokens.spacing.lg,
+              borderTopLeftRadius: tokens.borderRadius.xl,
+              borderTopRightRadius: tokens.borderRadius.xl,
+              backgroundColor: colors.background.secondary,
+            }}
+          >
             {/* Header */}
-            <View className="flex-row justify-between items-center mb-4">
-              <Text className={`text-xl font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: tokens.spacing.md,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xl,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
                 Voice Input
               </Text>
               <Pressable
@@ -196,19 +239,24 @@ export default function VoiceFAB() {
                 accessibilityRole="button"
                 testID="close-button"
               >
-                <X color={isDark ? '#9CA3AF' : '#666'} size={24} />
+                <X color={colors.text.tertiary} size={24} />
               </Pressable>
             </View>
 
             {/* Input Field */}
             <TextInput
-              className={`border rounded-xl p-4 text-base mb-4 ${
-                isDark
-                  ? 'border-gray-600 bg-gray-700 text-white'
-                  : 'border-gray-300 bg-white text-gray-800'
-              }`}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border.light,
+                borderRadius: tokens.components.input.borderRadius,
+                padding: tokens.spacing.md,
+                fontSize: tokens.typography.fontSize.base,
+                marginBottom: tokens.spacing.md,
+                color: colors.text.primary,
+                backgroundColor: colors.background.primary,
+              }}
               placeholder="e.g., bench press 225 for 10"
-              placeholderTextColor={isDark ? '#9CA3AF' : '#999'}
+              placeholderTextColor={colors.text.tertiary}
               value={inputText}
               onChangeText={setInputText}
               autoFocus
@@ -218,30 +266,75 @@ export default function VoiceFAB() {
 
             {/* Error Message */}
             {error && (
-              <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-                <Text className="text-sm text-red-600">{error}</Text>
+              <View
+                style={{
+                  padding: tokens.spacing.sm,
+                  borderRadius: tokens.borderRadius.md,
+                  marginBottom: tokens.spacing.sm,
+                  borderWidth: 1,
+                  borderColor: colors.accent.red,
+                  backgroundColor: colors.backgroundSoft.danger,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    color: colors.accent.red,
+                  }}
+                >
+                  {error}
+                </Text>
               </View>
             )}
 
             {/* Parsed Data Confirmation */}
             {parsedData && (
-              <View className={`border rounded-xl p-4 mb-4 ${
-                isDark
-                  ? 'bg-green-900/30 border-green-700'
-                  : 'bg-green-50 border-green-200'
-              }`}>
-                <Text className={`text-sm font-body-semibold mb-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <View
+                style={{
+                  padding: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.md,
+                  marginBottom: tokens.spacing.md,
+                  borderWidth: 1,
+                  borderColor: colors.accent.green,
+                  backgroundColor: colors.backgroundSoft.success,
+                }}
+              >
+                <Text
+                  style={{
+                    marginBottom: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.primary,
+                  }}
+                >
                   Parsed Command:
                 </Text>
-                <Text className={`text-base ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    color: colors.text.primary,
+                  }}
+                >
                   {parsedData.exercise_name}
                 </Text>
-                <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    marginTop: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.sm,
+                    color: colors.text.secondary,
+                  }}
+                >
                   {parsedData.weight && `${parsedData.weight} ${parsedData.weight_unit || 'lbs'}`}
                   {parsedData.reps && ` × ${parsedData.reps} reps`}
                   {parsedData.rpe && ` @ RPE ${parsedData.rpe}`}
                 </Text>
-                <Text className={`text-xs mt-2 ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                <Text
+                  style={{
+                    marginTop: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                  }}
+                >
                   Confidence: {(parsedData.confidence * 100).toFixed(0)}%
                 </Text>
               </View>
@@ -250,11 +343,16 @@ export default function VoiceFAB() {
             {/* Action Buttons */}
             {!parsedData ? (
               <Pressable
-                className={`p-4 rounded-xl items-center min-h-[60px] ${
-                  isLoading
-                    ? 'bg-gray-400'
-                    : isDark ? 'bg-primaryDark' : 'bg-primary-500'
-                }`}
+                style={({ pressed }) => ({
+                  padding: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.xl,
+                  alignItems: 'center',
+                  minHeight: 60,
+                  backgroundColor: isLoading
+                    ? colors.text.disabled
+                    : colors.accent.blue,
+                  opacity: pressed ? 0.9 : 1,
+                })}
                 onPress={() => handleVoiceInput(inputText)}
                 disabled={isLoading}
                 accessibilityLabel="Parse Command"
@@ -263,36 +361,75 @@ export default function VoiceFAB() {
                 testID="log-set-button"
               >
                 {isLoading ? (
-                  <ActivityIndicator color="white" />
+                  <ActivityIndicator color="#FFFFFF" />
                 ) : (
-                  <Text className="text-base font-bold text-white">
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.base,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: '#FFFFFF',
+                    }}
+                  >
                     Parse Command
                   </Text>
                 )}
               </Pressable>
             ) : (
-              <View className="flex-row gap-3">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  columnGap: tokens.spacing.sm,
+                }}
+              >
                 <Pressable
-                  className="flex-1 p-4 bg-gray-200 rounded-xl items-center min-h-[60px]"
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    padding: tokens.spacing.md,
+                    borderRadius: tokens.borderRadius.xl,
+                    alignItems: 'center',
+                    minHeight: 60,
+                    backgroundColor: colors.background.tertiary,
+                    opacity: pressed ? 0.9 : 1,
+                  })}
                   onPress={handleReject}
                   accessibilityLabel="Reject"
                   accessibilityHint="Rejects the parsed command and allows re-entry"
                   accessibilityRole="button"
                   testID="reject-button"
                 >
-                  <Text className="text-base font-bold text-gray-800">
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.base,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: colors.text.primary,
+                    }}
+                  >
                     Reject
                   </Text>
                 </Pressable>
                 <Pressable
-                  className="flex-1 p-4 bg-[#2C5F3D] rounded-xl items-center min-h-[60px]"
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    padding: tokens.spacing.md,
+                    borderRadius: tokens.borderRadius.xl,
+                    alignItems: 'center',
+                    minHeight: 60,
+                    backgroundColor: colors.accent.green,
+                    opacity: pressed ? 0.9 : 1,
+                  })}
                   onPress={() => handleAcceptSet(parsedData)}
                   accessibilityLabel="Accept and Log"
                   accessibilityHint="Accepts the parsed command and logs the workout set"
                   accessibilityRole="button"
                   testID="accept-button"
                 >
-                  <Text className="text-base font-bold text-white">
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.base,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: '#FFFFFF',
+                    }}
+                  >
                     Accept & Log
                   </Text>
                 </Pressable>
@@ -300,7 +437,14 @@ export default function VoiceFAB() {
             )}
 
             {/* Help Text */}
-            <Text className="text-sm text-gray-600 mt-4 text-center">
+            <Text
+              style={{
+                marginTop: tokens.spacing.md,
+                fontSize: tokens.typography.fontSize.sm,
+                textAlign: 'center',
+                color: colors.text.secondary,
+              }}
+            >
               Type your command (voice input coming in Phase 4)
             </Text>
           </View>

@@ -9,6 +9,7 @@ import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react-native';
 import { DeloadRecommendation } from '../../services/api/AnalyticsAPIClient';
 import { useTheme } from '../../hooks/useTheme';
+import { tokens } from '../../theme/tokens';
 
 interface DeloadCardProps {
   deloadRecommendation: DeloadRecommendation;
@@ -22,6 +23,7 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
   onDismiss,
 }) => {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [isApproving, setIsApproving] = useState(false);
 
   // Get card background color based on deload type
@@ -121,42 +123,82 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
 
   return (
     <View
-      className="p-4 rounded-2xl mb-6"
-      style={{ backgroundColor: getCardColor() }}
+      style={{
+        padding: tokens.spacing.md,
+        borderRadius: tokens.borderRadius['2xl'],
+        marginBottom: tokens.spacing.lg,
+        backgroundColor: getCardColor(),
+      }}
     >
       {/* Header */}
-      <View className="flex-row items-center mb-3">
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          marginBottom: tokens.spacing.sm,
+        }}
+      >
         {deloadRecommendation.deload_needed ? (
           <AlertCircle size={24} color={getIconColor()} />
         ) : (
           <CheckCircle size={24} color={getIconColor()} />
         )}
-        <Text className={`ml-2 text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <Text
+          style={{
+            marginLeft: tokens.spacing.xs,
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
+        >
           {deloadRecommendation.deload_needed ? 'Deload Recommended' : 'No Deload Needed'}
         </Text>
       </View>
 
       {/* Deload Type Badge */}
       {deloadRecommendation.deload_type && (
-        <View className="flex-row items-center mb-3">
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: tokens.spacing.sm,
+          }}
+        >
           <View
-            className="px-3 py-1 rounded-full mr-2"
-            style={{ backgroundColor: getIconColor() + '30' }}
+            style={{
+              paddingHorizontal: tokens.spacing.sm,
+              paddingVertical: tokens.spacing.xs,
+              borderRadius: tokens.borderRadius.full,
+              marginRight: tokens.spacing.xs,
+              backgroundColor: getIconColor() + '30',
+            }}
           >
             <Text
-              className="text-xs font-semibold capitalize"
-              style={{ color: getIconColor() }}
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                textTransform: 'capitalize',
+                color: getIconColor(),
+              }}
             >
               {deloadRecommendation.deload_type.replace('_', ' ')}
             </Text>
           </View>
           <View
-            className="px-3 py-1 rounded-full"
-            style={{ backgroundColor: getConfidenceBadgeColor() + '30' }}
+            style={{
+              paddingHorizontal: tokens.spacing.sm,
+              paddingVertical: tokens.spacing.xs,
+              borderRadius: tokens.borderRadius.full,
+              backgroundColor: getConfidenceBadgeColor() + '30',
+            }}
           >
             <Text
-              className="text-xs font-semibold capitalize"
-              style={{ color: getConfidenceBadgeColor() }}
+              style={{
+                fontSize: tokens.typography.fontSize.xs,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                textTransform: 'capitalize',
+                color: getConfidenceBadgeColor(),
+              }}
             >
               {deloadRecommendation.confidence} confidence
             </Text>
@@ -165,16 +207,44 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
       )}
 
       {/* Reason */}
-      <Text className={`text-sm mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <Text
+        style={{
+          fontSize: tokens.typography.fontSize.sm,
+          marginBottom: tokens.spacing.sm,
+          color: colors.text.secondary,
+        }}
+      >
         {deloadRecommendation.reason}
       </Text>
 
       {/* Recommendation */}
       {deloadRecommendation.recommendation && (
-        <View className={`p-3 rounded-xl mb-3 ${isDark ? 'bg-gray-700' : 'bg-white'}`}>
-          <View className="flex-row items-start">
-            <Info size={16} color={getIconColor()} className="mt-0.5 mr-2" />
-            <Text className={`flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+        <View
+          style={{
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.lg,
+            marginBottom: tokens.spacing.sm,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-start',
+            }}
+          >
+            <Info
+              size={16}
+              color={getIconColor()}
+              style={{ marginTop: 2, marginRight: tokens.spacing.xs }}
+            />
+            <Text
+              style={{
+                flex: 1,
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+              }}
+            >
               {deloadRecommendation.recommendation}
             </Text>
           </View>
@@ -183,16 +253,46 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
 
       {/* Indicators */}
       {Object.keys(deloadRecommendation.indicators).length > 0 && (
-        <View className="mb-3">
-          <Text className={`text-xs font-semibold mb-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            marginBottom: tokens.spacing.sm,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              marginBottom: tokens.spacing.xs,
+              color: colors.text.tertiary,
+            }}
+          >
             Indicators
           </Text>
           {Object.entries(deloadRecommendation.indicators).map(([key, value]) => (
-            <View key={key} className="flex-row justify-between mb-1">
-              <Text className={`text-xs capitalize ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View
+              key={key}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: 2,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  textTransform: 'capitalize',
+                  color: colors.text.tertiary,
+                }}
+              >
                 {key.replace(/_/g, ' ')}:
               </Text>
-              <Text className={`text-xs font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  color: colors.text.primary,
+                }}
+              >
                 {typeof value === 'number' ? value.toFixed(1) : value}
               </Text>
             </View>
@@ -202,23 +302,54 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
 
       {/* Action Buttons */}
       {deloadRecommendation.deload_needed && deloadRecommendation.requires_approval && (
-        <View className="flex-row space-x-2">
+        <View
+          style={{
+            flexDirection: 'row',
+            columnGap: tokens.spacing.xs,
+          }}
+        >
           <TouchableOpacity
             onPress={handleApprove}
             disabled={isApproving}
-            className="flex-1 py-3 rounded-xl mr-2"
-            style={{ backgroundColor: getIconColor() }}
+            style={{
+              flex: 1,
+              paddingVertical: tokens.spacing.sm,
+              borderRadius: tokens.borderRadius.lg,
+              marginRight: tokens.spacing.xs,
+              backgroundColor: getIconColor(),
+              opacity: isApproving ? 0.7 : 1,
+            }}
           >
-            <Text className="text-white text-center font-semibold">
+            <Text
+              style={{
+                textAlign: 'center',
+                fontSize: tokens.typography.fontSize.sm,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: '#FFFFFF',
+              }}
+            >
               {isApproving ? 'Approving...' : 'Approve Deload'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleDismiss}
             disabled={isApproving}
-            className={`flex-1 py-3 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}
+            style={{
+              flex: 1,
+              paddingVertical: tokens.spacing.sm,
+              borderRadius: tokens.borderRadius.lg,
+              backgroundColor: colors.background.tertiary,
+              opacity: isApproving ? 0.7 : 1,
+            }}
           >
-            <Text className={`text-center font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <Text
+              style={{
+                textAlign: 'center',
+                fontSize: tokens.typography.fontSize.sm,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: colors.text.primary,
+              }}
+            >
               Dismiss
             </Text>
           </TouchableOpacity>
@@ -227,8 +358,20 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
 
       {/* Programmed Deload Info */}
       {deloadRecommendation.deload_needed && deloadRecommendation.deload_type === 'programmed' && (
-        <View className={`p-3 rounded-xl ${isDark ? 'bg-gray-700' : 'bg-white'}`}>
-          <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            marginTop: tokens.spacing.sm,
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.lg,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.tertiary,
+            }}
+          >
             This is a programmed deload week built into your training plan. Follow the reduced volume
             prescribed in your program.
           </Text>

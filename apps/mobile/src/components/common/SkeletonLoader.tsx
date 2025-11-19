@@ -217,10 +217,10 @@ const styles = StyleSheet.create({
   shimmer: {
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: tokens.colors.light.overlay.shimmer,
     opacity: 0.5,
   },
-  
+
   // Chat message skeleton
   chatMessageSkeleton: {
     flexDirection: 'row',

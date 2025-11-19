@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, Text, Modal, Pressable, ScrollView } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { AlertCircle, TrendingDown, CheckCircle, X, Battery } from 'lucide-react-native';
 import { FatigueAssessment, DeloadPrescription } from '../../services/deload/DeloadService';
 
@@ -29,6 +30,7 @@ export default function DeloadRecommendationModal({
   prescription,
 }: DeloadRecommendationModalProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
   const volumeReductionPercent = Math.round((1 - prescription.volumeReduction) * 100);
   const intensityPercent = Math.round(prescription.intensityMaintenance * 100);
@@ -40,48 +42,144 @@ export default function DeloadRecommendationModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <View className="flex-1 bg-black/50 justify-center items-center p-6">
-        <View className={`w-full max-w-md rounded-xl shadow-xl p-6 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.overlay.scrimStrong,
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: tokens.spacing.lg,
+        }}
+      >
+        <View
+          style={{
+            width: '100%',
+            maxWidth: 420,
+            borderRadius: tokens.borderRadius.xl,
+            padding: tokens.spacing.lg,
+            backgroundColor: colors.background.secondary,
+            ...tokens.shadows.lg,
+          }}
+        >
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Header */}
-            <View className="flex-row items-center justify-between mb-4">
-              <View className="flex-row items-center">
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: tokens.spacing.md,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                }}
+              >
                 <Battery color="#F9AC60" size={24} />
-                <Text className={`text-xl font-bold ml-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                <Text
+                  style={{
+                    marginLeft: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.xl,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
+                >
                   Deload Week Recommended
                 </Text>
               </View>
               <Pressable
                 onPress={onClose}
-                className="p-2 min-w-[44px] min-h-[44px] items-center justify-center"
                 accessibilityLabel="Close modal"
+                style={{
+                  padding: tokens.spacing.xs,
+                  minWidth: 44,
+                  minHeight: 44,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
               >
                 <X color={isDark ? '#9CA3AF' : '#6B7280'} size={24} />
               </Pressable>
             </View>
 
             {/* Alert Badge */}
-            <View className="bg-orange-100 dark:bg-orange-900/30 p-4 rounded-xl mb-4">
-              <View className="flex-row items-center mb-2">
+            <View
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                marginBottom: tokens.spacing.md,
+                backgroundColor: colors.backgroundSoft.warning,
+              }}
+            >
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginBottom: tokens.spacing.xs,
+                }}
+              >
                 <AlertCircle color="#F9AC60" size={20} />
-                <Text className="text-base font-bold text-orange-600 dark:text-orange-400 ml-2">
+                <Text
+                  style={{
+                    marginLeft: tokens.spacing.xs,
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: isDark ? '#FBBF24' : '#92400E',
+                  }}
+                >
                   Recovery Week Needed
                 </Text>
               </View>
-              <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 Your body is showing signs of fatigue. A deload week will help you recover and come back stronger.
               </Text>
             </View>
 
             {/* Fatigue Indicators */}
-            <View className="mb-4">
-              <Text className={`text-sm font-body-semibold mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <View
+              style={{
+                marginBottom: tokens.spacing.md,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  marginBottom: tokens.spacing.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 Fatigue Indicators:
               </Text>
               {assessment.reasons.map((reason, index) => (
-                <View key={index} className="flex-row items-start mb-2">
-                  <TrendingDown color="#F9AC60" size={16} className="mt-1" />
-                  <Text className={`text-sm flex-1 ml-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <View
+                  key={index}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    marginBottom: tokens.spacing.xs,
+                  }}
+                >
+                  <TrendingDown
+                    color="#F9AC60"
+                    size={16}
+                    style={{ marginTop: 2 }}
+                  />
+                  <Text
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.secondary,
+                    }}
+                  >
                     {reason}
                   </Text>
                 </View>
@@ -89,57 +187,163 @@ export default function DeloadRecommendationModal({
             </View>
 
             {/* Deload Prescription */}
-            <View className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-              <Text className={`text-sm font-body-semibold mb-3 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+            <View
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                marginBottom: tokens.spacing.md,
+                backgroundColor: isDark ? colors.background.tertiary : colors.background.tertiary,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  marginBottom: tokens.spacing.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 Deload Prescription:
               </Text>
 
               {/* Volume Reduction */}
-              <View className="flex-row items-center justify-between mb-3">
-                <View className="flex-1">
-                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: tokens.spacing.sm,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: colors.text.tertiary,
+                    }}
+                  >
                     Volume Reduction
                   </Text>
-                  <Text className={`text-base font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.base,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: colors.text.primary,
+                    }}
+                  >
                     {volumeReductionPercent}% fewer sets
                   </Text>
                 </View>
-                <View className={`px-3 py-1 rounded-lg ${isDark ? 'bg-orange-900/30' : 'bg-orange-100'}`}>
-                  <Text className="text-sm font-body-semibold text-orange-600 dark:text-orange-400">
+                <View
+                  style={{
+                    paddingHorizontal: tokens.spacing.sm,
+                    paddingVertical: tokens.spacing.xs,
+                    borderRadius: tokens.borderRadius.lg,
+                    backgroundColor: colors.backgroundSoft.warningAlt,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.sm,
+                      fontWeight: tokens.typography.fontWeight.semibold,
+                      color: isDark ? '#FED7AA' : '#C05621',
+                    }}
+                  >
                     {Math.round(prescription.volumeReduction * 100)}% volume
                   </Text>
                 </View>
               </View>
 
               {/* Intensity Maintenance */}
-              <View className="flex-row items-center justify-between mb-3">
-                <View className="flex-1">
-                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: tokens.spacing.sm,
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: colors.text.tertiary,
+                    }}
+                  >
                     Intensity Maintenance
                   </Text>
-                  <Text className={`text-base font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.base,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: colors.text.primary,
+                    }}
+                  >
                     Keep {intensityPercent}% of weight
                   </Text>
                 </View>
-                <View className={`px-3 py-1 rounded-lg ${isDark ? 'bg-green-900/30' : 'bg-green-100'}`}>
-                  <Text className="text-sm font-body-semibold text-green-600 dark:text-green-400">
+                <View
+                  style={{
+                    paddingHorizontal: tokens.spacing.sm,
+                    paddingVertical: tokens.spacing.xs,
+                    borderRadius: tokens.borderRadius.lg,
+                    backgroundColor: colors.backgroundSoft.success,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.sm,
+                      fontWeight: tokens.typography.fontWeight.semibold,
+                      color: isDark ? '#BBF7D0' : '#166534',
+                    }}
+                  >
                     Maintain strength
                   </Text>
                 </View>
               </View>
 
               {/* Duration */}
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: colors.text.tertiary,
+                    }}
+                  >
                     Duration
                   </Text>
-                  <Text className={`text-base font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.base,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color: colors.text.primary,
+                    }}
+                  >
                     {prescription.duration} days
                   </Text>
                 </View>
-                <View className={`px-3 py-1 rounded-lg ${isDark ? 'bg-blue-900/30' : 'bg-blue-100'}`}>
-                  <Text className="text-sm font-body-semibold text-blue-600 dark:text-blue-400">
+                <View
+                  style={{
+                    paddingHorizontal: tokens.spacing.sm,
+                    paddingVertical: tokens.spacing.xs,
+                    borderRadius: tokens.borderRadius.lg,
+                    backgroundColor: colors.backgroundSoft.info,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: tokens.typography.fontSize.sm,
+                      fontWeight: tokens.typography.fontWeight.semibold,
+                      color: isDark ? '#BFDBFE' : '#1D4ED8',
+                    }}
+                  >
                     1 week
                   </Text>
                 </View>
@@ -147,46 +351,107 @@ export default function DeloadRecommendationModal({
             </View>
 
             {/* Benefits */}
-            <View className={`p-3 rounded-xl mb-6 ${isDark ? 'bg-primaryDark/20' : 'bg-primary-500/10'}`}>
-              <Text className={`text-sm font-body-semibold mb-2 ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+            <View
+              style={{
+                padding: tokens.spacing.sm,
+                borderRadius: tokens.borderRadius.lg,
+                marginBottom: tokens.spacing.lg,
+                backgroundColor: colors.backgroundSoft.info,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  marginBottom: tokens.spacing.xs,
+                  color: colors.accent.blue,
+                }}
+              >
                 💡 Benefits of Deloading:
               </Text>
-              <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                • Allows muscles and nervous system to recover{'\n'}
-                • Prevents overtraining and injury{'\n'}
-                • Prepares you for future progress{'\n'}
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
+              >
+                • Allows muscles and nervous system to recover{"\n"}
+                • Prevents overtraining and injury{"\n"}
+                • Prepares you for future progress{"\n"}
                 • Maintains strength while reducing fatigue
               </Text>
             </View>
 
             {/* Action Buttons */}
-            <View className="flex-row space-x-3">
+            <View
+              style={{
+                flexDirection: 'row',
+                columnGap: tokens.spacing.sm,
+              }}
+            >
               <Pressable
-                className={`flex-1 p-4 rounded-xl border-2 ${
-                  isDark ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-100'
-                }`}
                 onPress={onReject}
                 accessibilityLabel="Reject deload"
+                style={{
+                  flex: 1,
+                  padding: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.lg,
+                  borderWidth: 2,
+                  borderColor: colors.border.subtle,
+                  backgroundColor: colors.background.tertiary,
+                }}
               >
-                <Text className={`text-center font-bold ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.secondary,
+                  }}
+                >
                   Skip Deload
                 </Text>
               </Pressable>
 
               <Pressable
-                className={`flex-1 p-4 rounded-xl ${isDark ? 'bg-primaryDark' : 'bg-primary-500'}`}
                 onPress={onApprove}
                 accessibilityLabel="Approve deload"
+                style={{
+                  flex: 1,
+                  padding: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.lg,
+                  backgroundColor: colors.accent.blue,
+                }}
               >
-                <Text className="text-center font-bold text-white">
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: '#FFFFFF',
+                  }}
+                >
                   Start Deload Week
                 </Text>
               </Pressable>
             </View>
 
             {/* Premium Badge */}
-            <View className="mt-4 pt-3 border-t border-gray-200 dark:border-gray-700">
-              <Text className={`text-xs text-center ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+            <View
+              style={{
+                marginTop: tokens.spacing.lg,
+                paddingTop: tokens.spacing.sm,
+                borderTopWidth: 1,
+                borderTopColor: colors.border.subtle,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  textAlign: 'center',
+                  color: colors.text.tertiary,
+                }}
+              >
                 ⭐ Premium Auto-Deload Feature
               </Text>
             </View>

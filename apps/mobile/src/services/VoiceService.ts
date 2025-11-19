@@ -38,7 +38,7 @@ export class VoiceService {
           PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
           {
             title: 'Microphone Permission',
-            message: 'VoiceFit needs access to your microphone for voice workout logging.',
+            message: 'Coach needs access to your microphone for voice workout logging.',
             buttonNeutral: 'Ask Me Later',
             buttonNegative: 'Cancel',
             buttonPositive: 'OK',

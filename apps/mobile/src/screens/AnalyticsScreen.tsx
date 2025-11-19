@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { tokens } from '../theme/tokens';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
 import AnalyticsAPIClient, {
@@ -22,6 +23,7 @@ import { DeloadCard } from '../components/analytics/DeloadCard';
 export default function AnalyticsScreen() {
   const { isDark } = useTheme();
   const { user, token } = useAuth();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
   const [volumeAnalytics, setVolumeAnalytics] = useState<VolumeAnalytics | null>(null);
   const [fatigueAnalytics, setFatigueAnalytics] = useState<FatigueAnalytics | null>(null);
@@ -93,10 +95,18 @@ export default function AnalyticsScreen() {
   // Loading state
   if (isLoading && !volumeAnalytics) {
     return (
-      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color={isDark ? '#ffffff' : '#000000'} />
-          <Text className={`mt-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+        <View
+          style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}
+        >
+          <ActivityIndicator size="large" color={colors.accent.blue} />
+          <Text
+            style={{
+              marginTop: tokens.spacing.sm,
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+            }}
+          >
             Loading analytics...
           </Text>
         </View>
@@ -107,12 +117,33 @@ export default function AnalyticsScreen() {
   // Error state
   if (error && !volumeAnalytics) {
     return (
-      <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
-        <View className="flex-1 justify-center items-center px-6">
-          <Text className={`text-center text-lg ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingHorizontal: tokens.spacing.lg,
+          }}
+        >
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: tokens.typography.fontSize.lg,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: colors.text.primary,
+            }}
+          >
             Failed to load analytics
           </Text>
-          <Text className={`text-center mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <Text
+            style={{
+              marginTop: tokens.spacing.xs,
+              textAlign: 'center',
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+            }}
+          >
             {error}
           </Text>
         </View>
@@ -121,24 +152,36 @@ export default function AnalyticsScreen() {
   }
 
   return (
-    <SafeAreaView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-white'}`}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       <ScrollView
-        className="flex-1"
-        contentContainerStyle={{ padding: 24 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: tokens.spacing.lg }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={handleRefresh}
-            tintColor={isDark ? '#ffffff' : '#000000'}
+            tintColor={colors.accent.blue}
           />
         }
       >
         {/* Header */}
-        <View className="mb-6">
-          <Text className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <View style={{ marginBottom: tokens.spacing.lg }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize['2xl'],
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: colors.text.primary,
+            }}
+          >
             Analytics
           </Text>
-          <Text className={`text-sm mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <Text
+            style={{
+              marginTop: tokens.spacing.xs,
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+            }}
+          >
             Track your volume, fatigue, and recovery
           </Text>
         </View>
@@ -170,31 +213,95 @@ export default function AnalyticsScreen() {
 
         {/* Weekly Summary */}
         {volumeAnalytics && (
-          <View className={`p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-            <Text className={`text-lg font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <View
+            style={{
+              marginTop: tokens.spacing.lg,
+              padding: tokens.spacing.md,
+              borderRadius: tokens.borderRadius.xl,
+              backgroundColor: colors.background.secondary,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.md,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: colors.text.primary,
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
               This Week
             </Text>
-            <View className="flex-row justify-between mb-2">
-              <Text className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: tokens.spacing.xs,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 Total Workouts
               </Text>
-              <Text className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
                 {volumeAnalytics.weekly_volume.total_workouts}
               </Text>
             </View>
-            <View className="flex-row justify-between mb-2">
-              <Text className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: tokens.spacing.xs,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 Total Sets
               </Text>
-              <Text className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
                 {volumeAnalytics.weekly_volume.total_sets}
               </Text>
             </View>
-            <View className="flex-row justify-between">
-              <Text className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 Muscle Groups Trained
               </Text>
-              <Text className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
                 {Object.keys(volumeAnalytics.weekly_volume.volume_by_muscle).length}
               </Text>
             </View>
@@ -203,23 +310,70 @@ export default function AnalyticsScreen() {
 
         {/* Monthly Summary */}
         {volumeAnalytics && (
-          <View className={`mt-4 p-4 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-            <Text className={`text-lg font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <View
+            style={{
+              marginTop: tokens.spacing.md,
+              padding: tokens.spacing.md,
+              borderRadius: tokens.borderRadius.xl,
+              backgroundColor: colors.background.secondary,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.md,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: colors.text.primary,
+                marginBottom: tokens.spacing.sm,
+              }}
+            >
               This Month
             </Text>
-            <View className="flex-row justify-between mb-2">
-              <Text className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                marginBottom: tokens.spacing.xs,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 Total Workouts
               </Text>
-              <Text className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
                 {volumeAnalytics.monthly_volume.total_workouts}
               </Text>
             </View>
-            <View className="flex-row justify-between">
-              <Text className={`${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
+              >
                 Total Sets
               </Text>
-              <Text className={`font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
                 {volumeAnalytics.monthly_volume.total_sets}
               </Text>
             </View>
@@ -227,11 +381,32 @@ export default function AnalyticsScreen() {
         )}
 
         {/* Premium Badge */}
-        <View className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500">
-          <Text className="text-white text-center font-semibold">
+        <View
+          style={{
+            marginTop: tokens.spacing.lg,
+            padding: tokens.spacing.md,
+            borderRadius: tokens.borderRadius.xl,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: tokens.typography.fontSize.sm,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: colors.text.primary,
+            }}
+          >
             ✨ Premium Analytics
           </Text>
-          <Text className="text-white text-center text-xs mt-1 opacity-80">
+          <Text
+            style={{
+              marginTop: tokens.spacing.xs,
+              textAlign: 'center',
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
             Advanced insights to optimize your training
           </Text>
         </View>

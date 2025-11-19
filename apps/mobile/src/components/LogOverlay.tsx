@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: tokens.colors.light.overlay.scrim,
   },
   modalContent: {
     height: '80%',

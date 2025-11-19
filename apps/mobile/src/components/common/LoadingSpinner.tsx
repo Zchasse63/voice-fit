@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 
 interface LoadingSpinnerProps {
   message?: string;
@@ -21,19 +22,35 @@ export default function LoadingSpinner({
   fullScreen = false 
 }: LoadingSpinnerProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
-  const containerClass = fullScreen
-    ? `flex-1 items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-background-light'}`
-    : 'items-center justify-center p-8';
+  const containerStyle = fullScreen
+    ? {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: colors.background.primary,
+      }
+    : {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: tokens.spacing.lg,
+      };
 
   return (
-    <View className={containerClass}>
-      <ActivityIndicator 
-        size={size} 
-        color={isDark ? '#4A9B6F' : '#2C5F3D'} 
+    <View style={containerStyle}>
+      <ActivityIndicator
+        size={size}
+        color={colors.accent.blue}
       />
       {message && (
-        <Text className={`text-base mt-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <Text
+          style={{
+            marginTop: tokens.spacing.sm,
+            fontSize: tokens.typography.fontSize.base,
+            color: colors.text.secondary,
+          }}
+        >
           {message}
         </Text>
       )}

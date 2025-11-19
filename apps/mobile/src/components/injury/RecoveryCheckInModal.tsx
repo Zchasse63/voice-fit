@@ -80,62 +80,99 @@ export default function RecoveryCheckInModal({
     (new Date().getTime() - new Date(injury.reportedAt).getTime()) / (1000 * 60 * 60 * 24)
   );
 
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
   return (
     <Modal
       visible={visible}
       animationType="slide"
-      transparent={true}
+      transparent
       onRequestClose={onClose}
     >
-      <View className="flex-1 justify-end bg-black/50">
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: colors.overlay.scrim,
+        }}
+      >
         <View
-          className={`rounded-t-3xl p-6 ${
-            isDark ? 'bg-gray-900' : 'bg-white'
-          }`}
-          style={{ maxHeight: '90%' }}
+          style={{
+            borderTopLeftRadius: tokens.borderRadius['3xl'],
+            borderTopRightRadius: tokens.borderRadius['3xl'],
+            padding: tokens.spacing.lg,
+            backgroundColor: colors.background.secondary,
+            maxHeight: '90%',
+          }}
         >
           {/* Header */}
-          <View className="flex-row justify-between items-center mb-4">
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: tokens.spacing.md,
+            }}
+          >
             <View>
               <Text
-                className={`text-xl font-bold ${
-                  isDark ? 'text-gray-200' : 'text-gray-800'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.xl,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
               >
                 Recovery Check-In
               </Text>
               <Text
-                className={`text-sm mt-1 ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}
+                style={{
+                  marginTop: tokens.spacing.xs,
+                  fontSize: tokens.typography.fontSize.sm,
+                  color: colors.text.secondary,
+                }}
               >
                 {injury.bodyPart} • Day {daysInRecovery}
               </Text>
             </View>
             <Pressable onPress={onClose} accessibilityLabel="Close modal">
-              <X color={isDark ? '#9CA3AF' : '#6B7280'} size={24} />
+              <X
+                color={isDark ? tokens.colors.dark.text.tertiary : tokens.colors.light.text.tertiary}
+                size={24}
+              />
             </Pressable>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Pain Level Slider */}
-            <View className="mb-6">
-              <View className="flex-row justify-between items-center mb-2">
+            <View style={{ marginBottom: tokens.spacing.lg }}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: tokens.spacing.xs,
+                }}
+              >
                 <Text
-                  className={`text-base font-bold ${
-                    isDark ? 'text-gray-200' : 'text-gray-800'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
                 >
                   Current Pain Level
                 </Text>
                 <Text
-                  className={`text-2xl font-bold ${
-                    painLevel >= 7
-                      ? 'text-red-500'
-                      : painLevel >= 4
-                      ? 'text-yellow-500'
-                      : 'text-green-500'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize['2xl'],
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color:
+                      painLevel >= 7
+                        ? tokens.colors.light.state.danger
+                        : painLevel >= 4
+                        ? tokens.colors.light.state.warning
+                        : tokens.colors.light.state.success,
+                  }}
                 >
                   {painLevel}
                 </Text>
@@ -150,123 +187,200 @@ export default function RecoveryCheckInModal({
                 onValueChange={setPainLevel}
                 minimumTrackTintColor={
                   painLevel >= 7
-                    ? '#EF4444'
+                    ? tokens.colors.light.state.danger
                     : painLevel >= 4
-                    ? '#F59E0B'
-                    : '#10B981'
+                    ? tokens.colors.light.state.warning
+                    : tokens.colors.light.state.success,
                 }
-                maximumTrackTintColor={isDark ? '#374151' : '#D1D5DB'}
+                maximumTrackTintColor={
+                  isDark ? tokens.colors.dark.border.subtle : tokens.colors.light.border.subtle,
+                }
                 thumbTintColor={
                   painLevel >= 7
-                    ? '#EF4444'
+                    ? tokens.colors.light.state.danger
                     : painLevel >= 4
-                    ? '#F59E0B'
-                    : '#10B981'
+                    ? tokens.colors.light.state.warning
+                    : tokens.colors.light.state.success,
                 }
               />
 
-              <View className="flex-row justify-between mt-1">
-                <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  marginTop: tokens.spacing.xs,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                  }}
+                >
                   No pain
                 </Text>
-                <Text className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.tertiary,
+                  }}
+                >
                   Worst pain
                 </Text>
               </View>
             </View>
 
             {/* Range of Motion Quality */}
-            <View className="mb-6">
+            <View style={{ marginBottom: tokens.spacing.lg }}>
               <Text
-                className={`text-base font-bold mb-3 ${
-                  isDark ? 'text-gray-200' : 'text-gray-800'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.base,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  marginBottom: tokens.spacing.sm,
+                  color: colors.text.primary,
+                }}
               >
                 Range of Motion
               </Text>
-              <View className="flex-row space-x-2">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  columnGap: tokens.spacing.xs,
+                }}
+              >
                 <Pressable
-                  className={`flex-1 p-4 rounded-xl flex-row items-center justify-center ${
-                    romQuality === 'better'
-                      ? isDark
-                        ? 'bg-green-900/40 border-2 border-green-500'
-                        : 'bg-green-100 border-2 border-green-500'
-                      : isDark
-                      ? 'bg-gray-800'
-                      : 'bg-gray-100'
-                  }`}
                   onPress={() => setRomQuality('better')}
+                  style={{
+                    flex: 1,
+                    padding: tokens.spacing.md,
+                    borderRadius: tokens.borderRadius.xl,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor:
+                      romQuality === 'better'
+                        ? isDark
+                          ? `${tokens.colors.dark.state.success}20`
+                          : `${tokens.colors.light.state.success}20`
+                        : colors.background.tertiary,
+                    borderWidth: romQuality === 'better' ? 2 : 0,
+                    borderColor:
+                      romQuality === 'better'
+                        ? isDark
+                          ? tokens.colors.dark.state.success
+                          : tokens.colors.light.state.success
+                        : 'transparent',
+                  }}
                 >
                   <TrendingUp
-                    color={romQuality === 'better' ? '#10B981' : isDark ? '#6B7280' : '#9CA3AF'}
+                    color={
+                      romQuality === 'better'
+                        ? tokens.colors.light.state.success
+                        : colors.text.tertiary,
+                    }
                     size={20}
                   />
                   <Text
-                    className={`ml-2 font-bold ${
-                      romQuality === 'better'
-                        ? 'text-green-500'
-                        : isDark
-                        ? 'text-gray-400'
-                        : 'text-gray-600'
-                    }`}
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color:
+                        romQuality === 'better'
+                          ? tokens.colors.light.state.success
+                          : colors.text.secondary,
+                    }}
                   >
                     Better
                   </Text>
                 </Pressable>
 
                 <Pressable
-                  className={`flex-1 p-4 rounded-xl flex-row items-center justify-center ${
-                    romQuality === 'same'
-                      ? isDark
-                        ? 'bg-yellow-900/40 border-2 border-yellow-500'
-                        : 'bg-yellow-100 border-2 border-yellow-500'
-                      : isDark
-                      ? 'bg-gray-800'
-                      : 'bg-gray-100'
-                  }`}
                   onPress={() => setRomQuality('same')}
+                  style={{
+                    flex: 1,
+                    padding: tokens.spacing.md,
+                    borderRadius: tokens.borderRadius.xl,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor:
+                      romQuality === 'same'
+                        ? isDark
+                          ? `${tokens.colors.dark.state.warning}20`
+                          : `${tokens.colors.light.state.warning}20`
+                        : colors.background.tertiary,
+                    borderWidth: romQuality === 'same' ? 2 : 0,
+                    borderColor:
+                      romQuality === 'same'
+                        ? isDark
+                          ? tokens.colors.dark.state.warning
+                          : tokens.colors.light.state.warning
+                        : 'transparent',
+                  }}
                 >
                   <Minus
-                    color={romQuality === 'same' ? '#F59E0B' : isDark ? '#6B7280' : '#9CA3AF'}
+                    color={
+                      romQuality === 'same'
+                        ? tokens.colors.light.state.warning
+                        : colors.text.tertiary,
+                    }
                     size={20}
                   />
                   <Text
-                    className={`ml-2 font-bold ${
-                      romQuality === 'same'
-                        ? 'text-yellow-500'
-                        : isDark
-                        ? 'text-gray-400'
-                        : 'text-gray-600'
-                    }`}
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color:
+                        romQuality === 'same'
+                          ? tokens.colors.light.state.warning
+                          : colors.text.secondary,
+                    }}
                   >
                     Same
                   </Text>
                 </Pressable>
 
                 <Pressable
-                  className={`flex-1 p-4 rounded-xl flex-row items-center justify-center ${
-                    romQuality === 'worse'
-                      ? isDark
-                        ? 'bg-red-900/40 border-2 border-red-500'
-                        : 'bg-red-100 border-2 border-red-500'
-                      : isDark
-                      ? 'bg-gray-800'
-                      : 'bg-gray-100'
-                  }`}
                   onPress={() => setRomQuality('worse')}
+                  style={{
+                    flex: 1,
+                    padding: tokens.spacing.md,
+                    borderRadius: tokens.borderRadius.xl,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor:
+                      romQuality === 'worse'
+                        ? isDark
+                          ? `${tokens.colors.dark.state.danger}20`
+                          : `${tokens.colors.light.state.danger}20`
+                        : colors.background.tertiary,
+                    borderWidth: romQuality === 'worse' ? 2 : 0,
+                    borderColor:
+                      romQuality === 'worse'
+                        ? isDark
+                          ? tokens.colors.dark.state.danger
+                          : tokens.colors.light.state.danger
+                        : 'transparent',
+                  }}
                 >
                   <TrendingDown
-                    color={romQuality === 'worse' ? '#EF4444' : isDark ? '#6B7280' : '#9CA3AF'}
+                    color={
+                      romQuality === 'worse'
+                        ? tokens.colors.light.state.danger
+                        : colors.text.tertiary,
+                    }
                     size={20}
                   />
                   <Text
-                    className={`ml-2 font-bold ${
-                      romQuality === 'worse'
-                        ? 'text-red-500'
-                        : isDark
-                        ? 'text-gray-400'
-                        : 'text-gray-600'
-                    }`}
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color:
+                        romQuality === 'worse'
+                          ? tokens.colors.light.state.danger
+                          : colors.text.secondary,
+                    }}
                   >
                     Worse
                   </Text>
@@ -275,118 +389,148 @@ export default function RecoveryCheckInModal({
             </View>
 
             {/* Activity Tolerance */}
-            <View className="mb-6">
+            <View style={{ marginBottom: tokens.spacing.lg }}>
               <Text
-                className={`text-base font-bold mb-3 ${
-                  isDark ? 'text-gray-200' : 'text-gray-800'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.base,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  marginBottom: tokens.spacing.sm,
+                  color: colors.text.primary,
+                }}
               >
                 Activity Tolerance
               </Text>
-              <View className="space-y-2">
+              <View style={{ rowGap: tokens.spacing.xs }}>
                 <Pressable
-                  className={`p-4 rounded-xl ${
-                    activityTolerance === 'improving'
-                      ? isDark
-                        ? 'bg-green-900/40 border-2 border-green-500'
-                        : 'bg-green-100 border-2 border-green-500'
-                      : isDark
-                      ? 'bg-gray-800'
-                      : 'bg-gray-100'
-                  }`}
                   onPress={() => setActivityTolerance('improving')}
+                  style={{
+                    padding: tokens.spacing.md,
+                    borderRadius: tokens.borderRadius.xl,
+                    backgroundColor:
+                      activityTolerance === 'improving'
+                        ? isDark
+                          ? `${tokens.colors.dark.state.success}20`
+                          : `${tokens.colors.light.state.success}20`
+                        : colors.background.tertiary,
+                    borderWidth: activityTolerance === 'improving' ? 2 : 0,
+                    borderColor:
+                      activityTolerance === 'improving'
+                        ? isDark
+                          ? tokens.colors.dark.state.success
+                          : tokens.colors.light.state.success
+                        : 'transparent',
+                  }}
                 >
                   <Text
-                    className={`font-bold ${
-                      activityTolerance === 'improving'
-                        ? 'text-green-500'
-                        : isDark
-                        ? 'text-gray-300'
-                        : 'text-gray-700'
-                    }`}
+                    style={{
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color:
+                        activityTolerance === 'improving'
+                          ? tokens.colors.light.state.success
+                          : colors.text.primary,
+                    }}
                   >
                     Improving
                   </Text>
                   <Text
-                    className={`text-xs mt-1 ${
-                      activityTolerance === 'improving'
-                        ? 'text-green-400'
-                        : isDark
-                        ? 'text-gray-500'
-                        : 'text-gray-600'
-                    }`}
+                    style={{
+                      marginTop: tokens.spacing.xs,
+                      fontSize: tokens.typography.fontSize.xs,
+                      color:
+                        activityTolerance === 'improving'
+                          ? tokens.colors.light.state.success
+                          : colors.text.secondary,
+                    }}
                   >
                     Can do more activities with less discomfort
                   </Text>
                 </Pressable>
 
                 <Pressable
-                  className={`p-4 rounded-xl ${
-                    activityTolerance === 'plateau'
-                      ? isDark
-                        ? 'bg-yellow-900/40 border-2 border-yellow-500'
-                        : 'bg-yellow-100 border-2 border-yellow-500'
-                      : isDark
-                      ? 'bg-gray-800'
-                      : 'bg-gray-100'
-                  }`}
                   onPress={() => setActivityTolerance('plateau')}
+                  style={{
+                    padding: tokens.spacing.md,
+                    borderRadius: tokens.borderRadius.xl,
+                    backgroundColor:
+                      activityTolerance === 'plateau'
+                        ? isDark
+                          ? `${tokens.colors.dark.state.warning}20`
+                          : `${tokens.colors.light.state.warning}20`
+                        : colors.background.tertiary,
+                    borderWidth: activityTolerance === 'plateau' ? 2 : 0,
+                    borderColor:
+                      activityTolerance === 'plateau'
+                        ? isDark
+                          ? tokens.colors.dark.state.warning
+                          : tokens.colors.light.state.warning
+                        : 'transparent',
+                  }}
                 >
                   <Text
-                    className={`font-bold ${
-                      activityTolerance === 'plateau'
-                        ? 'text-yellow-500'
-                        : isDark
-                        ? 'text-gray-300'
-                        : 'text-gray-700'
-                    }`}
+                    style={{
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color:
+                        activityTolerance === 'plateau'
+                          ? tokens.colors.light.state.warning
+                          : colors.text.primary,
+                    }}
                   >
                     Plateau
                   </Text>
                   <Text
-                    className={`text-xs mt-1 ${
-                      activityTolerance === 'plateau'
-                        ? 'text-yellow-400'
-                        : isDark
-                        ? 'text-gray-500'
-                        : 'text-gray-600'
-                    }`}
+                    style={{
+                      marginTop: tokens.spacing.xs,
+                      fontSize: tokens.typography.fontSize.xs,
+                      color:
+                        activityTolerance === 'plateau'
+                          ? tokens.colors.light.state.warning
+                          : colors.text.secondary,
+                    }}
                   >
                     No significant change in activity level
                   </Text>
                 </Pressable>
 
                 <Pressable
-                  className={`p-4 rounded-xl ${
-                    activityTolerance === 'declining'
-                      ? isDark
-                        ? 'bg-red-900/40 border-2 border-red-500'
-                        : 'bg-red-100 border-2 border-red-500'
-                      : isDark
-                      ? 'bg-gray-800'
-                      : 'bg-gray-100'
-                  }`}
                   onPress={() => setActivityTolerance('declining')}
+                  style={{
+                    padding: tokens.spacing.md,
+                    borderRadius: tokens.borderRadius.xl,
+                    backgroundColor:
+                      activityTolerance === 'declining'
+                        ? isDark
+                          ? `${tokens.colors.dark.state.danger}20`
+                          : `${tokens.colors.light.state.danger}20`
+                        : colors.background.tertiary,
+                    borderWidth: activityTolerance === 'declining' ? 2 : 0,
+                    borderColor:
+                      activityTolerance === 'declining'
+                        ? isDark
+                          ? tokens.colors.dark.state.danger
+                          : tokens.colors.light.state.danger
+                        : 'transparent',
+                  }}
                 >
                   <Text
-                    className={`font-bold ${
-                      activityTolerance === 'declining'
-                        ? 'text-red-500'
-                        : isDark
-                        ? 'text-gray-300'
-                        : 'text-gray-700'
-                    }`}
+                    style={{
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      color:
+                        activityTolerance === 'declining'
+                          ? tokens.colors.light.state.danger
+                          : colors.text.primary,
+                    }}
                   >
                     Declining
                   </Text>
                   <Text
-                    className={`text-xs mt-1 ${
-                      activityTolerance === 'declining'
-                        ? 'text-red-400'
-                        : isDark
-                        ? 'text-gray-500'
-                        : 'text-gray-600'
-                    }`}
+                    style={{
+                      marginTop: tokens.spacing.xs,
+                      fontSize: tokens.typography.fontSize.xs,
+                      color:
+                        activityTolerance === 'declining'
+                          ? tokens.colors.light.state.danger
+                          : colors.text.secondary,
+                    }}
                   >
                     More difficulty with activities than before
                   </Text>
@@ -397,23 +541,30 @@ export default function RecoveryCheckInModal({
 
           {/* Submit Button */}
           <Pressable
-            className={`p-4 rounded-xl mt-4 ${
-              isSubmitting
-                ? isDark
-                  ? 'bg-gray-700'
-                  : 'bg-gray-300'
-                : isDark
-                ? 'bg-primaryDark'
-                : 'bg-primary-500'
-            }`}
             onPress={handleSubmit}
             disabled={isSubmitting}
             accessibilityLabel="Submit recovery check-in"
+            style={{
+              marginTop: tokens.spacing.md,
+              padding: tokens.spacing.md,
+              borderRadius: tokens.borderRadius.xl,
+              alignItems: 'center',
+              backgroundColor: isSubmitting
+                ? colors.background.tertiary
+                : isDark
+                ? tokens.colors.dark.accent.green
+                : tokens.colors.light.accent.green,
+            }}
           >
             {isSubmitting ? (
-              <ActivityIndicator size="small" color="white" />
+              <ActivityIndicator size="small" color={tokens.colors.shared.static.white} />
             ) : (
-              <Text className="text-center font-bold text-white">
+              <Text
+                style={{
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: tokens.colors.shared.static.white,
+                }}
+              >
                 Submit Check-In
               </Text>
             )}

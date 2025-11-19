@@ -10,6 +10,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, Modal, ScrollView } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { AlertTriangle, X, CheckCircle, ExternalLink, ArrowRight } from 'lucide-react-native';
 import WorkoutAdjustmentModal from './WorkoutAdjustmentModal';
 
@@ -49,6 +50,7 @@ export default function InjuryDetectionModal({
   onSubstitutionsAccepted,
 }: InjuryDetectionModalProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [showWorkoutAdjustment, setShowWorkoutAdjustment] = useState(false);
 
   const hasAffectedExercises = affectedExercises.length > 0;
@@ -78,24 +80,48 @@ export default function InjuryDetectionModal({
       transparent={true}
       onRequestClose={onClose}
     >
-      <View className="flex-1 justify-end bg-black/50">
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'flex-end',
+          backgroundColor: colors.overlay.scrim,
+        }}
+      >
         <View
-          className={`rounded-t-3xl p-6 ${
-            isDark ? 'bg-gray-900' : 'bg-white'
-          }`}
-          style={{ maxHeight: '90%' }}
+          style={{
+            borderTopLeftRadius: tokens.borderRadius['3xl'],
+            borderTopRightRadius: tokens.borderRadius['3xl'],
+            padding: tokens.spacing.lg,
+            maxHeight: '90%',
+            backgroundColor: colors.background.secondary,
+          }}
         >
           {/* Header */}
-          <View className="flex-row justify-between items-center mb-4">
-            <View className="flex-row items-center">
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: tokens.spacing.md,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+            >
               <AlertTriangle
                 color={getSeverityColor(injuryResult.severity)}
                 size={24}
               />
               <Text
-                className={`text-xl font-bold ml-2 ${
-                  isDark ? 'text-gray-200' : 'text-gray-800'
-                }`}
+                style={{
+                  marginLeft: tokens.spacing.xs,
+                  fontSize: tokens.typography.fontSize.xl,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
               >
                 Potential Injury Detected
               </Text>
@@ -108,72 +134,119 @@ export default function InjuryDetectionModal({
           <ScrollView showsVerticalScrollIndicator={false}>
             {/* Injury Summary */}
             <View
-              className={`p-4 rounded-xl mb-4 ${
-                isDark ? 'bg-gray-800' : 'bg-gray-50'
-              }`}
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                marginBottom: tokens.spacing.md,
+                backgroundColor: colors.background.tertiary,
+              }}
             >
-              <View className="flex-row justify-between items-center mb-2">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: tokens.spacing.xs,
+                }}
+              >
                 <Text
-                  className={`text-sm font-medium ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.medium,
+                    color: colors.text.tertiary,
+                  }}
                 >
                   Body Part
                 </Text>
                 <Text
-                  className={`text-base font-bold ${
-                    isDark ? 'text-gray-200' : 'text-gray-800'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
                 >
                   {injuryResult.bodyPart || 'Not specified'}
                 </Text>
               </View>
 
-              <View className="flex-row justify-between items-center mb-2">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: tokens.spacing.xs,
+                }}
+              >
                 <Text
-                  className={`text-sm font-medium ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.medium,
+                    color: colors.text.tertiary,
+                  }}
                 >
                   Severity
                 </Text>
                 <Text
-                  className="text-base font-bold"
-                  style={{ color: getSeverityColor(injuryResult.severity) }}
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: getSeverityColor(injuryResult.severity),
+                  }}
                 >
                   {getSeverityLabel(injuryResult.severity)}
                 </Text>
               </View>
 
-              <View className="flex-row justify-between items-center mb-2">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: tokens.spacing.xs,
+                }}
+              >
                 <Text
-                  className={`text-sm font-medium ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.medium,
+                    color: colors.text.tertiary,
+                  }}
                 >
                   Type
                 </Text>
                 <Text
-                  className={`text-base font-bold ${
-                    isDark ? 'text-gray-200' : 'text-gray-800'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
                 >
                   {injuryResult.injuryType || 'Not specified'}
                 </Text>
               </View>
 
-              <View className="flex-row justify-between items-center">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
                 <Text
-                  className={`text-sm font-medium ${
-                    isDark ? 'text-gray-400' : 'text-gray-600'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.medium,
+                    color: colors.text.tertiary,
+                  }}
                 >
                   Confidence
                 </Text>
                 <Text
-                  className={`text-base font-bold ${
-                    isDark ? 'text-gray-200' : 'text-gray-800'
-                  }`}
+                  style={{
+                    fontSize: tokens.typography.fontSize.base,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
                 >
                   {Math.round(injuryResult.confidence * 100)}%
                 </Text>
@@ -181,18 +254,26 @@ export default function InjuryDetectionModal({
             </View>
 
             {/* Description */}
-            <View className="mb-4">
+            <View
+              style={{
+                marginBottom: tokens.spacing.md,
+              }}
+            >
               <Text
-                className={`text-sm font-medium mb-2 ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.medium,
+                  marginBottom: tokens.spacing.xs,
+                  color: colors.text.tertiary,
+                }}
               >
                 Assessment
               </Text>
               <Text
-                className={`text-base ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.base,
+                  color: colors.text.secondary,
+                }}
               >
                 {injuryResult.description}
               </Text>
@@ -200,26 +281,33 @@ export default function InjuryDetectionModal({
 
             {/* Medical Disclaimer */}
             <View
-              className={`p-4 rounded-xl mb-4 border ${
-                isDark
-                  ? 'bg-yellow-900/20 border-yellow-700'
-                  : 'bg-yellow-50 border-yellow-300'
-              }`}
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                marginBottom: tokens.spacing.md,
+                borderWidth: 1,
+                backgroundColor: colors.backgroundSoft.warning,
+                borderColor: isDark ? '#FACC15' : '#EAB308',
+              }}
             >
               <Text
-                className={`text-sm font-bold mb-2 ${
-                  isDark ? 'text-yellow-400' : 'text-yellow-800'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  marginBottom: tokens.spacing.xs,
+                  color: isDark ? '#FEF9C3' : '#854D0E',
+                }}
               >
                 ⚠️ Important Medical Disclaimer
               </Text>
               <Text
-                className={`text-xs ${
-                  isDark ? 'text-yellow-300' : 'text-yellow-900'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: isDark ? '#FEF9C3' : '#713F12',
+                }}
               >
                 This is an automated assessment based on keywords and is NOT a
-                medical diagnosis. VoiceFit does not provide medical advice.
+                medical diagnosis. Coach does not provide medical advice.
                 {'\n\n'}
                 If you experience severe pain, swelling, inability to bear
                 weight, numbness, or symptoms that worsen, seek immediate
@@ -228,69 +316,111 @@ export default function InjuryDetectionModal({
             </View>
 
             {/* Recommendations */}
-            <View className="mb-4">
+            <View
+              style={{
+                marginBottom: tokens.spacing.md,
+              }}
+            >
               <Text
-                className={`text-sm font-medium mb-2 ${
-                  isDark ? 'text-gray-400' : 'text-gray-600'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.medium,
+                  marginBottom: tokens.spacing.xs,
+                  color: colors.text.tertiary,
+                }}
               >
                 Recommended Actions
               </Text>
-              <View className="space-y-2">
-                <View className="flex-row items-start mb-2">
+              <View>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    marginBottom: tokens.spacing.xs,
+                  }}
+                >
                   <CheckCircle
                     color={isDark ? '#4A9B6F' : '#2C5F3D'}
                     size={16}
                     style={{ marginTop: 2 }}
                   />
                   <Text
-                    className={`text-sm ml-2 flex-1 ${
-                      isDark ? 'text-gray-300' : 'text-gray-700'
-                    }`}
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.secondary,
+                    }}
                   >
                     Log this injury to track recovery progress
                   </Text>
                 </View>
-                <View className="flex-row items-start mb-2">
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    marginBottom: tokens.spacing.xs,
+                  }}
+                >
                   <CheckCircle
                     color={isDark ? '#4A9B6F' : '#2C5F3D'}
                     size={16}
                     style={{ marginTop: 2 }}
                   />
                   <Text
-                    className={`text-sm ml-2 flex-1 ${
-                      isDark ? 'text-gray-300' : 'text-gray-700'
-                    }`}
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.secondary,
+                    }}
                   >
                     We'll suggest exercise modifications to avoid aggravating
                     the injury
                   </Text>
                 </View>
-                <View className="flex-row items-start mb-2">
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'flex-start',
+                    marginBottom: tokens.spacing.xs,
+                  }}
+                >
                   <CheckCircle
                     color={isDark ? '#4A9B6F' : '#2C5F3D'}
                     size={16}
                     style={{ marginTop: 2 }}
                   />
                   <Text
-                    className={`text-sm ml-2 flex-1 ${
-                      isDark ? 'text-gray-300' : 'text-gray-700'
-                    }`}
+                    style={{
+                      marginLeft: tokens.spacing.xs,
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.secondary,
+                    }}
                   >
                     Weekly check-ins will monitor your recovery
                   </Text>
                 </View>
                 {injuryResult.severity === 'severe' && (
-                  <View className="flex-row items-start">
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'flex-start',
+                    }}
+                  >
                     <ExternalLink
                       color={isDark ? '#EF4444' : '#DC2626'}
                       size={16}
                       style={{ marginTop: 2 }}
                     />
                     <Text
-                      className={`text-sm ml-2 flex-1 ${
-                        isDark ? 'text-red-400' : 'text-red-600'
-                      }`}
+                      style={{
+                        marginLeft: tokens.spacing.xs,
+                        flex: 1,
+                        fontSize: tokens.typography.fontSize.sm,
+                        color: isDark ? '#FCA5A5' : '#B91C1C',
+                      }}
                     >
                       Consider consulting a healthcare provider for severe
                       injuries
@@ -304,27 +434,40 @@ export default function InjuryDetectionModal({
           {/* View Affected Exercises Button (if available) */}
           {hasAffectedExercises && (
             <Pressable
-              className={`p-4 rounded-xl mb-4 border-2 ${
-                isDark
-                  ? 'bg-blue-900/20 border-blue-700'
-                  : 'bg-blue-50 border-blue-300'
-              }`}
               onPress={() => setShowWorkoutAdjustment(true)}
               accessibilityLabel="View affected exercises and substitutions"
+              style={{
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                marginBottom: tokens.spacing.md,
+                borderWidth: 2,
+                backgroundColor: colors.backgroundSoft.info,
+                borderColor: isDark ? '#1D4ED8' : '#3B82F6',
+              }}
             >
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <View style={{ flex: 1 }}>
                   <Text
-                    className={`text-sm font-bold mb-1 ${
-                      isDark ? 'text-blue-400' : 'text-blue-800'
-                    }`}
+                    style={{
+                      fontSize: tokens.typography.fontSize.sm,
+                      fontWeight: tokens.typography.fontWeight.bold,
+                      marginBottom: tokens.spacing.xs,
+                      color: isDark ? '#60A5FA' : '#1D4ED8',
+                    }}
                   >
                     🏋️ View Affected Exercises
                   </Text>
                   <Text
-                    className={`text-xs ${
-                      isDark ? 'text-blue-300' : 'text-blue-700'
-                    }`}
+                    style={{
+                      fontSize: tokens.typography.fontSize.xs,
+                      color: isDark ? '#BFDBFE' : '#1D4ED8',
+                    }}
                   >
                     {affectedExercises.length} exercise{affectedExercises.length !== 1 ? 's' : ''} may stress your {injuryResult.bodyPart}
                   </Text>
@@ -338,31 +481,53 @@ export default function InjuryDetectionModal({
           )}
 
           {/* Action Buttons */}
-          <View className="flex-row space-x-3 mt-4">
+          <View
+            style={{
+              flexDirection: 'row',
+              gap: tokens.spacing.sm,
+              marginTop: tokens.spacing.lg,
+            }}
+          >
             <Pressable
-              className={`flex-1 p-4 rounded-xl ${
-                isDark ? 'bg-gray-800' : 'bg-gray-200'
-              }`}
               onPress={onDismiss}
               accessibilityLabel="Dismiss injury detection"
+              style={{
+                flex: 1,
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                backgroundColor: colors.background.tertiary,
+              }}
             >
               <Text
-                className={`text-center font-bold ${
-                  isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}
+                style={{
+                  textAlign: 'center',
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.secondary,
+                }}
               >
                 Dismiss
               </Text>
             </Pressable>
 
             <Pressable
-              className={`flex-1 p-4 rounded-xl ${
-                isDark ? 'bg-primaryDark' : 'bg-primary-500'
-              }`}
               onPress={onLogInjury}
               accessibilityLabel="Log injury and track recovery"
+              style={{
+                flex: 1,
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                backgroundColor: getSeverityColor(injuryResult.severity),
+              }}
             >
-              <Text className="text-center font-bold text-white">
+              <Text
+                style={{
+                  textAlign: 'center',
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: '#FFFFFF',
+                }}
+              >
                 Log Injury
               </Text>
             </Pressable>

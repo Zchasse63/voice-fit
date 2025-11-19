@@ -308,9 +308,9 @@ async def coach_ask(
 
 ---
 
-### **Step 4: Update Mobile CoachScreen** ⚠️ TODO
+### **Step 4: Update Mobile ChatScreen (Coach)** ⚠️ TODO
 
-**File:** `apps/mobile/src/screens/CoachScreen.tsx`
+**File:** `apps/mobile/src/screens/ChatScreen.tsx`
 
 **Current Code (lines 62-85):**
 ```typescript
@@ -474,7 +474,7 @@ curl -X POST http://localhost:8000/api/coach/ask \
 1. ✅ Create `UserContextBuilder` service (DONE)
 2. ⚠️ Update `/api/injury/analyze` endpoint
 3. ⚠️ Create `/api/coach/ask` endpoint
-4. ⚠️ Update `CoachScreen.tsx` to call API
+4. ⚠️ Update `ChatScreen.tsx` to call API
 5. ⚠️ Create missing database tables
 6. ⚠️ Test with real user data
 

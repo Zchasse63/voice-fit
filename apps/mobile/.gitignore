@@ -41,6 +41,8 @@ coverage/
 # iOS
 ios/Pods/
 ios/build/
+ios/build 2/
+
 ios/.xcodebuild.log
 ios/DerivedData/
 ios/HelloWorld/

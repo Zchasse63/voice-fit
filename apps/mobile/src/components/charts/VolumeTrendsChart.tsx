@@ -8,6 +8,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { useAuthStore } from '../../store/auth.store';
 import { chartDataService, VolumeDataPoint } from '../../services/charts/ChartDataService';
 import { CartesianChart, Line, useChartPressState } from 'victory-native';
@@ -15,6 +16,8 @@ import { Circle } from '@shopify/react-native-skia';
 
 const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = colors.accent;
   const user = useAuthStore((state) => state.user);
   const [data, setData] = useState<VolumeDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -69,34 +72,87 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
 
   if (isLoading) {
     return (
-      <View className={`p-4 rounded-xl shadow-md ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-        <Text className={`text-lg font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <View
+        style={{
+          padding: tokens.spacing.md,
+          borderRadius: tokens.borderRadius.lg,
+          marginBottom: tokens.spacing.md,
+          backgroundColor: colors.background.secondary,
+          ...tokens.shadows.lg,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            marginBottom: tokens.spacing.sm,
+            color: colors.text.primary,
+          }}
+        >
           Weekly Volume Trends
         </Text>
-        <View className="h-48 items-center justify-center">
-          <ActivityIndicator size="large" color={isDark ? '#4A9B6F' : '#2C5F3D'} />
+        <View
+          style={{
+            height: 192,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ActivityIndicator size="large" color={accentColors.green} />
         </View>
       </View>
     );
   }
 
   return (
-    <View className={`p-4 rounded-xl shadow-md ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-      <Text className={`text-lg font-bold mb-2 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+    <View
+      style={{
+        padding: tokens.spacing.md,
+        borderRadius: tokens.borderRadius.lg,
+        marginBottom: tokens.spacing.md,
+        backgroundColor: colors.background.secondary,
+        ...tokens.shadows.lg,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: tokens.typography.fontSize.lg,
+          fontWeight: tokens.typography.fontWeight.bold,
+          marginBottom: tokens.spacing.xs,
+          color: colors.text.primary,
+        }}
+      >
         Weekly Volume Trends
       </Text>
-      <Text className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <Text
+        style={{
+          fontSize: tokens.typography.fontSize.sm,
+          marginBottom: tokens.spacing.md,
+          color: colors.text.secondary,
+        }}
+      >
         Last 12 weeks of training volume
       </Text>
 
       {data.length === 0 ? (
-        <View className="h-48 items-center justify-center">
-          <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            height: 192,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+            }}
+          >
             No volume data available. Start logging workouts to see your trends!
           </Text>
         </View>
       ) : (
-        <View className="h-48">
+        <View style={{ height: 192 }}>
           <CartesianChart
             data={chartData}
             xKey="x"
@@ -107,7 +163,7 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
               <>
                 <Line
                   points={points.tonnage}
-                  color={isDark ? '#4A9B6F' : '#2C5F3D'}
+                  color={accentColors.green}
                   strokeWidth={3}
                   curveType="natural"
                   animate={{ type: 'timing', duration: 300 }}
@@ -117,7 +173,7 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
                     cx={state.x.position}
                     cy={state.y.tonnage.position}
                     r={8}
-                    color={isDark ? '#4A9B6F' : '#2C5F3D'}
+                    color={accentColors.green}
                     opacity={0.8}
                   />
                 )}
@@ -127,12 +183,38 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
 
           {/* Display current value on press */}
           {isActive && (
-            <View className="absolute top-0 left-0 right-0 items-center">
-              <View className={`px-3 py-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <Text className={`text-sm font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+              }}
+            >
+              <View
+                style={{
+                  paddingHorizontal: tokens.spacing.sm,
+                  paddingVertical: tokens.spacing.xs,
+                  borderRadius: tokens.borderRadius.md,
+                  backgroundColor: colors.background.tertiary,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: accentColors.green,
+                  }}
+                >
                   {formatVolume(state.y.tonnage.value)} lbs
                 </Text>
-                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                  }}
+                >
                   Week of {formatDate(new Date(state.x.value).toISOString())}
                 </Text>
               </View>
@@ -143,21 +225,56 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
 
       {/* Stats Summary */}
       {data.length > 0 && (
-        <View className={`mt-4 p-3 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-50'}`}>
-          <View className="flex-row justify-between items-center">
+        <View
+          style={{
+            marginTop: tokens.spacing.md,
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.md,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
             <View>
-              <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                }}
+              >
                 Average Weekly Volume
               </Text>
-              <Text className={`text-lg font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: accentColors.green,
+                }}
+              >
                 {formatVolume(averageVolume)} lbs
               </Text>
             </View>
-            <View className="items-end">
-              <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.secondary,
+                }}
+              >
                 Last Week
               </Text>
-              <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.lg,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: colors.text.primary,
+                }}
+              >
                 {formatVolume(data[data.length - 1].tonnage)} lbs
               </Text>
             </View>
@@ -167,9 +284,29 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
 
       {/* Legend */}
       {data.length > 0 && (
-        <View className="flex-row items-center justify-center mt-4">
-          <View className={`w-3 h-3 rounded-full mr-2 ${isDark ? 'bg-primaryDark' : 'bg-primary-500'}`} />
-          <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: tokens.spacing.md,
+          }}
+        >
+          <View
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 9999,
+              marginRight: tokens.spacing.xs,
+              backgroundColor: accentColors.green,
+            }}
+          />
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
             Total Weekly Tonnage (lbs)
           </Text>
         </View>

@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { Cloud, CloudOff, CheckCircle } from 'lucide-react-native';
 import { syncService } from '../../services/sync/SyncService';
 
 export default function SyncStatus() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [syncStatus, setSyncStatus] = useState({
     isSyncing: false,
     unsyncedWorkouts: 0,
@@ -34,9 +36,20 @@ export default function SyncStatus() {
 
   if (syncStatus.isSyncing) {
     return (
-      <View className="flex-row items-center">
-        <ActivityIndicator size="small" color={isDark ? '#4A9B6F' : '#2C5F3D'} />
-        <Text className={`text-xs ml-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        <ActivityIndicator size="small" color={colors.accent.green} />
+        <Text
+          style={{
+            marginLeft: 8,
+            fontSize: tokens.typography.fontSize.xs,
+            color: colors.text.tertiary,
+          }}
+        >
           Syncing...
         </Text>
       </View>
@@ -45,9 +58,20 @@ export default function SyncStatus() {
 
   if (totalUnsynced > 0) {
     return (
-      <View className="flex-row items-center">
-        <CloudOff color={isDark ? '#F9AC60' : '#DD7B57'} size={16} />
-        <Text className={`text-xs ml-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+        }}
+      >
+        <CloudOff color={colors.accent.orange} size={16} />
+        <Text
+          style={{
+            marginLeft: 8,
+            fontSize: tokens.typography.fontSize.xs,
+            color: colors.text.tertiary,
+          }}
+        >
           {totalUnsynced} pending
         </Text>
       </View>
@@ -55,9 +79,20 @@ export default function SyncStatus() {
   }
 
   return (
-    <View className="flex-row items-center">
-      <CheckCircle color={isDark ? '#4A9B6F' : '#2C5F3D'} size={16} />
-      <Text className={`text-xs ml-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+      }}
+    >
+      <CheckCircle color={colors.accent.green} size={16} />
+      <Text
+        style={{
+          marginLeft: 8,
+          fontSize: tokens.typography.fontSize.xs,
+          color: colors.text.tertiary,
+        }}
+      >
         Synced
       </Text>
     </View>

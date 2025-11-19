@@ -8,6 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, Pressable, ActivityIndicator, TextInput } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { useAuthStore } from '../../store/auth.store';
 import { readinessService, SimpleReadinessInput, calculateReadinessTrend } from '../../services/readiness/ReadinessService';
 import { InjuryDetectionService, InjuryDetectionResult } from '../../services/injury/InjuryDetectionService';
@@ -31,6 +32,8 @@ const emojiChoices: EmojiChoice[] = [
 
 export default function ReadinessCheckCard() {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = colors.accent;
   const user = useAuthStore((state) => state.user);
   const [selectedEmoji, setSelectedEmoji] = useState<EmojiOption | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -127,23 +130,56 @@ export default function ReadinessCheckCard() {
 
   if (isLoading) {
     return (
-      <View className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-        <ActivityIndicator size="small" color={isDark ? '#4A9B6F' : '#2C5F3D'} />
+      <View
+        style={{
+          padding: tokens.spacing.md,
+          borderRadius: tokens.borderRadius.lg,
+          marginBottom: tokens.spacing.md,
+          backgroundColor: colors.background.secondary,
+        }}
+      >
+        <ActivityIndicator size="small" color={accentColors.green} />
       </View>
     );
   }
 
   return (
-    <View className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
+    <View
+      style={{
+        padding: tokens.spacing.md,
+        borderRadius: tokens.borderRadius.lg,
+        marginBottom: tokens.spacing.md,
+        backgroundColor: colors.background.secondary,
+      }}
+    >
       {/* Header */}
-      <View className="flex-row justify-between items-center mb-3">
-        <Text className={`text-lg font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: tokens.spacing.sm,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
+        >
           How are you feeling today?
         </Text>
         {todayScore !== null && (
-          <View className="flex-row items-center">
-            <CheckCircle color={isDark ? '#4A9B6F' : '#2C5F3D'} size={16} />
-            <Text className={`text-sm ml-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <CheckCircle color={accentColors.green} size={16} />
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                marginLeft: tokens.spacing.xs,
+                color: colors.text.secondary,
+              }}
+            >
               {todayScore}%
             </Text>
           </View>
@@ -152,8 +188,13 @@ export default function ReadinessCheckCard() {
 
       {/* Free-tier on-device readiness trend summary */}
       {trendAverage !== null && trendDirection && (
-        <View className="mb-3">
-          <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View style={{ marginBottom: tokens.spacing.sm }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
             Last 7 days: {trendAverage}% ·
             {trendDirection === 'improving' && ' Trending up'}
             {trendDirection === 'declining' && ' Trending down'}
@@ -164,40 +205,61 @@ export default function ReadinessCheckCard() {
       )}
 
       {/* Emoji Selection */}
-      <View className="flex-row justify-between">
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+        }}
+      >
         {emojiChoices.map((choice) => {
           const isSelected = selectedEmoji === choice.emoji;
 
           return (
             <Pressable
               key={choice.emoji}
-              className={`flex-1 items-center p-3 rounded-xl mx-1 ${
-                isSelected
-                  ? isDark
-                    ? 'bg-primaryDark'
-                    : 'bg-primary-500'
-                  : isDark
-                  ? 'bg-gray-700'
-                  : 'bg-gray-100'
-              }`}
+              style={{
+                flex: 1,
+                alignItems: 'center',
+                padding: tokens.spacing.sm,
+                borderRadius: tokens.borderRadius.lg,
+                marginHorizontal: tokens.spacing.xs,
+                backgroundColor: isSelected
+                  ? accentColors.green
+                  : colors.background.tertiary,
+                opacity: isSaving ? 0.7 : 1,
+              }}
               onPress={() => handleEmojiSelect(choice.emoji)}
               disabled={isSaving}
               accessibilityLabel={`${choice.label} - ${choice.description}`}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
             >
-              <Text className="text-3xl mb-1">{choice.emoji}</Text>
               <Text
-                className={`text-xs font-bold ${
-                  isSelected ? 'text-white' : isDark ? 'text-gray-300' : 'text-gray-700'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize['3xl'],
+                  marginBottom: tokens.spacing.xs,
+                  color: isSelected ? tokens.colors.light.text.primary : colors.text.primary,
+                }}
+              >
+                {choice.emoji}
+              </Text>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  fontWeight: tokens.typography.fontWeight.bold,
+                  color: isSelected ? tokens.colors.light.text.primary : colors.text.primary,
+                }}
               >
                 {choice.label}
               </Text>
               <Text
-                className={`text-xs text-center mt-1 ${
-                  isSelected ? 'text-white opacity-90' : isDark ? 'text-gray-400' : 'text-gray-500'
-                }`}
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  textAlign: 'center',
+                  marginTop: tokens.spacing.xs,
+                  color: isSelected ? tokens.colors.light.text.primary : colors.text.secondary,
+                  opacity: isSelected ? 0.9 : 1,
+                }}
               >
                 {choice.description}
               </Text>
@@ -207,16 +269,26 @@ export default function ReadinessCheckCard() {
       </View>
 
       {/* Phase 3: Notes Input for Injury Detection */}
-      <View className="mt-4">
-        <Text className={`text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <View style={{ marginTop: tokens.spacing.md }}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.sm,
+            fontWeight: tokens.typography.fontWeight.medium,
+            marginBottom: tokens.spacing.xs,
+            color: colors.text.secondary,
+          }}
+        >
           Any pain, soreness, or concerns? (Optional)
         </Text>
         <TextInput
-          className={`p-3 rounded-lg ${
-            isDark ? 'bg-gray-700 text-gray-200' : 'bg-gray-100 text-gray-800'
-          }`}
+          style={{
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.md,
+            backgroundColor: colors.background.tertiary,
+            color: colors.text.primary,
+          }}
           placeholder="e.g., 'Sharp pain in left shoulder during overhead press'"
-          placeholderTextColor={isDark ? '#9CA3AF' : '#6B7280'}
+          placeholderTextColor={colors.text.tertiary}
           value={notes}
           onChangeText={setNotes}
           multiline
@@ -224,14 +296,27 @@ export default function ReadinessCheckCard() {
           textAlignVertical="top"
           editable={!isSaving}
         />
-        <Text className={`text-xs mt-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.xs,
+            marginTop: tokens.spacing.xs,
+            color: colors.text.tertiary,
+          }}
+        >
           We'll check for potential injuries and suggest modifications if needed
         </Text>
       </View>
 
       {/* Upgrade hint for Premium features */}
       {todayScore !== null && (
-        <Text className={`text-xs text-center mt-3 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.xs,
+            textAlign: 'center',
+            marginTop: tokens.spacing.sm,
+            color: colors.text.tertiary,
+          }}
+        >
           Upgrade to Premium for AI-powered injury analysis
         </Text>
       )}

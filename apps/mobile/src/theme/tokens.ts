@@ -48,8 +48,27 @@ export const tokens = {
 
       // Border colors
       border: {
+        subtle: "#E9ECEF", // Extra-subtle borders
         light: "#E9ECEF", // Subtle borders
         medium: "#6C757D", // Medium borders
+      },
+
+      // Overlay colors (modals, scrims, shimmer)
+      overlay: {
+        scrim: "rgba(0, 0, 0, 0.5)", // Standard modal/alert backdrop
+        scrimStrong: "rgba(0, 0, 0, 0.8)", // Stronger/full-screen overlays
+        shimmer: "rgba(255, 255, 255, 0.3)", // Skeleton shimmer overlay
+      },
+
+      // Soft background tints for callouts, chips, and badges
+      backgroundSoft: {
+        info: "#DBEAFE", // Soft blue info tint
+        success: "#DCFCE7", // Soft green success tint
+        warning: "#FEF3C7", // Soft yellow/orange warning tint
+        warningAlt: "#FFEFD5", // Alternate warm warning tint
+        danger: "#FEE2E2", // Soft red danger tint
+        accent: "rgba(96, 165, 250, 0.15)", // Accent blue selection tint
+        accentSubtle: "rgba(37, 99, 235, 0.08)", // Subtle accent blue tint
       },
 
       // State colors
@@ -97,8 +116,27 @@ export const tokens = {
 
       // Border colors
       border: {
+        subtle: "#2C2C2E", // Extra-subtle borders
         light: "#2C2C2E", // Dark gray borders
         medium: "#48484A", // Medium gray borders
+      },
+
+      // Overlay colors (modals, scrims, shimmer)
+      overlay: {
+        scrim: "rgba(0, 0, 0, 0.5)", // Standard modal/alert backdrop
+        scrimStrong: "rgba(0, 0, 0, 0.8)", // Stronger/full-screen overlays
+        shimmer: "rgba(255, 255, 255, 0.15)", // Subtle shimmer overlay on dark
+      },
+
+      // Soft background tints for callouts, chips, and badges
+      backgroundSoft: {
+        info: "rgba(59, 130, 246, 0.18)", // Soft blue info tint
+        success: "rgba(34, 197, 94, 0.18)", // Soft green success tint
+        warning: "rgba(250, 204, 21, 0.18)", // Soft yellow/orange warning tint
+        warningAlt: "rgba(249, 172, 96, 0.18)", // Alternate warm warning tint
+        danger: "rgba(248, 113, 113, 0.18)", // Soft red danger tint
+        accent: "rgba(96, 165, 250, 0.15)", // Accent blue selection tint
+        accentSubtle: "rgba(37, 99, 235, 0.08)", // Subtle accent blue tint
       },
 
       // State colors

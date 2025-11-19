@@ -467,7 +467,7 @@ export default function ProfileScreenRedesign({
             marginTop: tokens.spacing.xl,
           }}
         >
-          VoiceFit v1.0.0
+          Coach v1.0.0
         </Text>
       </ScrollView>
 
@@ -476,7 +476,7 @@ export default function ProfileScreenRedesign({
         <View
           style={{
             flex: 1,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            backgroundColor: colors.overlay.scrim,
             justifyContent: "flex-end",
           }}
         >

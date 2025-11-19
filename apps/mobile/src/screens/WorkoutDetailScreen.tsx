@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Pressable } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
+import { tokens } from '../theme/tokens';
 import { ArrowLeft, Clock, Dumbbell } from 'lucide-react-native';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -30,6 +31,7 @@ interface ExerciseGroup {
 
 export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetailScreenProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [workout, setWorkout] = useState<WorkoutLog | null>(null);
   const [exerciseGroups, setExerciseGroups] = useState<ExerciseGroup[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -119,23 +121,54 @@ export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetail
   const totalVolume = exerciseGroups.reduce((sum, group) => sum + group.totalVolume, 0);
 
   return (
-    <ScrollView className={`flex-1 ${isDark ? 'bg-gray-900' : 'bg-background-light'}`}>
-      <View className="p-6">
+    <ScrollView
+      style={{ flex: 1, backgroundColor: colors.background.primary }}
+      contentContainerStyle={{
+        paddingHorizontal: tokens.spacing.lg,
+        paddingVertical: tokens.spacing.lg,
+      }}
+    >
+      <View>
         {/* Header */}
-        <View className="flex-row items-center mb-6">
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginBottom: tokens.spacing.lg,
+          }}
+        >
           <Pressable
             onPress={onBack}
-            className="mr-4 active:opacity-60"
             accessibilityLabel="Go Back"
             accessibilityRole="button"
+            style={({ pressed }) => [
+              {
+                padding: tokens.spacing.sm,
+                marginRight: tokens.spacing.sm,
+                borderRadius: tokens.borderRadius.full,
+              },
+              pressed && { opacity: 0.7 },
+            ]}
           >
-            <ArrowLeft color={isDark ? '#4A9B6F' : '#2C5F3D'} size={24} />
+            <ArrowLeft color={colors.accent.blue} size={24} />
           </Pressable>
-          <View className="flex-1">
-            <Text className={`text-3xl font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize['2xl'],
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
               {workout.workoutName}
             </Text>
-            <Text className={`text-base mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            <Text
+              style={{
+                marginTop: 4,
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+              }}
+            >
               {workout.startTime.toLocaleDateString('en-US', {
                 weekday: 'long',
                 month: 'long',
@@ -146,95 +179,282 @@ export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetail
         </View>
 
         {/* Summary Stats */}
-        <View className="flex-row mb-6">
-          <View className={`flex-1 p-4 rounded-xl mr-2 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-            <View className="flex-row items-center mb-2">
-              <Clock color={isDark ? '#4A9B6F' : '#2C5F3D'} size={20} />
-              <Text className={`text-xs ml-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            flexDirection: 'row',
+            marginBottom: tokens.spacing.lg,
+          }}
+        >
+          <View
+            style={{
+              flex: 1,
+              padding: tokens.spacing.md,
+              borderRadius: tokens.borderRadius.lg,
+              marginRight: tokens.spacing.sm,
+              backgroundColor: colors.background.secondary,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: tokens.spacing.xs,
+              }}
+            >
+              <Clock color={colors.accent.blue} size={20} />
+              <Text
+                style={{
+                  marginLeft: tokens.spacing.xs,
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.tertiary,
+                }}
+              >
                 Duration
               </Text>
             </View>
-            <Text className={`text-2xl font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.lg,
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
               {formatDuration(workout.startTime, workout.endTime)}
             </Text>
           </View>
 
-          <View className={`flex-1 p-4 rounded-xl ml-2 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-            <View className="flex-row items-center mb-2">
-              <Dumbbell color={isDark ? '#4A9B6F' : '#2C5F3D'} size={20} />
-              <Text className={`text-xs ml-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View
+            style={{
+              flex: 1,
+              padding: tokens.spacing.md,
+              borderRadius: tokens.borderRadius.lg,
+              marginLeft: tokens.spacing.sm,
+              backgroundColor: colors.background.secondary,
+            }}
+          >
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginBottom: tokens.spacing.xs,
+              }}
+            >
+              <Dumbbell color={colors.accent.blue} size={20} />
+              <Text
+                style={{
+                  marginLeft: tokens.spacing.xs,
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.tertiary,
+                }}
+              >
                 Total Volume
               </Text>
             </View>
-            <Text className={`text-2xl font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.lg,
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
               {totalVolume >= 1000
                 ? `${(totalVolume / 1000).toFixed(1)}k`
-                : totalVolume} lbs
+                : totalVolume}{' '}
+              lbs
             </Text>
           </View>
         </View>
 
         {/* Exercise Groups */}
-        <View>
-          <Text className={`text-xl font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+        <View style={{ marginTop: tokens.spacing.md }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.lg,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: colors.text.primary,
+              marginBottom: tokens.spacing.sm,
+            }}
+          >
             Exercises ({exerciseGroups.length})
           </Text>
 
           {exerciseGroups.map((group, groupIndex) => (
             <View
               key={groupIndex}
-              className={`p-4 rounded-xl mb-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
+              style={{
+                marginBottom: tokens.spacing.md,
+                padding: tokens.spacing.md,
+                borderRadius: tokens.borderRadius.lg,
+                backgroundColor: colors.background.secondary,
+              }}
             >
-              <Text className={`text-lg font-bold mb-3 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.md,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  color: colors.text.primary,
+                  marginBottom: tokens.spacing.sm,
+                }}
+              >
                 {group.exerciseName}
               </Text>
 
               {/* Sets Table Header */}
-              <View className="flex-row mb-2 pb-2 border-b border-gray-200 dark:border-gray-700">
-                <Text className={`flex-1 text-xs font-bold ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  paddingBottom: 8,
+                  marginBottom: 4,
+                  borderBottomWidth: 1,
+                  borderBottomColor: colors.border.light,
+                }}
+              >
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: tokens.typography.fontSize.xs,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.tertiary,
+                  }}
+                >
                   Set
                 </Text>
-                <Text className={`flex-1 text-xs font-bold text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: tokens.typography.fontSize.xs,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.tertiary,
+                    textAlign: 'center',
+                  }}
+                >
                   Weight
                 </Text>
-                <Text className={`flex-1 text-xs font-bold text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: tokens.typography.fontSize.xs,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.tertiary,
+                    textAlign: 'center',
+                  }}
+                >
                   Reps
                 </Text>
-                <Text className={`flex-1 text-xs font-bold text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: tokens.typography.fontSize.xs,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.tertiary,
+                    textAlign: 'center',
+                  }}
+                >
                   RPE
                 </Text>
-                <Text className={`flex-1 text-xs font-bold text-right ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: tokens.typography.fontSize.xs,
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    color: colors.text.tertiary,
+                    textAlign: 'right',
+                  }}
+                >
                   Volume
                 </Text>
               </View>
 
               {/* Sets Rows */}
               {group.sets.map((set, setIndex) => (
-                <View key={set.id} className="flex-row py-2">
-                  <Text className={`flex-1 text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                <View
+                  key={set.id}
+                  style={{
+                    flexDirection: 'row',
+                    paddingVertical: 6,
+                  }}
+                >
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.secondary,
+                    }}
+                  >
                     {setIndex + 1}
                   </Text>
-                  <Text className={`flex-1 text-sm text-center ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.primary,
+                      textAlign: 'center',
+                    }}
+                  >
                     {set.weight} lbs
                   </Text>
-                  <Text className={`flex-1 text-sm text-center ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.primary,
+                      textAlign: 'center',
+                    }}
+                  >
                     {set.reps}
                   </Text>
-                  <Text className={`flex-1 text-sm text-center ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.primary,
+                      textAlign: 'center',
+                    }}
+                  >
                     {set.rpe || '-'}
                   </Text>
-                  <Text className={`flex-1 text-sm text-right ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                  <Text
+                    style={{
+                      flex: 1,
+                      fontSize: tokens.typography.fontSize.sm,
+                      color: colors.text.primary,
+                      textAlign: 'right',
+                    }}
+                  >
                     {set.weight * set.reps}
                   </Text>
                 </View>
               ))}
 
               {/* Exercise Summary */}
-              <View className="flex-row mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                <Text className={`flex-1 text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  marginTop: tokens.spacing.sm,
+                  paddingTop: tokens.spacing.sm,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border.light,
+                }}
+              >
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                  }}
+                >
                   Total
                 </Text>
-                <Text className={`flex-1 text-sm font-bold text-right ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+                <Text
+                  style={{
+                    flex: 1,
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.accent.blue,
+                    textAlign: 'right',
+                  }}
+                >
                   {group.sets.length} sets • {group.totalVolume} lbs
                 </Text>
               </View>
@@ -243,31 +463,95 @@ export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetail
         </View>
 
         {/* Workout Summary */}
-        <View className={`p-4 rounded-xl mt-4 ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-          <Text className={`text-lg font-bold mb-3 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+        <View
+          style={{
+            marginTop: tokens.spacing.lg,
+            padding: tokens.spacing.md,
+            borderRadius: tokens.borderRadius.lg,
+            backgroundColor: colors.background.secondary,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.md,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: colors.text.primary,
+              marginBottom: tokens.spacing.sm,
+            }}
+          >
             Workout Summary
           </Text>
-          <View className="flex-row justify-between mb-2">
-            <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: tokens.spacing.xs,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+              }}
+            >
               Total Exercises
             </Text>
-            <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
               {exerciseGroups.length}
             </Text>
           </View>
-          <View className="flex-row justify-between mb-2">
-            <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginBottom: tokens.spacing.xs,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+              }}
+            >
               Total Sets
             </Text>
-            <Text className={`text-sm font-bold ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
               {totalSets}
             </Text>
           </View>
-          <View className="flex-row justify-between">
-            <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+              }}
+            >
               Total Volume
             </Text>
-            <Text className={`text-sm font-bold ${isDark ? 'text-primaryDark' : 'text-primary-500'}`}>
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.accent.blue,
+              }}
+            >
               {totalVolume.toLocaleString()} lbs
             </Text>
           </View>

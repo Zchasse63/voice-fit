@@ -110,13 +110,11 @@ apps/mobile/
 ├── src/
 │   ├── screens/           # All app screens
 │   │   ├── HomeScreen.tsx
-│   │   ├── LogScreen.tsx        # Voice workout logging
-│   │   ├── ChatScreen.tsx       # AI Coach chat
-│   │   ├── CoachScreen.tsx      # AI Coach insights
+│   │   ├── ChatScreen.tsx       # Coach chat experience
 │   │   ├── RunScreen.tsx        # Running tracking
+│   │   ├── ProgramLogScreen.tsx # Program + history view
 │   │   ├── AnalyticsScreen.tsx  # Workout analytics
 │   │   ├── PRsScreen.tsx        # Personal records
-│   │   ├── ProgramCalendarScreen.tsx
 │   │   └── ProfileScreen.tsx
 │   ├── components/        # Reusable UI components
 │   ├── services/          # API & business logic
@@ -136,14 +134,12 @@ apps/mobile/
 
 | Screen | Purpose | Key Features |
 |--------|---------|-------------|
-| **Home** | Dashboard | Quick actions, recent workouts, badges |
-| **Log** | Voice Logging | Voice-to-text workout logging |
-| **Coach** | AI Insights | Personalized training recommendations |
-| **Chat** | AI Chat | Ask questions, get exercise swaps |
+| **Home** | Dashboard | Today's program, quick actions, recent workouts, badges |
+| **Coach** | AI Chat & Logging | Conversational coaching, voice logging, exercise swaps |
 | **Run** | Running Tracker | GPS tracking, pace analysis, GAP |
+| **Program & Log** | Training Plan & History | Weekly schedule, past workouts, volume overview |
 | **Analytics** | Progress Tracking | Charts, volume trends, muscle group balance |
 | **PRs** | Personal Records | Track 1RM improvements |
-| **Calendar** | Program View | Weekly training schedule |
 | **Profile** | User Settings | Edit profile, view badges, streaks |
 
 ---

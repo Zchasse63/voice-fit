@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { CartesianChart, Line, useChartPressState } from 'victory-native';
 import { Circle } from '@shopify/react-native-skia';
 
@@ -24,6 +25,8 @@ interface PRProgressionChartProps {
 
 export default function PRProgressionChart({ data, exerciseName }: PRProgressionChartProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = colors.accent;
   const { state, isActive } = useChartPressState({ x: 0, y: { weight: 0 } });
 
   // Format date for display (e.g., "2025-11-03" -> "Nov 3")
@@ -39,19 +42,45 @@ export default function PRProgressionChart({ data, exerciseName }: PRProgression
   }));
 
   return (
-    <View className={`p-4 rounded-xl shadow-md ${isDark ? 'bg-gray-800' : 'bg-white'}`}>
-      <Text className={`text-lg font-bold mb-4 ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+    <View
+      style={{
+        padding: tokens.spacing.md,
+        borderRadius: tokens.borderRadius.lg,
+        marginBottom: tokens.spacing.md,
+        backgroundColor: colors.background.secondary,
+        ...tokens.shadows.lg,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: tokens.typography.fontSize.lg,
+          fontWeight: tokens.typography.fontWeight.bold,
+          marginBottom: tokens.spacing.md,
+          color: colors.text.primary,
+        }}
+      >
         {exerciseName} Progression
       </Text>
 
       {data.length === 0 ? (
-        <View className="h-48 items-center justify-center">
-          <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            height: 192,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+            }}
+          >
             No PR data available
           </Text>
         </View>
       ) : (
-        <View className="h-48">
+        <View style={{ height: 192 }}>
           <CartesianChart
             data={chartData}
             xKey="x"
@@ -62,7 +91,7 @@ export default function PRProgressionChart({ data, exerciseName }: PRProgression
               <>
                 <Line
                   points={points.weight}
-                  color={isDark ? '#F9AC60' : '#DD7B57'}
+                  color={accentColors.orange}
                   strokeWidth={3}
                   curveType="natural"
                   animate={{ type: 'timing', duration: 300 }}
@@ -72,7 +101,7 @@ export default function PRProgressionChart({ data, exerciseName }: PRProgression
                     cx={state.x.position}
                     cy={state.y.weight.position}
                     r={8}
-                    color={isDark ? '#F9AC60' : '#DD7B57'}
+                    color={accentColors.orange}
                     opacity={0.8}
                   />
                 )}
@@ -82,12 +111,38 @@ export default function PRProgressionChart({ data, exerciseName }: PRProgression
 
           {/* Display current value on press */}
           {isActive && (
-            <View className="absolute top-0 left-0 right-0 items-center">
-              <View className={`px-3 py-2 rounded-lg ${isDark ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <Text className={`text-sm font-bold ${isDark ? 'text-secondaryDark' : 'text-secondary-500'}`}>
+            <View
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                alignItems: 'center',
+              }}
+            >
+              <View
+                style={{
+                  paddingHorizontal: tokens.spacing.sm,
+                  paddingVertical: tokens.spacing.xs,
+                  borderRadius: tokens.borderRadius.md,
+                  backgroundColor: colors.background.tertiary,
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.sm,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: accentColors.orange,
+                  }}
+                >
                   {state.y.weight.value} lbs
                 </Text>
-                <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                  }}
+                >
                   {formatDate(new Date(state.x.value).toISOString())}
                 </Text>
               </View>
@@ -98,9 +153,29 @@ export default function PRProgressionChart({ data, exerciseName }: PRProgression
 
       {/* Legend */}
       {data.length > 0 && (
-        <View className="flex-row items-center justify-center mt-4">
-          <View className={`w-3 h-3 rounded-full mr-2 ${isDark ? 'bg-secondaryDark' : 'bg-secondary-500'}`} />
-          <Text className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginTop: tokens.spacing.md,
+          }}
+        >
+          <View
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 9999,
+              marginRight: tokens.spacing.xs,
+              backgroundColor: accentColors.orange,
+            }}
+          />
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
             Max Weight (lbs)
           </Text>
         </View>

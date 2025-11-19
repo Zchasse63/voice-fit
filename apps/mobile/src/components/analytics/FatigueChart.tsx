@@ -8,6 +8,7 @@ import React from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import { VictoryLine, VictoryChart, VictoryTheme, VictoryAxis, VictoryArea } from 'victory-native';
 import { FatigueHistory, CurrentFatigue } from '../../services/api/AnalyticsAPIClient';
+import { tokens } from '../../theme/tokens';
 import { useTheme } from '../../hooks/useTheme';
 
 interface FatigueChartProps {
@@ -30,15 +31,15 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
   const getFatigueLevelColor = (level: string) => {
     switch (level) {
       case 'low':
-        return '#10b981'; // green
+        return accentColors.green;
       case 'moderate':
-        return '#f59e0b'; // yellow
+        return accentColors.orange;
       case 'high':
-        return '#f97316'; // orange
+        return accentColors.orange;
       case 'very_high':
-        return '#ef4444'; // red
+        return accentColors.red;
       default:
-        return '#6b7280'; // gray
+        return colors.text.tertiary;
     }
   };
 
@@ -78,62 +79,86 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
   const getRecoveryColor = (recommendation: string) => {
     switch (recommendation) {
       case 'continue':
-        return '#10b981'; // green
+        return accentColors.green;
       case 'reduce_volume':
-        return '#f59e0b'; // yellow
+        return accentColors.orange;
       case 'deload':
-        return '#f97316'; // orange
+        return accentColors.orange;
       case 'rest':
-        return '#ef4444'; // red
+        return accentColors.red;
       default:
-        return '#6b7280'; // gray
+        return colors.text.tertiary;
     }
   };
 
   // Get indicator status color
   const getIndicatorColor = (indicator: string, value: string) => {
     if (indicator === 'readiness_trend') {
-      if (value === 'improving') return '#10b981';
-      if (value === 'declining') return '#ef4444';
-      return '#f59e0b';
+      if (value === 'improving') return accentColors.green;
+      if (value === 'declining') return accentColors.red;
+      return accentColors.orange;
     }
     if (indicator === 'rpe_trend') {
-      if (value === 'decreasing') return '#10b981';
-      if (value === 'increasing') return '#ef4444';
-      return '#f59e0b';
+      if (value === 'decreasing') return accentColors.green;
+      if (value === 'increasing') return accentColors.red;
+      return accentColors.orange;
     }
     if (indicator === 'volume_status') {
-      if (value === 'normal') return '#10b981';
-      if (value === 'very_high') return '#ef4444';
-      return '#f59e0b';
+      if (value === 'normal') return accentColors.green;
+      if (value === 'very_high') return accentColors.red;
+      return accentColors.orange;
     }
     if (indicator === 'sleep_quality') {
-      if (value === 'good') return '#10b981';
-      if (value === 'poor') return '#ef4444';
-      return '#f59e0b';
+      if (value === 'good') return accentColors.green;
+      if (value === 'poor') return accentColors.red;
+      return accentColors.orange;
     }
     if (indicator === 'soreness_level') {
-      if (value === 'low') return '#10b981';
-      if (value === 'high') return '#ef4444';
-      return '#f59e0b';
+      if (value === 'low') return accentColors.green;
+      if (value === 'high') return accentColors.red;
+      return accentColors.orange;
     }
-    return '#6b7280';
+    return colors.text.tertiary;
   };
 
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = colors.accent;
+
   return (
-    <View className="mb-6">
+    <View
+      style={{
+        marginBottom: tokens.spacing.lg,
+      }}
+    >
       {/* Header */}
-      <View className="flex-row justify-between items-center mb-4">
-        <Text className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: tokens.spacing.md,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: colors.text.primary,
+          }}
+        >
           Fatigue Trend
         </Text>
-        <View className="flex-row items-center">
-          <Text className="text-2xl mr-2">
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ fontSize: 24, marginRight: tokens.spacing.xs }}>
             {getFatigueLevelEmoji(currentFatigue.fatigue_level)}
           </Text>
           <Text
-            className="text-sm font-semibold capitalize"
-            style={{ color: getFatigueLevelColor(currentFatigue.fatigue_level) }}
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              textTransform: 'capitalize',
+              color: getFatigueLevelColor(currentFatigue.fatigue_level),
+            }}
           >
             {currentFatigue.fatigue_level}
           </Text>
@@ -152,24 +177,35 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
             tickValues={chartData.map((d) => d.x)}
             tickFormat={chartData.map((d) => d.label)}
             style={{
-              axis: { stroke: isDark ? '#4b5563' : '#d1d5db' },
-              tickLabels: { fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 10 },
+              axis: { stroke: colors.border.subtle },
+              tickLabels: {
+                fill: colors.text.tertiary,
+                fontSize: 10,
+              },
             }}
           />
           <VictoryAxis
             dependentAxis
             domain={[0, 100]}
             style={{
-              axis: { stroke: isDark ? '#4b5563' : '#d1d5db' },
-              tickLabels: { fill: isDark ? '#9ca3af' : '#6b7280', fontSize: 10 },
-              grid: { stroke: isDark ? '#374151' : '#e5e7eb', strokeDasharray: '4,4' },
+              axis: { stroke: colors.border.subtle },
+              tickLabels: {
+                fill: colors.text.tertiary,
+                fontSize: 10,
+              },
+              grid: {
+                stroke: isDark
+                  ? tokens.colors.dark.border.subtle
+                  : tokens.colors.light.border.subtle,
+                strokeDasharray: '4,4',
+              },
             }}
           />
           <VictoryArea
             data={chartData}
             style={{
               data: {
-                fill: getFatigueLevelColor(currentFatigue.fatigue_level) + '30',
+                fill: `${getFatigueLevelColor(currentFatigue.fatigue_level)}30`,
                 stroke: getFatigueLevelColor(currentFatigue.fatigue_level),
                 strokeWidth: 3,
               },
@@ -178,21 +214,48 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
           />
         </VictoryChart>
       ) : (
-        <View className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <Text className={`text-center ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <View
+          style={{
+            padding: tokens.spacing.lg,
+            borderRadius: tokens.borderRadius['2xl'],
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
+          <Text
+            style={{
+              textAlign: 'center',
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+            }}
+          >
             No fatigue data available
           </Text>
         </View>
       )}
 
       {/* Current Fatigue Score */}
-      <View className={`mt-4 p-4 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-        <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <View
+        style={{
+          marginTop: tokens.spacing.md,
+          padding: tokens.spacing.md,
+          borderRadius: tokens.borderRadius.xl,
+          backgroundColor: colors.background.tertiary,
+        }}
+      >
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.sm,
+            color: colors.text.secondary,
+          }}
+        >
           Current Fatigue Score
         </Text>
         <Text
-          className="text-2xl font-bold"
-          style={{ color: getFatigueLevelColor(currentFatigue.fatigue_level) }}
+          style={{
+            fontSize: tokens.typography.fontSize['2xl'],
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: getFatigueLevelColor(currentFatigue.fatigue_level),
+          }}
         >
           {currentFatigue.fatigue_score.toFixed(0)}/100
         </Text>
@@ -200,79 +263,212 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
 
       {/* Recovery Recommendation */}
       <View
-        className="mt-4 p-4 rounded-xl"
-        style={{ backgroundColor: getRecoveryColor(currentFatigue.recovery_recommendation) + '20' }}
+        style={{
+          marginTop: tokens.spacing.md,
+          padding: tokens.spacing.md,
+          borderRadius: tokens.borderRadius.xl,
+          backgroundColor: `${getRecoveryColor(currentFatigue.recovery_recommendation)}20`,
+        }}
       >
-        <Text className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.sm,
+            color: colors.text.secondary,
+          }}
+        >
           Recovery Recommendation
         </Text>
         <Text
-          className="text-lg font-bold"
-          style={{ color: getRecoveryColor(currentFatigue.recovery_recommendation) }}
+          style={{
+            marginTop: 2,
+            fontSize: tokens.typography.fontSize.lg,
+            fontWeight: tokens.typography.fontWeight.bold,
+            color: getRecoveryColor(currentFatigue.recovery_recommendation),
+          }}
         >
           {getRecoveryText(currentFatigue.recovery_recommendation)}
         </Text>
-        <Text className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-          Estimated recovery: {currentFatigue.days_until_recovery} day{currentFatigue.days_until_recovery !== 1 ? 's' : ''}
+        <Text
+          style={{
+            marginTop: tokens.spacing.xs,
+            fontSize: tokens.typography.fontSize.xs,
+            color: colors.text.secondary,
+          }}
+        >
+          Estimated recovery: {currentFatigue.days_until_recovery} day
+          {currentFatigue.days_until_recovery !== 1 ? 's' : ''}
         </Text>
       </View>
 
       {/* Fatigue Indicators */}
-      <View className="mt-4">
-        <Text className={`text-sm font-semibold mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+      <View style={{ marginTop: tokens.spacing.md }}>
+        <Text
+          style={{
+            marginBottom: tokens.spacing.sm,
+            fontSize: tokens.typography.fontSize.sm,
+            fontWeight: tokens.typography.fontWeight.semibold,
+            color: colors.text.secondary,
+          }}
+        >
           Fatigue Indicators
         </Text>
-        
+
         {/* Readiness Trend */}
-        <View className={`flex-row justify-between items-center p-3 mb-2 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <Text className={`${isDark ? 'text-white' : 'text-gray-900'}`}>Readiness Trend</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: tokens.spacing.sm,
+            marginBottom: tokens.spacing.xs,
+            borderRadius: tokens.borderRadius.xl,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
           <Text
-            className="font-semibold capitalize"
-            style={{ color: getIndicatorColor('readiness_trend', currentFatigue.indicators.readiness_trend) }}
+            style={{
+              color: colors.text.primary,
+            }}
+          >
+            Readiness Trend
+          </Text>
+          <Text
+            style={{
+              fontWeight: tokens.typography.fontWeight.semibold,
+              textTransform: 'capitalize',
+              color: getIndicatorColor(
+                'readiness_trend',
+                currentFatigue.indicators.readiness_trend,
+              ),
+            }}
           >
             {currentFatigue.indicators.readiness_trend}
           </Text>
         </View>
 
         {/* RPE Trend */}
-        <View className={`flex-row justify-between items-center p-3 mb-2 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <Text className={`${isDark ? 'text-white' : 'text-gray-900'}`}>RPE Trend</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: tokens.spacing.sm,
+            marginBottom: tokens.spacing.xs,
+            borderRadius: tokens.borderRadius.xl,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
           <Text
-            className="font-semibold capitalize"
-            style={{ color: getIndicatorColor('rpe_trend', currentFatigue.indicators.rpe_trend) }}
+            style={{
+              color: colors.text.primary,
+            }}
+          >
+            RPE Trend
+          </Text>
+          <Text
+            style={{
+              fontWeight: tokens.typography.fontWeight.semibold,
+              textTransform: 'capitalize',
+              color: getIndicatorColor('rpe_trend', currentFatigue.indicators.rpe_trend),
+            }}
           >
             {currentFatigue.indicators.rpe_trend}
           </Text>
         </View>
 
         {/* Volume Status */}
-        <View className={`flex-row justify-between items-center p-3 mb-2 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <Text className={`${isDark ? 'text-white' : 'text-gray-900'}`}>Volume Status</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: tokens.spacing.sm,
+            marginBottom: tokens.spacing.xs,
+            borderRadius: tokens.borderRadius.xl,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
           <Text
-            className="font-semibold capitalize"
-            style={{ color: getIndicatorColor('volume_status', currentFatigue.indicators.volume_status) }}
+            style={{
+              color: colors.text.primary,
+            }}
+          >
+            Volume Status
+          </Text>
+          <Text
+            style={{
+              fontWeight: tokens.typography.fontWeight.semibold,
+              textTransform: 'capitalize',
+              color: getIndicatorColor(
+                'volume_status',
+                currentFatigue.indicators.volume_status,
+              ),
+            }}
           >
             {currentFatigue.indicators.volume_status.replace('_', ' ')}
           </Text>
         </View>
 
         {/* Sleep Quality */}
-        <View className={`flex-row justify-between items-center p-3 mb-2 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <Text className={`${isDark ? 'text-white' : 'text-gray-900'}`}>Sleep Quality</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: tokens.spacing.sm,
+            marginBottom: tokens.spacing.xs,
+            borderRadius: tokens.borderRadius.xl,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
           <Text
-            className="font-semibold capitalize"
-            style={{ color: getIndicatorColor('sleep_quality', currentFatigue.indicators.sleep_quality) }}
+            style={{
+              color: colors.text.primary,
+            }}
+          >
+            Sleep Quality
+          </Text>
+          <Text
+            style={{
+              fontWeight: tokens.typography.fontWeight.semibold,
+              textTransform: 'capitalize',
+              color: getIndicatorColor(
+                'sleep_quality',
+                currentFatigue.indicators.sleep_quality,
+              ),
+            }}
           >
             {currentFatigue.indicators.sleep_quality}
           </Text>
         </View>
 
         {/* Soreness Level */}
-        <View className={`flex-row justify-between items-center p-3 rounded-xl ${isDark ? 'bg-gray-800' : 'bg-gray-100'}`}>
-          <Text className={`${isDark ? 'text-white' : 'text-gray-900'}`}>Soreness Level</Text>
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: tokens.spacing.sm,
+            borderRadius: tokens.borderRadius.xl,
+            backgroundColor: colors.background.tertiary,
+          }}
+        >
           <Text
-            className="font-semibold capitalize"
-            style={{ color: getIndicatorColor('soreness_level', currentFatigue.indicators.soreness_level) }}
+            style={{
+              color: colors.text.primary,
+            }}
+          >
+            Soreness Level
+          </Text>
+          <Text
+            style={{
+              fontWeight: tokens.typography.fontWeight.semibold,
+              textTransform: 'capitalize',
+              color: getIndicatorColor(
+                'soreness_level',
+                currentFatigue.indicators.soreness_level,
+              ),
+            }}
           >
             {currentFatigue.indicators.soreness_level}
           </Text>

@@ -377,10 +377,9 @@ export default function HomeScreen({ navigation }: any) {
               padding: tokens.spacing.lg,
               ...tokens.shadows.sm,
             }}
-            onPress={() => {
-              // TODO: Navigate to program detail when screen is ready
-              console.log("Navigate to today's program");
-            }}
+            onPress={() =>
+              navigation.navigate("ProgramLog", { date: new Date().toISOString() })
+            }
           >
             <View
               style={{

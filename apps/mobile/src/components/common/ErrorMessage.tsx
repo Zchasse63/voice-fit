@@ -8,6 +8,7 @@
 import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { AlertCircle, RefreshCw } from 'lucide-react-native';
 
 interface ErrorMessageProps {
@@ -16,39 +17,72 @@ interface ErrorMessageProps {
   fullScreen?: boolean;
 }
 
-export default function ErrorMessage({ 
-  message, 
+export default function ErrorMessage({
+  message,
   onRetry,
-  fullScreen = false 
+  fullScreen = false
 }: ErrorMessageProps) {
   const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
-  const containerClass = fullScreen
-    ? `flex-1 items-center justify-center p-6 ${isDark ? 'bg-gray-900' : 'bg-background-light'}`
-    : 'items-center justify-center p-6';
+  const containerStyle = fullScreen
+    ? {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+        backgroundColor: colors.background.primary,
+      }
+    : {
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 24,
+      };
 
   return (
-    <View className={containerClass}>
-      <AlertCircle 
+    <View style={containerStyle}>
+      <AlertCircle
         color={isDark ? '#F87171' : '#DC2626'} 
         size={48} 
       />
-      <Text className={`text-base text-center mt-4 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <Text
+        style={{
+          marginTop: 16,
+          textAlign: 'center',
+          fontSize: tokens.typography.fontSize.base,
+          color: colors.text.secondary,
+        }}
+      >
         {message}
       </Text>
-      
+
       {onRetry && (
         <Pressable
-          className={`flex-row items-center mt-6 px-6 py-3 rounded-xl min-h-[60px] ${
-            isDark ? 'bg-primaryDark' : 'bg-primary-500'
-          }`}
+          style={{
+            marginTop: 24,
+            paddingHorizontal: 24,
+            paddingVertical: 12,
+            minHeight: 60,
+            borderRadius: tokens.borderRadius.xl,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: colors.accent.blue,
+          }}
           onPress={onRetry}
           accessibilityLabel="Retry"
           accessibilityHint="Attempts to reload the data"
           accessibilityRole="button"
         >
           <RefreshCw color="white" size={20} />
-          <Text className="text-base font-bold text-white ml-2">
+          <Text
+            style={{
+              marginLeft: 8,
+              fontSize: tokens.typography.fontSize.base,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: '#FFFFFF',
+            }}
+          >
             Try Again
           </Text>
         </Pressable>
