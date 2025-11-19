@@ -1099,3 +1099,176 @@ class ExerciseCreateOrMatchResponse(BaseModel):
                 },
             }
         }
+
+
+# ============================================================================
+# WARMUP & COOLDOWN MODELS
+# ============================================================================
+
+
+class WarmupTemplate(BaseModel):
+    """Model for warmup template"""
+
+    id: str
+    name: str
+    workout_type: str
+    exercises: List[Dict[str, Any]]
+    duration_minutes: int
+    created_at: str
+
+
+class CooldownTemplate(BaseModel):
+    """Model for cooldown template"""
+
+    id: str
+    name: str
+    workout_type: str
+    exercises: List[Dict[str, Any]]
+    duration_minutes: int
+    created_at: str
+
+
+class WarmupGenerateRequest(BaseModel):
+    """Request model for generating a warmup"""
+
+    workout_type: str = Field(
+        ..., description="Type of workout (upper_body, lower_body, full_body, cardio)"
+    )
+    duration_minutes: Optional[int] = Field(
+        5, description="Desired duration in minutes"
+    )
+    equipment: Optional[List[str]] = Field(
+        None, description="Available equipment"
+    )
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "workout_type": "upper_body",
+                "duration_minutes": 5,
+                "equipment": ["bands", "dumbbell"],
+            }
+        }
+
+
+class WarmupGenerateResponse(BaseModel):
+    """Response model for generated warmup"""
+
+    warmup: Dict[str, Any] = Field(..., description="Generated warmup routine")
+    message: str = Field(..., description="Message about the warmup")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "warmup": {
+                    "name": "Upper Body Activation",
+                    "exercises": [
+                        {"name": "Arm Circles", "duration": "30s"},
+                        {"name": "Band Pull-Aparts", "reps": 15},
+                    ],
+                    "duration_minutes": 5,
+                },
+                "message": "Here is a 5-minute upper body warmup.",
+            }
+        }
+
+
+# ============================================================================
+# NUTRITION MODELS
+# ============================================================================
+
+
+class NutritionLog(BaseModel):
+    """Model for nutrition log entry"""
+
+    id: str
+    user_id: str
+    log_date: str
+    meal_type: str
+    items: List[Dict[str, Any]]
+    total_calories: int
+    protein_g: int
+    carbs_g: int
+    fats_g: int
+    created_at: str
+
+
+class NutritionLogRequest(BaseModel):
+    """Request model for logging nutrition"""
+
+    user_id: str = Field(..., description="User ID")
+    meal_type: str = Field(..., description="Meal type (breakfast, lunch, dinner, snack)")
+    items: List[Dict[str, Any]] = Field(..., description="List of food items")
+    log_date: Optional[str] = Field(None, description="Date of log (YYYY-MM-DD)")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "user_id": "user_123",
+                "meal_type": "lunch",
+                "items": [
+                    {"name": "Chicken Breast", "calories": 165, "protein": 31, "carbs": 0, "fat": 3.6},
+                    {"name": "Rice", "calories": 200, "protein": 4, "carbs": 44, "fat": 0.4},
+                ],
+                "log_date": "2025-11-19",
+            }
+        }
+
+
+class NutritionLogResponse(BaseModel):
+    """Response model for logging nutrition"""
+
+    success: bool
+    log_id: str
+    summary: Dict[str, Any]
+    message: str
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "success": True,
+                "log_id": "log_123",
+                "summary": {
+                    "total_calories": 365,
+                    "protein_g": 35,
+                    "carbs_g": 44,
+                    "fats_g": 4,
+                },
+                "message": "Lunch logged successfully.",
+            }
+        }
+
+class NutritionParseRequest(BaseModel):
+    """Request model for parsing nutrition text"""
+
+    text: str = Field(..., description="Natural language text to parse")
+    user_id: str = Field(..., description="User ID")
+
+
+class NutritionParseResponse(BaseModel):
+    """Response model for parsing nutrition text"""
+
+    parsed_data: Dict[str, Any] = Field(..., description="Structured nutrition data")
+    confidence: float = Field(..., description="Confidence score")
+    message: str = Field(..., description="Status message")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "parsed_data": {
+                    "meal_type": "lunch",
+                    "items": [
+                        {
+                            "name": "Chicken Sandwich",
+                            "calories": 450,
+                            "protein": 35,
+                            "carbs": 40,
+                            "fat": 15,
+                            "quantity": "1 sandwich",
+                        }
+                    ],
+                },
+                "confidence": 0.95,
+                "message": "Successfully parsed nutrition text",
+            }
+        }

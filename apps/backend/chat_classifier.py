@@ -102,28 +102,32 @@ Your job is to classify user messages into one of these categories:
    - Examples: "185 for 8", "bench press 225 pounds 5 reps", "same weight for 10"
    - Indicators: Numbers (weight/reps), exercise names, workout-related terms
 
-2. **exercise_swap**: User wants to swap/replace an exercise
+2. **nutrition_log**: User is logging food or asking to log nutrition
+   - Examples: "I ate a chicken sandwich", "Log 2 eggs and toast", "Had a protein shake", "Add 500 calories for lunch"
+   - Indicators: Food names, "ate", "had", "log", "calories", meal names (breakfast, lunch, dinner)
+
+3. **exercise_swap**: User wants to swap/replace an exercise
    - Examples: "Swap bench press", "Replace deadlift with something else", "Give me alternative to squat", "Can't do bench press", "What else can I do instead of overhead press"
    - Indicators: swap, replace, substitute, alternative, instead of, can't do + exercise name
 
-3. **question**: User is asking the AI Coach a question
+4. **question**: User is asking the AI Coach a question
    - Examples: "How do I improve my bench press?", "What's a good program for beginners?"
    - Indicators: Question words (how, what, why, when), seeking advice/information (NOT about swapping)
 
-4. **onboarding**: User is responding to onboarding questions
+5. **onboarding**: User is responding to onboarding questions
    - Examples: "I want to build muscle", "I have dumbbells and a barbell", "3-4 times per week"
    - Indicators: Answering questions about goals, equipment, schedule, experience
 
-5. **general**: General conversation or unclear intent
+6. **general**: General conversation or unclear intent
    - Examples: "Thanks!", "Sounds good", "Let's do it"
    - Indicators: Acknowledgments, greetings, unclear messages
 
 Respond with a JSON object:
 {
-  "message_type": "workout_log" | "exercise_swap" | "question" | "onboarding" | "general",
+  "message_type": "workout_log" | "nutrition_log" | "exercise_swap" | "question" | "onboarding" | "general",
   "confidence": 0.0-1.0,
   "reasoning": "Brief explanation of classification",
-  "suggested_action": "parse_with_kimi" | "show_exercise_swaps" | "call_ai_coach" | "continue_onboarding" | "acknowledge",
+  "suggested_action": "parse_with_kimi" | "parse_nutrition" | "show_exercise_swaps" | "call_ai_coach" | "continue_onboarding" | "acknowledge",
   "extracted_data": {
     "exercise_name": "extracted exercise name if exercise_swap, else null",
     "reason": "optional reason for swap (injury, pain, equipment) if mentioned"
@@ -266,6 +270,33 @@ For exercise_swap, extract the exercise name from the message."""
                 0.6,
                 "Contains onboarding-related keywords",
                 "continue_onboarding",
+            )
+
+        # Check for nutrition logging
+        nutrition_keywords = [
+            "ate",
+            "had",
+            "breakfast",
+            "lunch",
+            "dinner",
+            "snack",
+            "calories",
+            "protein",
+            "carbs",
+            "fat",
+            "food",
+            "meal",
+            "chicken",
+            "egg",
+            "rice",
+            "salad",
+        ]
+        if any(keyword in message_lower for keyword in nutrition_keywords):
+            return (
+                "nutrition_log",
+                0.6,
+                "Contains nutrition-related keywords",
+                "parse_nutrition",
             )
 
         # Default to general

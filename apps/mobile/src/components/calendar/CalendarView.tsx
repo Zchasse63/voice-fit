@@ -5,12 +5,16 @@ import { ChevronLeft, ChevronRight } from 'lucide-react-native';
 import { database } from '../../services/database/watermelon/database';
 import WorkoutLog from '../../services/database/watermelon/models/WorkoutLog';
 import { Q } from '@nozbe/watermelondb';
+import { programService, DailyWorkout } from '../../services/ProgramService';
+import { tokens } from '../../theme/tokens';
 
 interface CalendarDay {
   date: Date;
   isCurrentMonth: boolean;
-  hasWorkout: boolean;
+  hasWorkout: boolean; // Completed workout
+  hasScheduled: boolean; // Scheduled workout
   workoutCount: number;
+  scheduledWorkout?: DailyWorkout;
 }
 
 export default function CalendarView() {
@@ -19,14 +23,19 @@ export default function CalendarView() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [workoutDates, setWorkoutDates] = useState<Map<string, number>>(new Map());
+  const [scheduledWorkouts, setScheduledWorkouts] = useState<Map<string, DailyWorkout>>(new Map());
 
   useEffect(() => {
-    loadWorkoutDates();
+    loadData();
   }, [currentDate]);
 
   useEffect(() => {
     generateCalendar();
-  }, [currentDate, workoutDates]);
+  }, [currentDate, workoutDates, scheduledWorkouts]);
+
+  const loadData = async () => {
+    await Promise.all([loadWorkoutDates(), loadScheduledWorkouts()]);
+  };
 
   const loadWorkoutDates = async () => {
     try {
@@ -53,6 +62,30 @@ export default function CalendarView() {
     }
   };
 
+  const loadScheduledWorkouts = async () => {
+    try {
+      // For MVP, we'll just check the current month's days
+      // In a real app, we'd fetch the whole month's schedule efficiently
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+      const scheduleMap = new Map<string, DailyWorkout>();
+
+      // Iterate through days in month
+      for (let d = new Date(startOfMonth); d <= endOfMonth; d.setDate(d.getDate() + 1)) {
+        const workout = await programService.getScheduledWorkout(new Date(d));
+        if (workout) {
+          const dateKey = d.toISOString().split('T')[0];
+          scheduleMap.set(dateKey, workout);
+        }
+      }
+
+      setScheduledWorkouts(scheduleMap);
+    } catch (error) {
+      console.error('Failed to load scheduled workouts:', error);
+    }
+  };
+
   const generateCalendar = () => {
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -72,7 +105,9 @@ export default function CalendarView() {
         date,
         isCurrentMonth: false,
         hasWorkout: workoutDates.has(dateKey),
+        hasScheduled: scheduledWorkouts.has(dateKey),
         workoutCount: workoutDates.get(dateKey) || 0,
+        scheduledWorkout: scheduledWorkouts.get(dateKey),
       });
     }
 
@@ -84,7 +119,9 @@ export default function CalendarView() {
         date,
         isCurrentMonth: true,
         hasWorkout: workoutDates.has(dateKey),
+        hasScheduled: scheduledWorkouts.has(dateKey),
         workoutCount: workoutDates.get(dateKey) || 0,
+        scheduledWorkout: scheduledWorkouts.get(dateKey),
       });
     }
 
@@ -97,7 +134,9 @@ export default function CalendarView() {
         date,
         isCurrentMonth: false,
         hasWorkout: workoutDates.has(dateKey),
+        hasScheduled: scheduledWorkouts.has(dateKey),
         workoutCount: workoutDates.get(dateKey) || 0,
+        scheduledWorkout: scheduledWorkouts.get(dateKey),
       });
     }
 
@@ -237,20 +276,21 @@ export default function CalendarView() {
           const baseDayTextColor = !day.isCurrentMonth
             ? colors.text.tertiary
             : today
-            ? isDark
-              ? tokens.colors.dark.accent.green
-              : tokens.colors.light.accent.green
-            : colors.text.primary;
+              ? isDark
+                ? tokens.colors.dark.accent.green
+                : tokens.colors.light.accent.green
+              : colors.text.primary;
 
           return (
             <Pressable
               key={index}
               onPress={() => setSelectedDate(day.date)}
-              accessibilityLabel={`${day.date.toLocaleDateString()}, ${
-                day.hasWorkout
+              accessibilityLabel={`${day.date.toLocaleDateString()}, ${day.hasWorkout
                   ? `${day.workoutCount} workout${day.workoutCount > 1 ? 's' : ''}`
-                  : 'No workouts'
-              }`}
+                  : day.hasScheduled
+                    ? 'Scheduled workout'
+                    : 'No workouts'
+                }`}
               accessibilityRole="button"
               style={{
                 width: '14.28%',
@@ -277,19 +317,34 @@ export default function CalendarView() {
                 >
                   {day.date.getDate()}
                 </Text>
-                {day.hasWorkout && (
-                  <View
-                    style={{
-                      width: 4,
-                      height: 4,
-                      borderRadius: 999,
-                      marginTop: 4,
-                      backgroundColor: isDark
-                        ? tokens.colors.dark.accent.green
-                        : tokens.colors.light.accent.green,
-                    }}
-                  />
-                )}
+
+                {/* Dot Indicators */}
+                <View style={{ flexDirection: 'row', gap: 2, marginTop: 4 }}>
+                  {day.hasWorkout && (
+                    <View
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: 999,
+                        backgroundColor: isDark
+                          ? tokens.colors.dark.accent.green
+                          : tokens.colors.light.accent.green,
+                      }}
+                    />
+                  )}
+                  {day.hasScheduled && !day.hasWorkout && (
+                    <View
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: 999,
+                        backgroundColor: isDark
+                          ? tokens.colors.dark.accent.blue
+                          : tokens.colors.light.accent.blue,
+                      }}
+                    />
+                  )}
+                </View>
               </View>
             </Pressable>
           );
@@ -306,29 +361,78 @@ export default function CalendarView() {
           paddingTop: tokens.spacing.md,
           borderTopWidth: 1,
           borderTopColor: colors.border.subtle,
+          gap: tokens.spacing.lg,
         }}
       >
-        <View
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 999,
-            marginRight: tokens.spacing.xs,
-            backgroundColor: isDark
-              ? tokens.colors.dark.accent.green
-              : tokens.colors.light.accent.green,
-          }}
-        />
-        <Text
-          style={{
-            fontSize: tokens.typography.fontSize.xs,
-            color: colors.text.secondary,
-          }}
-        >
-          Workout completed
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 999,
+              marginRight: tokens.spacing.xs,
+              backgroundColor: isDark
+                ? tokens.colors.dark.accent.green
+                : tokens.colors.light.accent.green,
+            }}
+          />
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
+            Completed
+          </Text>
+        </View>
+
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 999,
+              marginRight: tokens.spacing.xs,
+              backgroundColor: isDark
+                ? tokens.colors.dark.accent.blue
+                : tokens.colors.light.accent.blue,
+            }}
+          />
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
+            Scheduled
+          </Text>
+        </View>
       </View>
+
+      {/* Selected Date Details (Simple MVP) */}
+      {selectedDate && (
+        <View style={{ marginTop: tokens.spacing.md }}>
+          <Text style={{ color: colors.text.primary, fontWeight: 'bold', marginBottom: 4 }}>
+            {selectedDate.toLocaleDateString()}
+          </Text>
+          {scheduledWorkouts.get(selectedDate.toISOString().split('T')[0]) ? (
+            <View>
+              <Text style={{ color: colors.text.secondary }}>
+                Scheduled: {scheduledWorkouts.get(selectedDate.toISOString().split('T')[0])?.focus}
+              </Text>
+              {scheduledWorkouts.get(selectedDate.toISOString().split('T')[0])?.exercises.map((ex, i) => (
+                <Text key={i} style={{ color: colors.text.tertiary, fontSize: 12 }}>
+                  • {ex.name} ({ex.sets}x{ex.reps})
+                </Text>
+              ))}
+            </View>
+          ) : (
+            <Text style={{ color: colors.text.tertiary }}>No scheduled workout</Text>
+          )}
+        </View>
+      )}
     </View>
   );
 }
+
 

@@ -50,6 +50,13 @@ const slides: OnboardingSlide[] = [
     icon: MessageCircle,
     color: '#36625E',
   },
+  {
+    id: 4,
+    title: 'Athlete Profile',
+    description: 'Tell us your sport (e.g., Running, Basketball) to get specialized training programs.',
+    icon: TrendingUp, // Reusing icon for now, could be Activity or similar
+    color: '#5D3FD3',
+  },
 ];
 
 interface OnboardingScreenProps {

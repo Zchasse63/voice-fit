@@ -208,6 +208,15 @@ QUESTIONNAIRE:
         if user_context:
             prompt += f"\nUSER CONTEXT:\n{user_context}\n"
 
+        # Inject Sport Context if available in questionnaire
+        if "primary_sport" in questionnaire:
+            prompt += f"""
+SPORT CONTEXT:
+Primary Sport: {questionnaire.get('primary_sport', 'General Fitness')}
+Level: {questionnaire.get('sport_level', 'Recreational')}
+Season Status: {questionnaire.get('season_status', 'Off-Season')}
+"""
+
         prompt += f"""
 KNOWLEDGE BASE CONTEXT:
 {knowledge_context}

@@ -414,11 +414,55 @@ class SmartNamespaceSelector:
             "content_types": ["programming"],
             "priority": 2,
         }
-        selected["program-templates"] = {
-            "top_k": 2,
-            "content_types": ["programming"],
-            "priority": 2,
-        }
+        # Sport-specific selection
+        primary_sport = questionnaire.get("primary_sport", "").lower()
+        print(f"DEBUG: primary_sport='{primary_sport}'")
+        
+        if "basketball" in primary_sport:
+            selected["sports-performance"] = {
+                "top_k": 4,
+                "content_types": ["programming", "principle"],
+                "priority": 1,
+            }
+            selected["plyometrics"] = {
+                "top_k": 3,
+                "content_types": ["programming"],
+                "priority": 1,
+            }
+            selected["cardio-conditioning"] = {
+                "top_k": 2,
+                "content_types": ["programming"],
+                "priority": 2,
+            }
+
+        if "running" in primary_sport or "marathon" in primary_sport:
+            selected["running-cardio"] = {
+                "top_k": 4,
+                "content_types": ["programming"],
+                "priority": 1,
+            }
+            selected["running-injuries"] = {
+                "top_k": 3,
+                "content_types": ["recovery"],
+                "priority": 1,
+            }
+            selected["endurance-training"] = {
+                "top_k": 3,
+                "content_types": ["programming"],
+                "priority": 1,
+            }
+
+        if "football" in primary_sport or "soccer" in primary_sport:
+             selected["sports-performance"] = {
+                "top_k": 4,
+                "content_types": ["programming"],
+                "priority": 1,
+            }
+             selected["cardio-conditioning"] = {
+                "top_k": 3,
+                "content_types": ["programming"],
+                "priority": 2,
+            }
 
         return selected
 

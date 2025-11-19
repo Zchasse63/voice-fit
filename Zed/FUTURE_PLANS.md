@@ -294,81 +294,9 @@ Prove causation, not just correlation:
 
 ---
 
-### 6.2 Video Form Analysis
 
-**Goal:** Use computer vision to analyze exercise form and flag potential issues
 
-#### Form Quality Scoring
-```json
-{
-  "exercise": "Barbell Squat",
-  "form_score": 7.2,
-  "issues_detected": [
-    {
-      "issue": "knee_valgus",
-      "severity": "moderate",
-      "timestamp": "0:03",
-      "recommendation": "Focus on pushing knees out, add hip abduction work"
-    },
-    {
-      "issue": "forward_lean",
-      "severity": "minor",
-      "timestamp": "0:05",
-      "recommendation": "Improve ankle mobility, try elevated heels"
-    }
-  ],
-  "substitute_suggested": "Goblet Squat",
-  "reason": "Build better movement patterns before loading heavy"
-}
-```
-
-**Features:**
-- [ ] Record sets with phone camera (front/side view)
-- [ ] ML model detects joint angles, bar path, tempo
-- [ ] Flags form breakdowns (knee valgus, butt wink, forward lean)
-- [ ] Suggests corrective exercises or regressions
-- [ ] Tracks form improvement over time
-- [ ] Automatically swap to easier variation if form is consistently poor
-
-**Use Cases:**
-- User's squat depth decreases over sets → AI suggests ending set early
-- Knee valgus detected → Flag potential knee injury risk, suggest glute work
-- Bar path shifts forward on bench press → Suggest form cues or lighter weight
-- Consistent form issues → Recommend video coaching session
-
-**Technical Requirements:**
-- MediaPipe or similar pose estimation library
-- On-device processing (privacy)
-- Custom ML model trained on exercise form datasets
-- Low-latency processing (<2 seconds per set)
-
-**Estimated Timeline:** 10-12 weeks (complex ML work)  
-**Dependencies:** ML expertise, large dataset of exercise videos with annotations
-
----
-
-### 6.3 Additional Advanced Personalization Ideas
-
-#### Genetic Profiling (Future: 12+ months)
-- [ ] Integrate DNA test results (23andMe, AncestryDNA)
-- [ ] Tailor nutrition/training to genetic markers (ACTN3, ACE, etc.)
-- [ ] Predict injury susceptibility based on genetic factors
-
-#### Behavioral AI (Future: 9-12 months)
-- [ ] ML model learns user preferences over time
-- [ ] Predicts which substitutes user will prefer
-- [ ] Adapts communication style based on engagement patterns
-- [ ] Proactively suggests workouts user will enjoy
-
-#### Social Comparison (Future: 6-9 months)
-- [ ] "Users like you prefer these substitutes"
-- [ ] Compare performance to similar athletes (age, weight, experience)
-- [ ] Leaderboards for specific exercises
-- [ ] Anonymous benchmarking data
-
----
-
-Okay, I think we need to make a push to GitHub to see if that syntax error... ...works. We just have to push it to GitHub for a real way to pick it up. What I want to implement now from the future plans is the program scheduling in calendar view. I think we need a calendar now. I think that would work great. Lock screen widget and live activity. I definitely want to go ahead and do that now. And then smart exercise creation and synonym checking. Definitely want to go ahead and do that now. Everything else can wait until later on. And once we complete these, let's make sure we mark them off in the future plans document so that... ...whoever works on this knows that it is complete. I'm not sure which order these should be done in or what other information we need to put together to... ...get this fully planned and move forward with those three things that were mentioned. The two other things that I want to do is I want to make sure that the nutrition plan and the... ...AI Health Intelligence Engine information... ...I realize that they have their own documents, but I want to make sure that those are at least listed in the future plans. In this future plans markdown can serve as our central location for all information for future plans. And then we still have the other documents that go into further depth on those as well.## Phase 6.4: Warm-up & Cooldown Programming
+## Phase 6.4: Warm-up & Cooldown Programming
 
 **Goal:** Automatically generate sport-specific warm-ups and cooldowns based on workout type, injury history, and user preferences
 

@@ -85,6 +85,12 @@ from models import (
     VolumeAnalyticsResponse,
     WorkoutInsightsRequest,
     WorkoutInsightsResponse,
+    WarmupGenerateRequest,
+    WarmupGenerateResponse,
+    NutritionLogRequest,
+    NutritionLogResponse,
+    NutritionParseRequest,
+    NutritionParseResponse,
 )
 from monitoring_service import get_monitoring_service
 from onboarding_service import OnboardingService
@@ -95,6 +101,8 @@ from rate_limit_middleware import add_rate_limiting
 from user_context_builder import UserContextBuilder
 from volume_tracking_service import VolumeTrackingService
 from weather_service import WeatherService
+from warmup_service import warmup_service
+from nutrition_service import nutrition_service
 
 # Load environment variables
 load_dotenv()
@@ -3482,6 +3490,88 @@ async def adherence_check_in(
         print(f"Error processing adherence check-in: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to process check-in: {str(e)}"
+        )
+
+
+# ============================================================================
+# WARMUP & COOLDOWN ENDPOINTS
+# ============================================================================
+
+
+@app.post("/api/warmup/generate", response_model=WarmupGenerateResponse)
+async def generate_warmup(request: WarmupGenerateRequest):
+    """Generate a warmup routine based on workout type"""
+    try:
+        result = warmup_service.generate_warmup(
+            workout_type=request.workout_type,
+            duration_minutes=request.duration_minutes
+        )
+        return WarmupGenerateResponse(
+            warmup=result,
+            message=f"Generated {result['duration_minutes']}-minute {result['name']}"
+        )
+    except Exception as e:
+        print(f"Error generating warmup: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================================
+# NUTRITION ENDPOINTS
+# ============================================================================
+
+
+@app.post("/api/nutrition/log", response_model=NutritionLogResponse)
+async def log_nutrition(request: NutritionLogRequest):
+    """Log a nutrition entry"""
+    try:
+        result = nutrition_service.log_nutrition(
+            user_id=request.user_id,
+            meal_type=request.meal_type,
+            items=request.items,
+            log_date=request.log_date
+        )
+        return NutritionLogResponse(
+            success=True,
+            log_id=result["log_id"],
+            summary=result["summary"],
+            message=f"Logged {request.meal_type} successfully"
+        )
+    except Exception as e:
+        print(f"Error logging nutrition: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/nutrition/summary")
+async def get_nutrition_summary(user_id: str, date: str):
+    """Get nutrition summary for a specific date"""
+    try:
+        summary = nutrition_service.get_daily_summary(user_id, date)
+        return summary
+    except Exception as e:
+        print(f"Error getting nutrition summary: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/nutrition/parse", response_model=NutritionParseResponse)
+async def parse_nutrition_text(
+    request: NutritionParseRequest,
+    user: dict = Depends(verify_token),
+):
+    """
+    Parse natural language nutrition text into structured data.
+    """
+    try:
+        result = nutrition_service.parse_nutrition_text(request.text)
+        
+        return NutritionParseResponse(
+            parsed_data=result,
+            confidence=result.get("confidence", 0.0),
+            message="Successfully parsed nutrition text" if "error" not in result else "Failed to parse nutrition text"
+        )
+    except Exception as e:
+        print(f"Error parsing nutrition text: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to parse nutrition text: {str(e)}"
         )
 
 
