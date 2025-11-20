@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, SafeAreaView } from "react-native";
 import { ArrowLeft, Calendar, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useTheme } from "../theme/ThemeContext";
 import tokens from "../theme/tokens";
@@ -146,11 +146,11 @@ export default function ProgramLogScreen({ navigation, route }: ProgramLogScreen
   });
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background.primary }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background.primary }}>
       <ScrollView
         contentContainerStyle={{
           paddingHorizontal: tokens.spacing.lg,
-          paddingTop: tokens.spacing.lg,
+          paddingTop: tokens.spacing.md,
           paddingBottom: tokens.spacing.xl,
         }}
       >
@@ -387,7 +387,7 @@ export default function ProgramLogScreen({ navigation, route }: ProgramLogScreen
         workoutLogId={selectedWorkoutId ?? undefined}
         onClose={() => setSelectedWorkoutId(null)}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

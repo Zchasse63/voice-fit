@@ -13,7 +13,8 @@ export type AuthStackParamList = {
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export default function AuthNavigator() {
-  const { isDark } = useTheme();
+  const theme = useTheme();
+  const isDark = theme?.isDark ?? false;
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
   return (

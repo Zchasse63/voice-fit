@@ -31,7 +31,7 @@ import { ChevronLeft, RotateCcw, MessageSquare } from 'lucide-react-native';
 import tokens from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuthStore } from '../store/auth.store';
-import { supabase } from '../services/supabase';
+import { supabase } from '../services/database/supabase.client';
 
 interface PreferencesScreenProps {
   navigation?: any;

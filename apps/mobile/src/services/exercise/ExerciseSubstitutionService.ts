@@ -11,7 +11,7 @@
  * 250+ scientifically-backed alternatives with EMG studies and biomechanical analysis
  */
 
-import { supabase } from '../database/supabase';
+import { supabase } from '../database/supabase.client';
 
 // Types
 export interface ExerciseSubstitution {

@@ -23,6 +23,10 @@ import { database } from "../services/database/watermelon/database";
 import WorkoutLog from "../services/database/watermelon/models/WorkoutLog";
 import Set from "../services/database/watermelon/models/Set";
 import { Q } from "@nozbe/watermelondb";
+import { VolumeTrendsChart } from "../components/charts/VolumeTrendsChart";
+import { ReadinessTrendChart } from "../components/readiness/ReadinessTrendChart";
+import { chartDataService, VolumeDataPoint, ReadinessDataPoint } from "../services/charts/ChartDataService";
+import AnalyticsAPIClient, { FatigueAnalytics } from "../services/api/AnalyticsAPIClient";
 
 export default function HomeScreen({ navigation }: any) {
   const { isDark } = useTheme();
@@ -39,13 +43,24 @@ export default function HomeScreen({ navigation }: any) {
   });
   const [recentWorkouts, setRecentWorkouts] = useState<WorkoutLog[]>([]);
 
+  // Analytics state
+  const [volumeData, setVolumeData] = useState<VolumeDataPoint[]>([]);
+  const [readinessData, setReadinessData] = useState<ReadinessDataPoint[]>([]);
+  const [fatigueData, setFatigueData] = useState<FatigueAnalytics | null>(null);
+  const [prCount, setPrCount] = useState<number>(0);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
   useEffect(() => {
     loadDashboardData();
   }, []);
 
   const loadDashboardData = async () => {
     try {
-      await Promise.all([loadWeeklyStats(), loadRecentWorkouts()]);
+      await Promise.all([
+        loadWeeklyStats(),
+        loadRecentWorkouts(),
+        loadAnalyticsData()
+      ]);
     } catch (error) {
       console.error("Failed to load dashboard data:", error);
     }
@@ -101,6 +116,53 @@ export default function HomeScreen({ navigation }: any) {
       setRecentWorkouts(workouts);
     } catch (error) {
       console.error("Failed to load recent workouts:", error);
+    }
+  };
+
+  const loadAnalyticsData = async () => {
+    if (!user?.id) {
+      setAnalyticsLoading(false);
+      return;
+    }
+
+    try {
+      setAnalyticsLoading(true);
+
+      // Fetch volume trends (last 12 weeks)
+      const volume = await chartDataService.getVolumeTrends(user.id);
+      setVolumeData(volume);
+
+      // Fetch readiness trends (last 7 days)
+      const readiness = await chartDataService.getReadinessTrend(user.id);
+      setReadinessData(readiness);
+
+      // Fetch fatigue analytics from backend API
+      try {
+        const fatigue = await AnalyticsAPIClient.getFatigueAnalytics(user.id);
+        setFatigueData(fatigue);
+      } catch (error) {
+        console.log("Fatigue analytics not available:", error);
+        // Don't fail the whole load if fatigue data isn't available
+      }
+
+      // Count PRs from last 30 days
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const PRHistory = database.get('pr_history');
+      const recentPRs = await PRHistory
+        .query(
+          Q.where('user_id', user.id),
+          Q.where('achieved_at', Q.gte(thirtyDaysAgo.getTime()))
+        )
+        .fetchCount();
+
+      setPrCount(recentPRs);
+
+    } catch (error) {
+      console.error("Failed to load analytics data:", error);
+    } finally {
+      setAnalyticsLoading(false);
     }
   };
 
@@ -296,6 +358,206 @@ export default function HomeScreen({ navigation }: any) {
             console.log('Navigate to health snapshot details');
           }}
         />
+
+        {/* Insights & Analytics Grid */}
+        <View style={{ marginTop: tokens.spacing.xl, marginBottom: tokens.spacing.xl }}>
+          <View
+            style={{
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: tokens.spacing.md,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.lg,
+                fontWeight: tokens.typography.fontWeight.bold,
+                color: colors.text.primary,
+              }}
+            >
+              Insights & Analytics
+            </Text>
+            <Pressable
+              onPress={() => {
+                // TODO: Navigate to AnalyticsScreen when ready
+                console.log('Navigate to Analytics');
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.sm,
+                  fontWeight: tokens.typography.fontWeight.semibold,
+                  color: colors.accent.blue,
+                }}
+              >
+                View All
+              </Text>
+            </Pressable>
+          </View>
+
+          {/* 2x2 Grid */}
+          <View style={{ gap: tokens.spacing.md }}>
+            {/* Row 1 */}
+            <View style={{ flexDirection: "row", gap: tokens.spacing.md }}>
+              {/* Volume Trend Card (Top-Left) */}
+              <View style={{ flex: 1 }}>
+                <Pressable
+                  onPress={() => navigation.navigate('VolumeDetail')}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <View
+                    style={{
+                      backgroundColor: colors.background.secondary,
+                      borderRadius: tokens.borderRadius.lg,
+                      padding: tokens.spacing.md,
+                      minHeight: 140,
+                      ...tokens.shadows.sm,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.sm,
+                        color: colors.text.secondary,
+                        marginBottom: tokens.spacing.xs,
+                        fontWeight: tokens.typography.fontWeight.medium,
+                      }}
+                    >
+                      Volume Trend
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.sm,
+                        color: colors.text.tertiary,
+                        marginBottom: tokens.spacing.sm,
+                      }}
+                    >
+                      Last 7 Days
+                    </Text>
+                    {/* Mini chart placeholder - will enhance later */}
+                    <View style={{ height: 60, marginTop: 'auto', justifyContent: 'center', alignItems: 'center' }}>
+                      {analyticsLoading ? (
+                        <Text style={{ fontSize: tokens.typography.fontSize.xs, color: colors.text.tertiary }}>
+                          Loading...
+                        </Text>
+                      ) : volumeData.length > 0 ? (
+                        <Text style={{ fontSize: tokens.typography.fontSize.xl, fontWeight: tokens.typography.fontWeight.bold, color: colors.accent.blue }}>
+                          {Math.round(volumeData.slice(-7).reduce((sum, d) => sum + d.tonnage, 0) / 1000)}k lbs
+                        </Text>
+                      ) : (
+                        <Text style={{ fontSize: tokens.typography.fontSize.xs, color: colors.text.tertiary }}>
+                          No data
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* PRs This Month Card (Top-Right) */}
+              <View style={{ flex: 1 }}>
+                <MetricCard
+                  title="PRs This Month"
+                  value={prCount}
+                  subtitle="New Records"
+                  icon={Award}
+                  iconColor={colors.accent.coral}
+                  variant="compact"
+                  onPress={() => {
+                    // TODO: Navigate to PRs screen when ready
+                    console.log('Navigate to PRs screen');
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Row 2 */}
+            <View style={{ flexDirection: "row", gap: tokens.spacing.md }}>
+              {/* Readiness Card (Bottom-Left) */}
+              <View style={{ flex: 1 }}>
+                <Pressable
+                  onPress={() => navigation.navigate('RecoveryDetail')}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <View
+                    style={{
+                      backgroundColor: colors.background.secondary,
+                      borderRadius: tokens.borderRadius.lg,
+                      padding: tokens.spacing.md,
+                      minHeight: 140,
+                      ...tokens.shadows.sm,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.sm,
+                        color: colors.text.secondary,
+                        marginBottom: tokens.spacing.xs,
+                        fontWeight: tokens.typography.fontWeight.medium,
+                      }}
+                    >
+                      Readiness
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.sm,
+                        color: colors.text.tertiary,
+                        marginBottom: tokens.spacing.sm,
+                      }}
+                    >
+                      Last 7 Days
+                    </Text>
+                    {/* Mini chart placeholder - will enhance later */}
+                    <View style={{ height: 60, marginTop: 'auto', justifyContent: 'center', alignItems: 'center' }}>
+                      {analyticsLoading ? (
+                        <Text style={{ fontSize: tokens.typography.fontSize.xs, color: colors.text.tertiary }}>
+                          Loading...
+                        </Text>
+                      ) : readinessData.length > 0 ? (
+                        <Text style={{ fontSize: tokens.typography.fontSize.xl, fontWeight: tokens.typography.fontWeight.bold, color: colors.accent.green }}>
+                          {Math.round(readinessData[readinessData.length - 1].compositeScore)}%
+                        </Text>
+                      ) : (
+                        <Text style={{ fontSize: tokens.typography.fontSize.xs, color: colors.text.tertiary }}>
+                          No data
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </Pressable>
+              </View>
+
+              {/* Fatigue Score Card (Bottom-Right) */}
+              <View style={{ flex: 1 }}>
+                <MetricCard
+                  title="Fatigue Score"
+                  value={fatigueData?.current_fatigue_score?.toFixed(1) || '--'}
+                  subtitle={
+                    fatigueData?.current_fatigue_score
+                      ? fatigueData.current_fatigue_score < 4 ? 'Low'
+                        : fatigueData.current_fatigue_score < 7 ? 'Moderate'
+                        : 'High'
+                      : 'No data'
+                  }
+                  icon={Activity}
+                  iconColor={
+                    fatigueData?.current_fatigue_score
+                      ? fatigueData.current_fatigue_score < 4 ? colors.accent.green
+                        : fatigueData.current_fatigue_score < 7 ? colors.accent.orange
+                        : colors.accent.coral
+                      : colors.text.tertiary
+                  }
+                  variant="compact"
+                  onPress={() => navigation.navigate('RecoveryDetail')}
+                />
+              </View>
+            </View>
+          </View>
+        </View>
 
         {/* Quick Action - Start Workout */}
         <Pressable

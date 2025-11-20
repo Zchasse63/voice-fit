@@ -16,12 +16,13 @@ interface LoadingSpinnerProps {
   fullScreen?: boolean;
 }
 
-export default function LoadingSpinner({ 
-  message = 'Loading...', 
+export default function LoadingSpinner({
+  message = 'Loading...',
   size = 'large',
-  fullScreen = false 
+  fullScreen = false
 }: LoadingSpinnerProps) {
-  const { isDark } = useTheme();
+  const theme = useTheme();
+  const isDark = theme?.isDark ?? false;
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
   const containerStyle = fullScreen

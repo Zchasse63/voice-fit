@@ -13,6 +13,10 @@ import RunScreen from "../screens/RunScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ProgramLogScreen from "../screens/ProgramLogScreen";
 
+// Import detail screens
+import VolumeDetailScreen from "../screens/VolumeDetailScreen";
+import RecoveryDetailScreen from "../screens/RecoveryDetailScreen";
+
 // Import coach screens
 import ClientSelectorScreen from "../screens/coach/ClientSelectorScreen";
 import InviteClientScreen from "../screens/coach/InviteClientScreen";
@@ -21,7 +25,8 @@ const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
 function MainTabs() {
-  const { isDark } = useTheme();
+  const theme = useTheme();
+  const isDark = theme?.isDark ?? false;
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
   return (
@@ -123,6 +128,21 @@ export default function RootNavigator() {
       <Stack.Screen
         name="ProgramLog"
         component={ProgramLogScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      {/* Analytics Detail Screens */}
+      <Stack.Screen
+        name="VolumeDetail"
+        component={VolumeDetailScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="RecoveryDetail"
+        component={RecoveryDetailScreen}
         options={{
           animation: "slide_from_right",
         }}

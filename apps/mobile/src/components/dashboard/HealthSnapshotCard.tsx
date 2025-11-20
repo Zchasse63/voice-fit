@@ -4,7 +4,7 @@ import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
 import { Heart, AlertTriangle, TrendingUp, TrendingDown, ChevronRight } from 'lucide-react-native';
 import { useAuthStore } from '../../store/auth.store';
-import { supabase } from '../../services/supabase';
+import { supabase } from '../../services/database/supabase.client';
 
 interface HealthSnapshot {
   id: string;

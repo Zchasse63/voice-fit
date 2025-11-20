@@ -11,6 +11,16 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		3D0BFBE32AF875C276E98BEF /* libPods-VoiceFit.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 03B73EC8CCDF38819FB65E7D /* libPods-VoiceFit.a */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
+		9278CA972ECF6A7A001135A0 /* SiriShortcutsManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA922ECF6A7A001135A0 /* SiriShortcutsManager.m */; };
+		9278CA982ECF6A7A001135A0 /* RunningActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA902ECF6A7A001135A0 /* RunningActivityAttributes.swift */; };
+		9278CA992ECF6A7A001135A0 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA952ECF6A7A001135A0 /* WorkoutActivityAttributes.swift */; };
+		9278CA9A2ECF6A7A001135A0 /* LiveActivityModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA8E2ECF6A7A001135A0 /* LiveActivityModule.m */; };
+		9278CA9B2ECF6A7A001135A0 /* LiveActivityModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA8F2ECF6A7A001135A0 /* LiveActivityModule.swift */; };
+		9278CA9C2ECF6A7A001135A0 /* SkipRestIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA942ECF6A7A001135A0 /* SkipRestIntent.swift */; };
+		9278CA9D2ECF6A7A001135A0 /* WorkoutLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA962ECF6A7A001135A0 /* WorkoutLiveActivity.swift */; };
+		9278CA9E2ECF6A7A001135A0 /* SiriShortcutsManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA932ECF6A7A001135A0 /* SiriShortcutsManager.swift */; };
+		9278CA9F2ECF6A7A001135A0 /* RunningLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA912ECF6A7A001135A0 /* RunningLiveActivity.swift */; };
+		9278CAA02ECF6A7A001135A0 /* CompleteSetIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9278CA8D2ECF6A7A001135A0 /* CompleteSetIntent.swift */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
 		CC355C68B33093F9845AB692 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4DA375FFDF9CDCB87CF4A8B /* ExpoModulesProvider.swift */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
@@ -23,9 +33,19 @@
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = VoiceFit/Info.plist; sourceTree = "<group>"; };
 		6D3D808A424C7FC356124368 /* Pods-VoiceFit.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VoiceFit.release.xcconfig"; path = "Target Support Files/Pods-VoiceFit/Pods-VoiceFit.release.xcconfig"; sourceTree = "<group>"; };
 		8D7C962E525DF163A3ABAD79 /* Pods-VoiceFit.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-VoiceFit.debug.xcconfig"; path = "Target Support Files/Pods-VoiceFit/Pods-VoiceFit.debug.xcconfig"; sourceTree = "<group>"; };
+		9278CA8D2ECF6A7A001135A0 /* CompleteSetIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompleteSetIntent.swift; sourceTree = "<group>"; };
+		9278CA8E2ECF6A7A001135A0 /* LiveActivityModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = LiveActivityModule.m; sourceTree = "<group>"; };
+		9278CA8F2ECF6A7A001135A0 /* LiveActivityModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityModule.swift; sourceTree = "<group>"; };
+		9278CA902ECF6A7A001135A0 /* RunningActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningActivityAttributes.swift; sourceTree = "<group>"; };
+		9278CA912ECF6A7A001135A0 /* RunningLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RunningLiveActivity.swift; sourceTree = "<group>"; };
+		9278CA922ECF6A7A001135A0 /* SiriShortcutsManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SiriShortcutsManager.m; sourceTree = "<group>"; };
+		9278CA932ECF6A7A001135A0 /* SiriShortcutsManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SiriShortcutsManager.swift; sourceTree = "<group>"; };
+		9278CA942ECF6A7A001135A0 /* SkipRestIntent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkipRestIntent.swift; sourceTree = "<group>"; };
+		9278CA952ECF6A7A001135A0 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
+		9278CA962ECF6A7A001135A0 /* WorkoutLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutLiveActivity.swift; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = VoiceFit/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		D9A3E214C5F6F1AD1E4E73AF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = VoiceFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D9A3E214C5F6F1AD1E4E73AF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xml; name = PrivacyInfo.xcprivacy; path = VoiceFit/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = VoiceFit/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* VoiceFit-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "VoiceFit-Bridging-Header.h"; path = "VoiceFit/VoiceFit-Bridging-Header.h"; sourceTree = "<group>"; };
@@ -55,6 +75,16 @@
 		13B07FAE1A68108700A75B9A /* VoiceFit */ = {
 			isa = PBXGroup;
 			children = (
+				9278CA8D2ECF6A7A001135A0 /* CompleteSetIntent.swift */,
+				9278CA8E2ECF6A7A001135A0 /* LiveActivityModule.m */,
+				9278CA8F2ECF6A7A001135A0 /* LiveActivityModule.swift */,
+				9278CA902ECF6A7A001135A0 /* RunningActivityAttributes.swift */,
+				9278CA912ECF6A7A001135A0 /* RunningLiveActivity.swift */,
+				9278CA922ECF6A7A001135A0 /* SiriShortcutsManager.m */,
+				9278CA932ECF6A7A001135A0 /* SiriShortcutsManager.swift */,
+				9278CA942ECF6A7A001135A0 /* SkipRestIntent.swift */,
+				9278CA952ECF6A7A001135A0 /* WorkoutActivityAttributes.swift */,
+				9278CA962ECF6A7A001135A0 /* WorkoutLiveActivity.swift */,
 				F11748412D0307B40044C1D9 /* AppDelegate.swift */,
 				F11748442D0722820044C1D9 /* VoiceFit-Bridging-Header.h */,
 				BB2F792B24A3F905000567C9 /* Supporting */,
@@ -111,7 +141,6 @@
 				8D7C962E525DF163A3ABAD79 /* Pods-VoiceFit.debug.xcconfig */,
 				6D3D808A424C7FC356124368 /* Pods-VoiceFit.release.xcconfig */,
 			);
-			name = Pods;
 			path = Pods;
 			sourceTree = "<group>";
 		};
@@ -331,6 +360,16 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
+				9278CA972ECF6A7A001135A0 /* SiriShortcutsManager.m in Sources */,
+				9278CA982ECF6A7A001135A0 /* RunningActivityAttributes.swift in Sources */,
+				9278CA992ECF6A7A001135A0 /* WorkoutActivityAttributes.swift in Sources */,
+				9278CA9A2ECF6A7A001135A0 /* LiveActivityModule.m in Sources */,
+				9278CA9B2ECF6A7A001135A0 /* LiveActivityModule.swift in Sources */,
+				9278CA9C2ECF6A7A001135A0 /* SkipRestIntent.swift in Sources */,
+				9278CA9D2ECF6A7A001135A0 /* WorkoutLiveActivity.swift in Sources */,
+				9278CA9E2ECF6A7A001135A0 /* SiriShortcutsManager.swift in Sources */,
+				9278CA9F2ECF6A7A001135A0 /* RunningLiveActivity.swift in Sources */,
+				9278CAA02ECF6A7A001135A0 /* CompleteSetIntent.swift in Sources */,
 				CC355C68B33093F9845AB692 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

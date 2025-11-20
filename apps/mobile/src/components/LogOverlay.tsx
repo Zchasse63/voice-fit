@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { X } from 'lucide-react-native';
 import tokens from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { database } from '../services/database/watermelon/database';
 import WorkoutLog from '../services/database/watermelon/models/WorkoutLog';
 import Set from '../services/database/watermelon/models/Set';
@@ -37,6 +38,10 @@ interface SetData {
 }
 
 export default function LogOverlay({ visible, onClose, workoutLogId }: LogOverlayProps) {
+  const theme = useTheme();
+  const isDark = theme?.isDark ?? false;
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
   const [sets, setSets] = useState<SetData[]>([]);
   const [workoutName, setWorkoutName] = useState<string>('Current Workout');
   const [isLoading, setIsLoading] = useState(true);
@@ -97,7 +102,7 @@ export default function LogOverlay({ visible, onClose, workoutLogId }: LogOverla
         style={{
           height: 32,
           borderBottomWidth: 1,
-          borderBottomColor: tokens.colors.notebook.ruledLine,
+          borderBottomColor: colors.notebook.ruledLine,
         }}
       />
     );
@@ -113,7 +118,7 @@ export default function LogOverlay({ visible, onClose, workoutLogId }: LogOverla
           paddingVertical: 8,
           paddingHorizontal: 16,
           borderBottomWidth: 1,
-          borderBottomColor: tokens.colors.notebook.ruledLine,
+          borderBottomColor: colors.notebook.ruledLine,
         }}
       >
         <Text
@@ -178,9 +183,9 @@ export default function LogOverlay({ visible, onClose, workoutLogId }: LogOverla
         />
 
         {/* Modal Content */}
-        <View style={styles.modalContent}>
+        <View style={[styles.modalContent, { backgroundColor: colors.notebook.background }]}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { borderBottomColor: colors.notebook.redLine }]}>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>{workoutName}</Text>
               <Text style={styles.headerSubtitle}>
@@ -193,7 +198,7 @@ export default function LogOverlay({ visible, onClose, workoutLogId }: LogOverla
           </View>
 
           {/* Red margin line (notebook style) */}
-          <View style={styles.redLine} />
+          <View style={[styles.redLine, { backgroundColor: colors.notebook.redLine }]} />
 
           {/* Workout log content */}
           <ScrollView style={styles.scrollView}>
@@ -220,7 +225,16 @@ export default function LogOverlay({ visible, onClose, workoutLogId }: LogOverla
           {/* Hole punch decorations (notebook style) */}
           <View style={styles.holePunchContainer}>
             {[0, 1, 2].map((i) => (
-              <View key={i} style={styles.holePunch} />
+              <View
+                key={i}
+                style={[
+                  styles.holePunch,
+                  {
+                    backgroundColor: colors.background.primary,
+                    borderColor: colors.notebook.holePunch
+                  }
+                ]}
+              />
             ))}
           </View>
         </View>
@@ -240,7 +254,6 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     height: '80%',
-    backgroundColor: tokens.colors.notebook.background,
     borderTopLeftRadius: tokens.borderRadius.xl,
     borderTopRightRadius: tokens.borderRadius.xl,
     ...tokens.shadows.xl,
@@ -250,7 +263,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: tokens.spacing.md,
     borderBottomWidth: 2,
-    borderBottomColor: tokens.colors.notebook.redLine,
   },
   headerTitle: {
     fontFamily: tokens.typography.fontFamily.notebook,
@@ -273,7 +285,6 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: 2,
-    backgroundColor: tokens.colors.notebook.redLine,
   },
   scrollView: {
     flex: 1,
@@ -321,9 +332,7 @@ const styles = StyleSheet.create({
     width: 16,
     height: 16,
     borderRadius: 8,
-    backgroundColor: tokens.colors.background.primary,
     borderWidth: 1,
-    borderColor: tokens.colors.notebook.holePunch,
   },
 });
 

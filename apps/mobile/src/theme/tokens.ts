@@ -10,6 +10,23 @@ export const tokens = {
   // COLORS
   // ============================================================================
   colors: {
+    // Compatibility layer - default to light theme for direct access
+    // Components should use theme-aware colors via useTheme() hook
+    get background() { return this.light.background; },
+    get text() { return this.light.text; },
+    get accent() { return this.light.accent; },
+    get backgroundSoft() { return this.light.backgroundSoft; },
+    get state() { return this.light.state; },
+    get overlay() { return this.light.overlay; },
+    get badge() { return this.light.badge; },
+    get notebook() { return this.light.notebook; },
+    shared: {
+      static: {
+        white: "#FFFFFF",
+        black: "#000000",
+      },
+    },
+
     light: {
       // Background colors (MacroFactor white/gray)
       background: {
@@ -75,6 +92,14 @@ export const tokens = {
       state: {
         hover: "#F8F9FA", // Hover state
         pressed: "#E9ECEF", // Pressed state
+      },
+
+      // Notebook-style colors (for LogOverlay)
+      notebook: {
+        background: "#FFFEF5", // Cream notebook paper
+        ruledLine: "#E0E0E0", // Light gray ruled lines
+        redLine: "#FF6B6B", // Red margin line
+        holePunch: "#D1D5DB", // Hole punch gray
       },
     },
 
@@ -143,6 +168,14 @@ export const tokens = {
       state: {
         hover: "#2C2C2E", // Dark gray hover
         pressed: "#3C3C3E", // Slightly lighter pressed
+      },
+
+      // Notebook-style colors (for LogOverlay)
+      notebook: {
+        background: "#1C1C1E", // Dark notebook background
+        ruledLine: "#2C2C2E", // Dark ruled lines
+        redLine: "#FF453A", // Bright red margin line
+        holePunch: "#48484A", // Hole punch dark gray
       },
     },
   },
