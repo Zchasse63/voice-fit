@@ -4,12 +4,14 @@ import MapView, { Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import { useTheme } from "../theme/ThemeContext";
 import { tokens } from "../theme/tokens";
 import { useRunStore } from "../store/run.store";
-import { Play, Pause, Square, MapPin } from "lucide-react-native";
+import { Play, Pause, Square, MapPin, Mic } from "lucide-react-native";
+import { useNavigation } from "@react-navigation/native";
 
 export default function RunScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const mapRef = useRef<MapView>(null);
+  const navigation = useNavigation<any>();
 
   const {
     isTracking,
@@ -205,12 +207,53 @@ export default function RunScreen() {
         )}
       </MapView>
 
+      {/* Goal Row */}
+      <View
+        style={{
+          position: "absolute",
+          top: 20,
+          left: 0,
+          right: 0,
+          paddingHorizontal: tokens.spacing.lg,
+          flexDirection: "row",
+          justifyContent: "space-between",
+          gap: tokens.spacing.sm,
+        }}
+      >
+        {["Easy", "Distance", "Time"].map((label) => (
+          <Pressable
+            key={label}
+            style={({ pressed }) => ({
+              flex: 1,
+              backgroundColor: colors.background.secondary,
+              borderRadius: tokens.borderRadius.full,
+              paddingVertical: tokens.spacing.sm,
+              alignItems: "center",
+              justifyContent: "center",
+              borderWidth: 1,
+              borderColor: colors.border.light,
+              opacity: pressed ? 0.85 : 1,
+            })}
+            onPress={() => Alert.alert("Goal", `${label} goal coming soon`)}
+          >
+            <Text
+              style={{
+                color: colors.text.primary,
+                fontWeight: tokens.typography.fontWeight.semibold,
+              }}
+            >
+              {label}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
+
       {/* Stats Overlay - Runna Style */}
       {isTracking && (
         <View
           style={{
             position: "absolute",
-            top: 60,
+            top: 80,
             left: tokens.spacing.lg,
             right: tokens.spacing.lg,
             backgroundColor: isDark
@@ -395,6 +438,22 @@ export default function RunScreen() {
           ...tokens.shadows.xl,
         }}
       >
+        {/* Voice shortcut hint */}
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: tokens.spacing.sm,
+            marginBottom: tokens.spacing.sm,
+          }}
+        >
+          <Mic size={16} color={colors.text.secondary} />
+          <Text style={{ color: colors.text.secondary, fontSize: tokens.typography.fontSize.sm }}>
+            Try: “Mark lap” or “Pause run”
+          </Text>
+        </View>
+
         {error && (
           <Text
             style={{
@@ -481,14 +540,32 @@ export default function RunScreen() {
                 <Square color="white" size={28} fill="white" strokeWidth={2} />
               </Pressable>
             </>
-          )}
-        </View>
+        )}
+      </View>
 
-        {/* Instructions */}
-        {!isTracking && (
-          <Text
-            style={{
-              fontSize: tokens.typography.fontSize.sm,
+      <Pressable
+        onPress={() => navigation.navigate("Splits")}
+        style={({ pressed }) => ({
+          marginTop: tokens.spacing.md,
+          alignItems: "center",
+          opacity: pressed ? 0.85 : 1,
+        })}
+      >
+        <Text
+          style={{
+            color: colors.accent.blue,
+            fontWeight: tokens.typography.fontWeight.semibold,
+          }}
+        >
+          View splits
+        </Text>
+      </Pressable>
+
+      {/* Instructions */}
+      {!isTracking && (
+        <Text
+          style={{
+            fontSize: tokens.typography.fontSize.sm,
               color: colors.text.secondary,
               textAlign: "center",
               marginTop: tokens.spacing.md,

@@ -22,6 +22,7 @@ import { Q } from "@nozbe/watermelondb";
 import { VolumeDataPoint, ReadinessDataPoint } from "../services/charts/ChartDataService";
 import AnalyticsAPIClient, { FatigueAnalytics } from "../services/api/AnalyticsAPIClient";
 import { supabaseAnalyticsService } from "../services/analytics/SupabaseAnalyticsService";
+import CurrentSetBar from "../components/workout/CurrentSetBar";
 
 export default function HomeScreen({ navigation }: any) {
   const { isDark } = useTheme();
@@ -147,13 +148,15 @@ export default function HomeScreen({ navigation }: any) {
   };
 
   return (
-    <ScrollView
-      style={{
-        flex: 1,
-        backgroundColor: colors.background.primary,
-      }}
-    >
-      <View style={{ padding: tokens.spacing.lg }}>
+    <View style={{ flex: 1, backgroundColor: colors.background.primary }}>
+      <ScrollView
+        style={{
+          flex: 1,
+          backgroundColor: colors.background.primary,
+        }}
+        contentContainerStyle={{ paddingBottom: tokens.spacing.xxl * 2 }}
+      >
+        <View style={{ padding: tokens.spacing.lg }}>
         {/* Header with Avatar */}
         <View
           style={{
@@ -230,9 +233,7 @@ export default function HomeScreen({ navigation }: any) {
               marginBottom: tokens.spacing.xl,
               ...tokens.shadows.md,
             }}
-            onPress={() => {
-              // Navigate to workout in progress
-            }}
+            onPress={() => navigation.navigate("ProgramLog")}
           >
             <View
               style={{
@@ -268,6 +269,39 @@ export default function HomeScreen({ navigation }: any) {
           </Pressable>
         )}
 
+        {/* Daily Check-in */}
+        <Pressable
+          onPress={() => navigation.navigate("Chat", { intent: "check-in" })}
+          style={({ pressed }) => ({
+            backgroundColor: colors.background.secondary,
+            borderRadius: tokens.borderRadius.lg,
+            padding: tokens.spacing.lg,
+            marginBottom: tokens.spacing.lg,
+            borderWidth: 1,
+            borderColor: colors.border.primary,
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.base,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: colors.text.primary,
+            }}
+          >
+            Daily Check-in
+          </Text>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+              marginTop: 4,
+            }}
+          >
+            Tap to complete in Coach (sleep/energy/status)
+          </Text>
+        </Pressable>
+
         {/* Weekly Stats Overview */}
         <StatsOverview
           title="This Week"
@@ -300,6 +334,40 @@ export default function HomeScreen({ navigation }: any) {
             },
           ]}
         />
+
+        {/* Weekly Digest */}
+        <Pressable
+          onPress={() => navigation.navigate("Chat", { intent: "weekly-digest" })}
+          style={({ pressed }) => ({
+            marginTop: tokens.spacing.lg,
+            marginBottom: tokens.spacing.md,
+            padding: tokens.spacing.md,
+            borderRadius: tokens.borderRadius.lg,
+            backgroundColor: colors.background.secondary,
+            borderWidth: 1,
+            borderColor: colors.border.primary,
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.base,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              color: colors.text.primary,
+            }}
+          >
+            Weekly Digest
+          </Text>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+              marginTop: 4,
+            }}
+          >
+            View in Coach for trends and next steps
+          </Text>
+        </Pressable>
 
         {/* Health Snapshot Card */}
         <HealthSnapshotCard
@@ -555,6 +623,8 @@ export default function HomeScreen({ navigation }: any) {
 
 
       </View>
-    </ScrollView>
+      </ScrollView>
+      <CurrentSetBar onOpenWorkout={() => navigation.navigate("ProgramLog")} />
+    </View>
   );
 }

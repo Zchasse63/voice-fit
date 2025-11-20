@@ -7,7 +7,7 @@
 
 import React from "react";
 import { View, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
-import { Send } from "lucide-react-native";
+import { Send, Mic } from "lucide-react-native";
 import tokens from "../../theme/tokens";
 import { useTheme } from "../../theme/ThemeContext";
 
@@ -15,6 +15,7 @@ interface ChatInputProps {
   value: string;
   onChangeText: (text: string) => void;
   onSend: () => void;
+  onMicPress?: () => void;
   placeholder?: string;
   disabled?: boolean;
   loading?: boolean;
@@ -24,6 +25,7 @@ export default function ChatInput({
   value,
   onChangeText,
   onSend,
+  onMicPress,
   placeholder = "Type a message...",
   disabled = false,
   loading = false,
@@ -72,6 +74,23 @@ export default function ChatInput({
           },
         ]}
       />
+
+      {onMicPress && (
+        <Pressable
+          onPress={onMicPress}
+          disabled={loading || disabled}
+          style={({ pressed }) => [
+            styles.sendButton,
+            {
+              backgroundColor: colors.background.secondary,
+              opacity: pressed ? 0.8 : 1,
+              marginLeft: tokens.spacing.sm,
+            },
+          ]}
+        >
+          <Mic size={18} color={colors.text.primary} />
+        </Pressable>
+      )}
 
       <Pressable
         onPress={handleSend}
