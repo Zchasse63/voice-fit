@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
-import { LucideIcon } from 'lucide-react-native';
+import { LucideIcon, ChevronRight } from 'lucide-react-native';
 
 interface MetricCardProps {
   title: string;
@@ -53,29 +53,36 @@ export default function MetricCard({
         backgroundColor: colors.background.secondary,
         borderRadius: tokens.borderRadius.lg,
         padding: variant === 'compact' ? tokens.spacing.md : tokens.spacing.lg,
-        minHeight: variant === 'compact' ? 100 : 120,
-        ...tokens.shadows.sm,
+        height: variant === 'compact' ? 140 : 120,
+        ...tokens.shadows.md,
+        borderWidth: 1,
+        borderColor: colors.border.primary,
       }}
     >
-      {/* Header with Icon */}
+      {/* Header with Icon and Chevron */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Text
-          style={{
-            fontSize: tokens.typography.fontSize.sm,
-            color: colors.text.secondary,
-            fontWeight: tokens.typography.fontWeight.medium,
-            marginBottom: tokens.spacing.xs,
-          }}
-        >
-          {title}
-        </Text>
-        {Icon && (
-          <Icon
-            color={iconColor || colors.accent.blue}
-            size={20}
-            strokeWidth={2}
-          />
-        )}
+        <View style={{ flex: 1 }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.secondary,
+              fontWeight: tokens.typography.fontWeight.semibold,
+              marginBottom: tokens.spacing.xs,
+            }}
+          >
+            {title}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.xs }}>
+          {Icon && (
+            <Icon
+              color={iconColor || colors.accent.blue}
+              size={20}
+              strokeWidth={2}
+            />
+          )}
+          {onPress && <ChevronRight size={20} color={colors.text.tertiary} />}
+        </View>
       </View>
 
       {/* Value */}
@@ -122,7 +129,8 @@ export default function MetricCard({
       <Pressable
         onPress={onPress}
         style={({ pressed }) => ({
-          opacity: pressed ? 0.7 : 1,
+          opacity: pressed ? 0.8 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         })}
         accessibilityRole="button"
         accessibilityLabel={`${title}: ${value}${subtitle ? `, ${subtitle}` : ''}`}

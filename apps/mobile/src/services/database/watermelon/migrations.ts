@@ -277,5 +277,32 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    // Migration from v9 to v10 (Supabase Schema Alignment - workout_logs)
+    {
+      toVersion: 10,
+      steps: [
+        // Add new required columns to match Supabase schema
+        addColumns({
+          table: "workout_logs",
+          columns: [
+            { name: "exercise_id", type: "string" },
+            { name: "workout_date", type: "number" },
+            { name: "set_number", type: "number" },
+            { name: "reps_completed", type: "number" },
+            { name: "weight_used", type: "number", isOptional: true },
+            { name: "rpe", type: "number", isOptional: true },
+            { name: "program_exercise_id", type: "string", isOptional: true },
+            { name: "voice_command_id", type: "string", isOptional: true },
+            { name: "workout_id", type: "string", isOptional: true },
+            { name: "was_prescribed", type: "boolean", isOptional: true },
+            { name: "was_completed", type: "boolean", isOptional: true },
+            { name: "notes", type: "string", isOptional: true },
+          ],
+        }),
+        // Note: Old columns (workout_name, start_time, end_time, warmup/cooldown fields)
+        // are kept for backward compatibility. They can be removed in a future migration
+        // after ensuring all data has been migrated to the new structure.
+      ],
+    },
   ],
 });

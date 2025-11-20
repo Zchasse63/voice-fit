@@ -8,19 +8,24 @@
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 9,
+  version: 10,
   tables: [
     tableSchema({
       name: "workout_logs",
       columns: [
         { name: "user_id", type: "string" },
-        { name: "workout_name", type: "string", isOptional: true },
-        { name: "start_time", type: "number" },
-        { name: "end_time", type: "number", isOptional: true },
-        { name: "warmup_routine", type: "string", isOptional: true },
-        { name: "cooldown_routine", type: "string", isOptional: true },
-        { name: "warmup_duration_min", type: "number", isOptional: true },
-        { name: "cooldown_duration_min", type: "number", isOptional: true },
+        { name: "exercise_id", type: "string" }, // REQUIRED - matches Supabase
+        { name: "workout_date", type: "number" }, // REQUIRED - timestamp for the date
+        { name: "set_number", type: "number" }, // REQUIRED - which set in the workout
+        { name: "reps_completed", type: "number" }, // REQUIRED - reps performed
+        { name: "weight_used", type: "number", isOptional: true }, // weight in lbs/kg
+        { name: "rpe", type: "number", isOptional: true }, // rate of perceived exertion
+        { name: "program_exercise_id", type: "string", isOptional: true }, // link to program
+        { name: "voice_command_id", type: "string", isOptional: true }, // voice logging reference
+        { name: "workout_id", type: "string", isOptional: true }, // parent workout session
+        { name: "was_prescribed", type: "boolean", isOptional: true }, // from program
+        { name: "was_completed", type: "boolean", isOptional: true }, // completion status
+        { name: "notes", type: "string", isOptional: true }, // user notes
         { name: "synced", type: "boolean" },
         { name: "created_at", type: "number" },
         { name: "updated_at", type: "number" },

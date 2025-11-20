@@ -52,4 +52,4 @@ export const database = new Database({
   ],
 });
 
-console.log("[WatermelonDB] Database initialized with schema v7");
+console.log("[WatermelonDB] Database initialized with schema v10 (Supabase-aligned)");

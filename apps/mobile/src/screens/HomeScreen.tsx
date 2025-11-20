@@ -7,15 +7,11 @@ import { tokens } from "../theme/tokens";
 import {
   Dumbbell,
   Activity,
-  Zap,
-  Target,
-  Clock,
   Award,
-  User,
+  ChevronRight,
 } from "lucide-react-native";
 import {
   MetricCard,
-  TimelineItem,
   StatsOverview,
   HealthSnapshotCard,
 } from "../components/dashboard";
@@ -23,10 +19,9 @@ import { database } from "../services/database/watermelon/database";
 import WorkoutLog from "../services/database/watermelon/models/WorkoutLog";
 import Set from "../services/database/watermelon/models/Set";
 import { Q } from "@nozbe/watermelondb";
-import { VolumeTrendsChart } from "../components/charts/VolumeTrendsChart";
-import { ReadinessTrendChart } from "../components/readiness/ReadinessTrendChart";
-import { chartDataService, VolumeDataPoint, ReadinessDataPoint } from "../services/charts/ChartDataService";
+import { VolumeDataPoint, ReadinessDataPoint } from "../services/charts/ChartDataService";
 import AnalyticsAPIClient, { FatigueAnalytics } from "../services/api/AnalyticsAPIClient";
+import { supabaseAnalyticsService } from "../services/analytics/SupabaseAnalyticsService";
 
 export default function HomeScreen({ navigation }: any) {
   const { isDark } = useTheme();
@@ -41,7 +36,6 @@ export default function HomeScreen({ navigation }: any) {
     totalSets: 0,
     totalTime: 0,
   });
-  const [recentWorkouts, setRecentWorkouts] = useState<WorkoutLog[]>([]);
 
   // Analytics state
   const [volumeData, setVolumeData] = useState<VolumeDataPoint[]>([]);
@@ -58,7 +52,6 @@ export default function HomeScreen({ navigation }: any) {
     try {
       await Promise.all([
         loadWeeklyStats(),
-        loadRecentWorkouts(),
         loadAnalyticsData()
       ]);
     } catch (error) {
@@ -106,19 +99,6 @@ export default function HomeScreen({ navigation }: any) {
     }
   };
 
-  const loadRecentWorkouts = async () => {
-    try {
-      const workouts = await database
-        .get<WorkoutLog>("workout_logs")
-        .query(Q.sortBy("start_time", Q.desc), Q.take(5))
-        .fetch();
-
-      setRecentWorkouts(workouts);
-    } catch (error) {
-      console.error("Failed to load recent workouts:", error);
-    }
-  };
-
   const loadAnalyticsData = async () => {
     if (!user?.id) {
       setAnalyticsLoading(false);
@@ -128,12 +108,14 @@ export default function HomeScreen({ navigation }: any) {
     try {
       setAnalyticsLoading(true);
 
-      // Fetch volume trends (last 12 weeks)
-      const volume = await chartDataService.getVolumeTrends(user.id);
+      // Fetch volume trends from Supabase (last 12 weeks)
+      const volume = await supabaseAnalyticsService.getVolumeTrends(user.id);
+      console.log('Volume data loaded:', volume.length, 'weeks');
       setVolumeData(volume);
 
-      // Fetch readiness trends (last 7 days)
-      const readiness = await chartDataService.getReadinessTrend(user.id);
+      // Fetch readiness trends from Supabase (last 7 days)
+      const readiness = await supabaseAnalyticsService.getReadinessTrend(user.id);
+      console.log('Readiness data loaded:', readiness.length, 'days');
       setReadinessData(readiness);
 
       // Fetch fatigue analytics from backend API
@@ -145,48 +127,16 @@ export default function HomeScreen({ navigation }: any) {
         // Don't fail the whole load if fatigue data isn't available
       }
 
-      // Count PRs from last 30 days
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const PRHistory = database.get('pr_history');
-      const recentPRs = await PRHistory
-        .query(
-          Q.where('user_id', user.id),
-          Q.where('achieved_at', Q.gte(thirtyDaysAgo.getTime()))
-        )
-        .fetchCount();
-
-      setPrCount(recentPRs);
+      // Count PRs from Supabase (last 30 days)
+      const prCount = await supabaseAnalyticsService.getPRCount(user.id);
+      console.log('PR count loaded:', prCount);
+      setPrCount(prCount);
 
     } catch (error) {
       console.error("Failed to load analytics data:", error);
     } finally {
       setAnalyticsLoading(false);
     }
-  };
-
-  const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffDays = Math.floor(
-      (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    if (diffDays < 7) return `${diffDays} days ago`;
-
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  };
-
-  const formatDuration = (startTime: number, endTime?: number) => {
-    if (!endTime) return "In progress";
-    const minutes = Math.floor((endTime - startTime) / 60000);
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
   };
 
   const getCurrentGreeting = () => {
@@ -405,7 +355,8 @@ export default function HomeScreen({ navigation }: any) {
                 <Pressable
                   onPress={() => navigation.navigate('VolumeDetail')}
                   style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
+                    opacity: pressed ? 0.8 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
                   })}
                 >
                   <View
@@ -413,37 +364,43 @@ export default function HomeScreen({ navigation }: any) {
                       backgroundColor: colors.background.secondary,
                       borderRadius: tokens.borderRadius.lg,
                       padding: tokens.spacing.md,
-                      minHeight: 140,
-                      ...tokens.shadows.sm,
+                      height: 140,
+                      ...tokens.shadows.md,
+                      borderWidth: 1,
+                      borderColor: colors.border.primary,
                     }}
                   >
-                    <Text
-                      style={{
-                        fontSize: tokens.typography.fontSize.sm,
-                        color: colors.text.secondary,
-                        marginBottom: tokens.spacing.xs,
-                        fontWeight: tokens.typography.fontWeight.medium,
-                      }}
-                    >
-                      Volume Trend
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: tokens.typography.fontSize.sm,
-                        color: colors.text.tertiary,
-                        marginBottom: tokens.spacing.sm,
-                      }}
-                    >
-                      Last 7 Days
-                    </Text>
-                    {/* Mini chart placeholder - will enhance later */}
-                    <View style={{ height: 60, marginTop: 'auto', justifyContent: 'center', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontSize: tokens.typography.fontSize.sm,
+                            color: colors.text.secondary,
+                            marginBottom: tokens.spacing.xs,
+                            fontWeight: tokens.typography.fontWeight.semibold,
+                          }}
+                        >
+                          Volume Trend
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: tokens.typography.fontSize.xs,
+                            color: colors.text.tertiary,
+                            marginBottom: tokens.spacing.sm,
+                          }}
+                        >
+                          Last 7 Days
+                        </Text>
+                      </View>
+                      <ChevronRight size={20} color={colors.text.tertiary} />
+                    </View>
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                       {analyticsLoading ? (
                         <Text style={{ fontSize: tokens.typography.fontSize.xs, color: colors.text.tertiary }}>
                           Loading...
                         </Text>
                       ) : volumeData.length > 0 ? (
-                        <Text style={{ fontSize: tokens.typography.fontSize.xl, fontWeight: tokens.typography.fontWeight.bold, color: colors.accent.blue }}>
+                        <Text style={{ fontSize: tokens.typography.fontSize.xxl, fontWeight: tokens.typography.fontWeight.bold, color: colors.accent.blue }}>
                           {Math.round(volumeData.slice(-7).reduce((sum, d) => sum + d.tonnage, 0) / 1000)}k lbs
                         </Text>
                       ) : (
@@ -480,7 +437,8 @@ export default function HomeScreen({ navigation }: any) {
                 <Pressable
                   onPress={() => navigation.navigate('RecoveryDetail')}
                   style={({ pressed }) => ({
-                    opacity: pressed ? 0.7 : 1,
+                    opacity: pressed ? 0.8 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
                   })}
                 >
                   <View
@@ -488,37 +446,43 @@ export default function HomeScreen({ navigation }: any) {
                       backgroundColor: colors.background.secondary,
                       borderRadius: tokens.borderRadius.lg,
                       padding: tokens.spacing.md,
-                      minHeight: 140,
-                      ...tokens.shadows.sm,
+                      height: 140,
+                      ...tokens.shadows.md,
+                      borderWidth: 1,
+                      borderColor: colors.border.primary,
                     }}
                   >
-                    <Text
-                      style={{
-                        fontSize: tokens.typography.fontSize.sm,
-                        color: colors.text.secondary,
-                        marginBottom: tokens.spacing.xs,
-                        fontWeight: tokens.typography.fontWeight.medium,
-                      }}
-                    >
-                      Readiness
-                    </Text>
-                    <Text
-                      style={{
-                        fontSize: tokens.typography.fontSize.sm,
-                        color: colors.text.tertiary,
-                        marginBottom: tokens.spacing.sm,
-                      }}
-                    >
-                      Last 7 Days
-                    </Text>
-                    {/* Mini chart placeholder - will enhance later */}
-                    <View style={{ height: 60, marginTop: 'auto', justifyContent: 'center', alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontSize: tokens.typography.fontSize.sm,
+                            color: colors.text.secondary,
+                            marginBottom: tokens.spacing.xs,
+                            fontWeight: tokens.typography.fontWeight.semibold,
+                          }}
+                        >
+                          Readiness
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: tokens.typography.fontSize.xs,
+                            color: colors.text.tertiary,
+                            marginBottom: tokens.spacing.sm,
+                          }}
+                        >
+                          Last 7 Days
+                        </Text>
+                      </View>
+                      <ChevronRight size={20} color={colors.text.tertiary} />
+                    </View>
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                       {analyticsLoading ? (
                         <Text style={{ fontSize: tokens.typography.fontSize.xs, color: colors.text.tertiary }}>
                           Loading...
                         </Text>
                       ) : readinessData.length > 0 ? (
-                        <Text style={{ fontSize: tokens.typography.fontSize.xl, fontWeight: tokens.typography.fontWeight.bold, color: colors.accent.green }}>
+                        <Text style={{ fontSize: tokens.typography.fontSize.xxl, fontWeight: tokens.typography.fontWeight.bold, color: colors.accent.green }}>
                           {Math.round(readinessData[readinessData.length - 1].compositeScore)}%
                         </Text>
                       ) : (
@@ -589,206 +553,7 @@ export default function HomeScreen({ navigation }: any) {
           </Text>
         </Pressable>
 
-        {/* Metric Cards Grid */}
-        <View
-          style={{
-            flexDirection: "row",
-            gap: tokens.spacing.md,
-            marginBottom: tokens.spacing.xl,
-          }}
-        >
-          <View style={{ flex: 1 }}>
-            <MetricCard
-              title="Weekly Goal"
-              value="4/5"
-              subtitle="workouts"
-              icon={Target}
-              iconColor={colors.accent.green}
-              trend="up"
-              trendValue="+1"
-              variant="compact"
-              onPress={() => {
-                // Navigate to analytics/weekly view
-                console.log('Navigate to weekly goal details');
-              }}
-            />
-          </View>
-          <View style={{ flex: 1 }}>
-            <MetricCard
-              title="Streak"
-              value="12"
-              subtitle="days"
-              icon={Zap}
-              iconColor={colors.accent.orange}
-              variant="compact"
-              onPress={() => {
-                // Navigate to streak details
-                console.log('Navigate to streak details');
-              }}
-            />
-          </View>
-        </View>
 
-        {/* Today's Program Card */}
-        <View style={{ marginBottom: tokens.spacing.xl }}>
-          <Text
-            style={{
-              fontSize: tokens.typography.fontSize.lg,
-              fontWeight: tokens.typography.fontWeight.bold,
-              color: colors.text.primary,
-              marginBottom: tokens.spacing.md,
-            }}
-          >
-            Today's Program
-          </Text>
-          <Pressable
-            style={{
-              backgroundColor: colors.background.secondary,
-              borderRadius: tokens.borderRadius.lg,
-              padding: tokens.spacing.lg,
-              ...tokens.shadows.sm,
-            }}
-            onPress={() =>
-              navigation.navigate("ProgramLog", { date: new Date().toISOString() })
-            }
-          >
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                marginBottom: tokens.spacing.sm,
-              }}
-            >
-              <Dumbbell color={colors.accent.blue} size={20} />
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.lg,
-                  fontWeight: tokens.typography.fontWeight.bold,
-                  color: colors.text.primary,
-                  marginLeft: tokens.spacing.sm,
-                }}
-              >
-                Push Day
-              </Text>
-            </View>
-            <Text
-              style={{
-                fontSize: tokens.typography.fontSize.base,
-                color: colors.text.secondary,
-                marginBottom: tokens.spacing.xs,
-              }}
-            >
-              Chest, Shoulders, Triceps
-            </Text>
-            <View style={{ flexDirection: "row", alignItems: "center" }}>
-              <Clock color={colors.text.tertiary} size={16} />
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.sm,
-                  color: colors.text.tertiary,
-                  marginLeft: 4,
-                }}
-              >
-                Estimated 1h 15m • 6 exercises
-              </Text>
-            </View>
-          </Pressable>
-        </View>
-
-        {/* Recent Activity Timeline */}
-        {recentWorkouts.length > 0 && (
-          <View style={{ marginBottom: tokens.spacing.xl }}>
-            <Text
-              style={{
-                fontSize: tokens.typography.fontSize.lg,
-                fontWeight: tokens.typography.fontWeight.bold,
-                color: colors.text.primary,
-                marginBottom: tokens.spacing.md,
-              }}
-            >
-              Recent Activity
-            </Text>
-            <View
-              style={{
-                backgroundColor: colors.background.secondary,
-                borderRadius: tokens.borderRadius.lg,
-                padding: tokens.spacing.md,
-                ...tokens.shadows.sm,
-              }}
-            >
-              {recentWorkouts.map((workout, index) => (
-                <TimelineItem
-                  key={workout.id}
-                  title={workout.workoutName || "Workout"}
-                  subtitle={formatDuration(
-                    workout.startTime.getTime(),
-                    workout.endTime?.getTime(),
-                  )}
-                  time={formatDate(workout.startTime.getTime())}
-                  icon={Dumbbell}
-                  iconColor={colors.accent.blue}
-                  iconBackgroundColor={colors.accent.blue + "20"}
-                  isLast={index === recentWorkouts.length - 1}
-                  onPress={() => {
-                    // TODO: Navigate to workout detail when screen is ready
-                    console.log('Navigate to workout:', workout.id);
-                  }}
-                />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Personal Records */}
-        <View style={{ marginBottom: tokens.spacing.xl }}>
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-between",
-              alignItems: "center",
-              marginBottom: tokens.spacing.md,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: tokens.typography.fontSize.lg,
-                fontWeight: tokens.typography.fontWeight.bold,
-                color: colors.text.primary,
-              }}
-            >
-              Personal Records
-            </Text>
-            <Pressable
-              onPress={() => {
-                // TODO: Navigate to PRs screen when ready
-                console.log('Navigate to Personal Records');
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.sm,
-                  fontWeight: tokens.typography.fontWeight.semibold,
-                  color: colors.accent.blue,
-                }}
-              >
-                View All
-              </Text>
-            </Pressable>
-          </View>
-          <MetricCard
-            title="Recent PR"
-            value="225 lbs"
-            subtitle="Bench Press • 3 days ago"
-            icon={Award}
-            iconColor={colors.accent.coral}
-            trend="up"
-            trendValue="+10 lbs"
-            onPress={() => {
-              // TODO: Navigate to PRs detail when screen is ready
-              console.log('Navigate to PR detail');
-            }}
-          />
-        </View>
       </View>
     </ScrollView>
   );
