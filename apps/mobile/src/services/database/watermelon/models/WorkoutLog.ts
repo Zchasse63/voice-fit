@@ -21,6 +21,10 @@ export default class WorkoutLog extends Model {
   @field('workout_name') workoutName?: string;
   @date('start_time') startTime!: Date;
   @date('end_time') endTime?: Date;
+  @field('warmup_routine') warmupRoutine?: string; // JSON string
+  @field('cooldown_routine') cooldownRoutine?: string; // JSON string
+  @field('warmup_duration_min') warmupDurationMin?: number;
+  @field('cooldown_duration_min') cooldownDurationMin?: number;
   @field('synced') synced!: boolean;
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;

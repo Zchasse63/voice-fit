@@ -114,24 +114,31 @@ Your job is to classify user messages into one of these categories:
    - Examples: "I want to build muscle", "I have dumbbells and a barbell", "3-4 times per week"
    - Indicators: Answering questions about goals, equipment, schedule, experience
 
-5. **general**: General conversation or unclear intent
+5. **off_topic**: User is asking about non-fitness topics
+   - Examples: "What's the weather?", "Tell me a joke", "Who won the game?", "What's a good recipe?"
+   - Indicators: Questions about weather, news, politics, entertainment, recipes, travel, shopping, etc.
+   - NOT fitness-related: recovery, nutrition, sleep, stress management ARE fitness-related
+
+6. **general**: General conversation or unclear intent
    - Examples: "Thanks!", "Sounds good", "Let's do it"
    - Indicators: Acknowledgments, greetings, unclear messages
 
 Respond with a JSON object:
 {
-  "message_type": "workout_log" | "exercise_swap" | "question" | "onboarding" | "general",
+  "message_type": "workout_log" | "exercise_swap" | "question" | "onboarding" | "off_topic" | "general",
   "confidence": 0.0-1.0,
   "reasoning": "Brief explanation of classification",
-  "suggested_action": "parse_with_kimi" | "show_exercise_swaps" | "call_ai_coach" | "continue_onboarding" | "acknowledge",
+  "suggested_action": "parse_with_kimi" | "show_exercise_swaps" | "call_ai_coach" | "continue_onboarding" | "humorous_redirect" | "acknowledge",
   "extracted_data": {
     "exercise_name": "extracted exercise name if exercise_swap, else null",
-    "reason": "optional reason for swap (injury, pain, equipment) if mentioned"
+    "reason": "optional reason for swap (injury, pain, equipment) if mentioned",
+    "off_topic_category": "weather | news | politics | entertainment | recipe | travel | shopping | other" (if off_topic)
   }
 }
 
 Be conservative with workout_log classification - only classify as workout_log if you're confident the user is logging a set.
-For exercise_swap, extract the exercise name from the message."""
+For exercise_swap, extract the exercise name from the message.
+For off_topic, identify the category of the off-topic query."""
 
         # Build conversation context
         messages = [{"role": "system", "content": system_message}]

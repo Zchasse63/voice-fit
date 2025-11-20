@@ -21,6 +21,13 @@ export default class ScheduledWorkout extends Model {
   @field('status') status!: string; // 'scheduled', 'completed', 'skipped', 'rescheduled'
   @field('completed_workout_log_id') completedWorkoutLogId?: string;
   @field('notes') notes?: string;
+  @field('rescheduled_from') rescheduledFrom?: number; // timestamp of original date
+  @field('reschedule_reason') rescheduleReason?: string;
+  @field('conflict_acknowledged') conflictAcknowledged?: boolean;
+  @field('warmup_routine') warmupRoutine?: string; // JSON string
+  @field('cooldown_routine') cooldownRoutine?: string; // JSON string
+  @field('warmup_duration_min') warmupDurationMin?: number;
+  @field('cooldown_duration_min') cooldownDurationMin?: number;
   @field('synced') synced!: boolean;
 
   @readonly @date('created_at') createdAt!: Date;

@@ -8,7 +8,7 @@
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 7,
+  version: 9,
   tables: [
     tableSchema({
       name: "workout_logs",
@@ -17,6 +17,10 @@ export const schema = appSchema({
         { name: "workout_name", type: "string", isOptional: true },
         { name: "start_time", type: "number" },
         { name: "end_time", type: "number", isOptional: true },
+        { name: "warmup_routine", type: "string", isOptional: true },
+        { name: "cooldown_routine", type: "string", isOptional: true },
+        { name: "warmup_duration_min", type: "number", isOptional: true },
+        { name: "cooldown_duration_min", type: "number", isOptional: true },
         { name: "synced", type: "boolean" },
         { name: "created_at", type: "number" },
         { name: "updated_at", type: "number" },
@@ -198,6 +202,13 @@ export const schema = appSchema({
         { name: "status", type: "string" }, // 'scheduled', 'completed', 'skipped', 'rescheduled'
         { name: "completed_workout_log_id", type: "string", isOptional: true },
         { name: "notes", type: "string", isOptional: true },
+        { name: "rescheduled_from", type: "number", isOptional: true }, // timestamp of original date
+        { name: "reschedule_reason", type: "string", isOptional: true },
+        { name: "conflict_acknowledged", type: "boolean", isOptional: true },
+        { name: "warmup_routine", type: "string", isOptional: true },
+        { name: "cooldown_routine", type: "string", isOptional: true },
+        { name: "warmup_duration_min", type: "number", isOptional: true },
+        { name: "cooldown_duration_min", type: "number", isOptional: true },
         { name: "synced", type: "boolean" },
         { name: "created_at", type: "number" },
         { name: "updated_at", type: "number" },

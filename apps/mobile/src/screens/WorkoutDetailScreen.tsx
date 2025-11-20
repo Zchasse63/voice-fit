@@ -9,6 +9,7 @@ import { database } from '../services/database/watermelon/database';
 import WorkoutLog from '../services/database/watermelon/models/WorkoutLog';
 import Set from '../services/database/watermelon/models/Set';
 import { Q } from '@nozbe/watermelondb';
+import { WarmupCooldownSection } from '../components/workout/WarmupCooldownSection';
 
 interface WorkoutDetailScreenProps {
   workoutId: string;
@@ -264,6 +265,18 @@ export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetail
             </Text>
           </View>
         </View>
+
+        {/* Warmup Section */}
+        {workout.warmupRoutine && (
+          <WarmupCooldownSection
+            type="warmup"
+            data={JSON.parse(workout.warmupRoutine)}
+            onStartTimer={() => {
+              // TODO: Implement timer functionality
+              console.log('Start warmup timer');
+            }}
+          />
+        )}
 
         {/* Exercise Groups */}
         <View style={{ marginTop: tokens.spacing.md }}>
@@ -556,6 +569,18 @@ export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetail
             </Text>
           </View>
         </View>
+
+        {/* Cooldown Section */}
+        {workout.cooldownRoutine && (
+          <WarmupCooldownSection
+            type="cooldown"
+            data={JSON.parse(workout.cooldownRoutine)}
+            onStartTimer={() => {
+              // TODO: Implement timer functionality
+              console.log('Start cooldown timer');
+            }}
+          />
+        )}
       </View>
     </ScrollView>
   );

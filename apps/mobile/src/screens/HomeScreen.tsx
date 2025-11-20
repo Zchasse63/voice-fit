@@ -17,6 +17,7 @@ import {
   MetricCard,
   TimelineItem,
   StatsOverview,
+  HealthSnapshotCard,
 } from "../components/dashboard";
 import { database } from "../services/database/watermelon/database";
 import WorkoutLog from "../services/database/watermelon/models/WorkoutLog";
@@ -286,6 +287,14 @@ export default function HomeScreen({ navigation }: any) {
               color: colors.accent.coral,
             },
           ]}
+        />
+
+        {/* Health Snapshot Card */}
+        <HealthSnapshotCard
+          onPress={() => {
+            // TODO: Navigate to health snapshot details screen
+            console.log('Navigate to health snapshot details');
+          }}
         />
 
         {/* Quick Action - Start Workout */}

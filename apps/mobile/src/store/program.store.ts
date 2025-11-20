@@ -466,17 +466,45 @@ export const useProgramStore = create<ProgramState>((set, get) => ({
 
   rescheduleWorkout: async (workoutId, newDate) => {
     try {
+      set({ isLoading: true, error: null });
+
+      // Import CalendarService dynamically to avoid circular dependencies
+      const CalendarService = (await import('../services/calendar/CalendarService')).default;
+
+      // Get user ID (TODO: from auth store)
+      const userId = 'current-user-id';
+
+      // Check for conflicts on the new date
+      const conflicts = await CalendarService.checkConflicts(
+        userId,
+        newDate.toISOString().split('T')[0],
+        workoutId
+      );
+
+      // Update local database
       await database.write(async () => {
         const workout = await database.get<ScheduledWorkout>('scheduled_workouts').find(workoutId);
+        const originalDate = new Date(workout.scheduledDate).toISOString().split('T')[0];
+
         await workout.update((w) => {
           w.scheduledDate = newDate.getTime();
           w.status = 'rescheduled';
           w.synced = false;
+          // Store original date in notes if not already rescheduled
+          if (w.status !== 'rescheduled') {
+            w.notes = `Originally scheduled for ${originalDate}. ${w.notes || ''}`.trim();
+          }
         });
       });
+
+      set({ isLoading: false });
+
+      // Return conflict info for UI to handle
+      return conflicts;
     } catch (error) {
       console.error('Failed to reschedule workout:', error);
-      set({ error: 'Failed to reschedule workout' });
+      set({ error: 'Failed to reschedule workout', isLoading: false });
+      throw error;
     }
   },
 

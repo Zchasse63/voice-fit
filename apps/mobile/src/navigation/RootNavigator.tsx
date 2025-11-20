@@ -13,6 +13,10 @@ import RunScreen from "../screens/RunScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ProgramLogScreen from "../screens/ProgramLogScreen";
 
+// Import coach screens
+import ClientSelectorScreen from "../screens/coach/ClientSelectorScreen";
+import InviteClientScreen from "../screens/coach/InviteClientScreen";
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -126,6 +130,23 @@ export default function RootNavigator() {
       <Stack.Screen
         name="Profile"
         component={ProfileScreen}
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+        }}
+      />
+      {/* Coach Screens */}
+      <Stack.Screen
+        name="ClientSelector"
+        component={ClientSelectorScreen}
+        options={{
+          presentation: "modal",
+          animation: "slide_from_bottom",
+        }}
+      />
+      <Stack.Screen
+        name="InviteClient"
+        component={InviteClientScreen}
         options={{
           presentation: "modal",
           animation: "slide_from_bottom",

@@ -29,6 +29,9 @@ class VoiceParseRequest(BaseModel):
     auto_save: bool = Field(
         False, description="Automatically save high-confidence sets to database"
     )
+    session_id: Optional[str] = Field(
+        None, description="Optional voice session ID for stateful conversations"
+    )
 
     class Config:
         json_schema_extra = {
@@ -222,6 +225,9 @@ class CoachQuestionRequest(BaseModel):
     )
     conversation_history: Optional[List[Dict[str, str]]] = Field(
         None, description="Previous conversation messages"
+    )
+    session_id: Optional[str] = Field(
+        None, description="Optional voice session ID for stateful conversations"
     )
 
     class Config:
@@ -769,6 +775,9 @@ class ChatClassifyRequest(BaseModel):
     conversation_history: Optional[List[Dict[str, str]]] = Field(
         None, description="Recent conversation history for context"
     )
+    session_id: Optional[str] = Field(
+        None, description="Optional voice session ID for stateful conversations"
+    )
 
     class Config:
         json_schema_extra = {
@@ -1099,3 +1108,66 @@ class ExerciseCreateOrMatchResponse(BaseModel):
                 },
             }
         }
+
+
+# ============================================================================
+# COACH-CLIENT INVITATION MODELS
+# ============================================================================
+
+
+class InvitationCreateRequest(BaseModel):
+    """Request to create a coach-client invitation"""
+
+    client_email: str = Field(..., description="Email of client to invite")
+    message: Optional[str] = Field(None, description="Optional message to client")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "client_email": "athlete@example.com",
+                "message": "Hi! I'd like to be your coach and help you reach your fitness goals.",
+            }
+        }
+
+
+class InvitationResponse(BaseModel):
+    """Response for invitation operations"""
+
+    id: str
+    coach_id: str
+    client_email: str
+    client_id: Optional[str]
+    status: str
+    invited_at: str
+    responded_at: Optional[str]
+    expires_at: str
+    message: Optional[str]
+
+
+class InvitationUpdateRequest(BaseModel):
+    """Request to update invitation status (accept/decline)"""
+
+    status: str = Field(..., description="New status: 'accepted' or 'declined'")
+
+    class Config:
+        json_schema_extra = {"example": {"status": "accepted"}}
+
+
+class ClientAssignmentResponse(BaseModel):
+    """Response for client assignment"""
+
+    id: str
+    coach_id: str
+    client_id: str
+    assigned_at: str
+    revoked_at: Optional[str]
+    notes: Optional[str]
+
+
+class RevokeAccessRequest(BaseModel):
+    """Request to revoke coach access"""
+
+    reason: Optional[str] = Field(None, description="Optional reason for revocation")
+
+    class Config:
+        json_schema_extra = {"example": {"reason": "No longer need coaching services"}}

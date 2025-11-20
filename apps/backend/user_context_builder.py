@@ -58,6 +58,17 @@ class UserContextBuilder:
         recent_runs = await self._get_recent_runs(user_id, days=14)
         streaks = await self._get_user_streaks(user_id)
         badges = await self._get_user_badges(user_id)
+        daily_metrics = await self._get_daily_metrics(user_id, days=7)
+        nutrition_summary = await self._get_nutrition_summary(user_id, days=7)
+        # NEW: Wearable data
+        wearable_connections = await self._get_wearable_connections(user_id)
+        health_metrics = await self._get_health_metrics(user_id, days=7)
+        sleep_sessions = await self._get_sleep_sessions(user_id, days=7)
+        daily_summaries = await self._get_daily_summaries(user_id, days=7)
+        # NEW: Health snapshots
+        latest_snapshot = await self._get_latest_health_snapshot(user_id)
+        # NEW: User preferences
+        user_preferences = await self._get_user_preferences(user_id)
 
         # Build context string
         context_parts = []
@@ -142,6 +153,78 @@ class UserContextBuilder:
             )
             context_parts.append("")
 
+        # Daily Metrics (from wearables)
+        if daily_metrics:
+            context_parts.append("**Wearable Data (Last 7 Days):**")
+
+            # Group metrics by date
+            metrics_by_date = {}
+            for metric in daily_metrics:
+                date_key = metric.get("date", "unknown")
+                if date_key not in metrics_by_date:
+                    metrics_by_date[date_key] = {}
+                metric_type = metric.get("metric_type", "unknown")
+                value = metric.get("value_numeric", 0)
+                source = metric.get("source", "unknown")
+                metrics_by_date[date_key][metric_type] = {"value": value, "source": source}
+
+            # Show most recent 3 days
+            sorted_dates = sorted(metrics_by_date.keys(), reverse=True)[:3]
+            for date_key in sorted_dates:
+                metrics = metrics_by_date[date_key]
+                context_parts.append(f"\n**{date_key}:**")
+
+                # Sleep metrics
+                if "sleep_duration" in metrics:
+                    sleep_hrs = metrics["sleep_duration"]["value"]
+                    context_parts.append(f"  - Sleep: {sleep_hrs:.1f} hours ({metrics['sleep_duration']['source']})")
+
+                # Recovery/HRV
+                if "hrv" in metrics:
+                    hrv = metrics["hrv"]["value"]
+                    context_parts.append(f"  - HRV: {hrv:.0f} ms ({metrics['hrv']['source']})")
+
+                if "recovery_score" in metrics:
+                    recovery = metrics["recovery_score"]["value"]
+                    context_parts.append(f"  - Recovery: {recovery:.0f}% ({metrics['recovery_score']['source']})")
+
+                # Activity
+                if "strain" in metrics:
+                    strain = metrics["strain"]["value"]
+                    context_parts.append(f"  - Strain: {strain:.1f} ({metrics['strain']['source']})")
+
+                if "steps" in metrics:
+                    steps = metrics["steps"]["value"]
+                    context_parts.append(f"  - Steps: {steps:.0f} ({metrics['steps']['source']})")
+
+            context_parts.append("")
+
+        # Nutrition Summary
+        if nutrition_summary:
+            context_parts.append("**Nutrition (Last 7 Days):**")
+
+            # Show most recent 3 days
+            sorted_nutrition = sorted(nutrition_summary, key=lambda x: x.get("date", ""), reverse=True)[:3]
+            for entry in sorted_nutrition:
+                date_key = entry.get("date", "unknown")
+                calories = entry.get("calories", 0)
+                protein = entry.get("protein_g", 0)
+                carbs = entry.get("carbs_g", 0)
+                fat = entry.get("fat_g", 0)
+                source = entry.get("source", "unknown")
+
+                context_parts.append(f"\n**{date_key}:** ({source})")
+                if calories:
+                    context_parts.append(f"  - Calories: {calories:.0f} kcal")
+                if protein:
+                    context_parts.append(f"  - Protein: {protein:.0f}g")
+                if carbs:
+                    context_parts.append(f"  - Carbs: {carbs:.0f}g")
+                if fat:
+                    context_parts.append(f"  - Fat: {fat:.0f}g")
+
+            context_parts.append("")
+
         # Recent PRs
         if recent_prs:
             context_parts.append("**Recent Personal Records (Last 30 Days):**")
@@ -190,9 +273,191 @@ class UserContextBuilder:
                 context_parts.append(f"- {badge_name} - {earned_at}")
             context_parts.append("")
 
+        # Wearable Connections
+        if wearable_connections:
+            context_parts.append("**Connected Wearables:**")
+            for conn in wearable_connections:
+                provider = conn.get("provider", "unknown")
+                last_sync = conn.get("last_sync_at", "never")
+                status = conn.get("sync_status", "unknown")
+                context_parts.append(f"- {provider.upper()}: Last sync {last_sync} ({status})")
+            context_parts.append("")
+
+        # Health Metrics (Recovery & Readiness)
+        if health_metrics:
+            context_parts.append("**Health Metrics (Last 7 Days):**")
+
+            # Group by metric type and show latest value
+            metrics_by_type = {}
+            for metric in health_metrics:
+                metric_type = metric.get("metric_type", "unknown")
+                if metric_type not in metrics_by_type:
+                    metrics_by_type[metric_type] = metric
+
+            # Show key recovery metrics
+            if "recovery_score" in metrics_by_type:
+                recovery = metrics_by_type["recovery_score"]
+                value = recovery.get("value_numeric", 0)
+                source = recovery.get("source", "unknown")
+                context_parts.append(f"- Recovery Score: {value}% ({source})")
+
+            if "hrv" in metrics_by_type:
+                hrv = metrics_by_type["hrv"]
+                value = hrv.get("value_numeric", 0)
+                source = hrv.get("source", "unknown")
+                context_parts.append(f"- HRV: {value}ms ({source})")
+
+            if "resting_hr" in metrics_by_type:
+                rhr = metrics_by_type["resting_hr"]
+                value = rhr.get("value_numeric", 0)
+                source = rhr.get("source", "unknown")
+                context_parts.append(f"- Resting HR: {value} bpm ({source})")
+
+            if "spo2" in metrics_by_type:
+                spo2 = metrics_by_type["spo2"]
+                value = spo2.get("value_numeric", 0)
+                source = spo2.get("source", "unknown")
+                context_parts.append(f"- SpO2: {value}% ({source})")
+
+            context_parts.append("")
+
+        # Sleep Data
+        if sleep_sessions:
+            context_parts.append("**Recent Sleep (Last 7 Days):**")
+
+            # Show last 3 sleep sessions
+            sorted_sleep = sorted(sleep_sessions, key=lambda x: x.get("start_time", ""), reverse=True)[:3]
+            for session in sorted_sleep:
+                date = session.get("start_time", "unknown")[:10]  # Extract date
+                total_min = session.get("total_duration_minutes", 0)
+                total_hrs = total_min / 60
+                score = session.get("sleep_score", 0)
+                efficiency = session.get("sleep_efficiency", 0)
+                source = session.get("source", "unknown")
+
+                context_parts.append(f"\n**{date}:** ({source})")
+                context_parts.append(f"  - Duration: {total_hrs:.1f} hours")
+                if score:
+                    context_parts.append(f"  - Sleep Score: {score}%")
+                if efficiency:
+                    context_parts.append(f"  - Efficiency: {efficiency}%")
+
+                # Sleep stages
+                deep = session.get("deep_sleep_minutes", 0)
+                rem = session.get("rem_sleep_minutes", 0)
+                light = session.get("light_sleep_minutes", 0)
+                if deep or rem or light:
+                    context_parts.append(f"  - Stages: Deep {deep}min, REM {rem}min, Light {light}min")
+
+            context_parts.append("")
+
+        # Daily Summaries
+        if daily_summaries:
+            context_parts.append("**Daily Activity Summary (Last 7 Days):**")
+
+            # Show last 3 days
+            sorted_summaries = sorted(daily_summaries, key=lambda x: x.get("date", ""), reverse=True)[:3]
+            for summary in sorted_summaries:
+                date = summary.get("date", "unknown")
+                steps = summary.get("steps", 0)
+                active_min = summary.get("active_minutes", 0)
+                calories = summary.get("calories_total", 0)
+                strain = summary.get("strain_score", 0)
+
+                context_parts.append(f"\n**{date}:**")
+                if steps:
+                    context_parts.append(f"  - Steps: {steps:,}")
+                if active_min:
+                    context_parts.append(f"  - Active Minutes: {active_min}")
+                if calories:
+                    context_parts.append(f"  - Calories: {calories}")
+                if strain:
+                    context_parts.append(f"  - Strain Score: {strain}")
+
+            context_parts.append("")
+
+        # Health Snapshot (AI-Generated Daily Summary)
+        if latest_snapshot:
+            context_parts.append("**Latest Health Snapshot:**")
+            snapshot_date = latest_snapshot.get("date", "unknown")
+            ai_summary = latest_snapshot.get("ai_summary", "")
+            recommendations = latest_snapshot.get("ai_recommendations", [])
+            risk_flags = latest_snapshot.get("risk_flags", [])
+            completeness = latest_snapshot.get("data_completeness_score", 0)
+
+            context_parts.append(f"Date: {snapshot_date} (Data Completeness: {completeness}%)")
+
+            if ai_summary:
+                context_parts.append(f"\n**AI Summary:** {ai_summary}")
+
+            if recommendations:
+                context_parts.append("\n**Recommendations:**")
+                for rec in recommendations[:3]:  # Show top 3
+                    context_parts.append(f"  - {rec}")
+
+            if risk_flags:
+                context_parts.append("\n**Risk Flags:**")
+                for flag in risk_flags:
+                    context_parts.append(f"  ⚠️ {flag}")
+
+            context_parts.append("")
+
+        # User Preferences
+        if user_preferences:
+            context_parts.append("**User Preferences:**")
+
+            # Workout preferences
+            duration = user_preferences.get("preferred_workout_duration_min")
+            if duration:
+                context_parts.append(f"- Preferred Workout Duration: {duration} minutes")
+
+            max_workouts = user_preferences.get("max_workouts_per_week")
+            if max_workouts:
+                context_parts.append(f"- Max Workouts Per Week: {max_workouts}")
+
+            workout_time = user_preferences.get("preferred_workout_time")
+            if workout_time:
+                context_parts.append(f"- Preferred Training Time: {workout_time}")
+
+            # Equipment
+            available_equipment = user_preferences.get("available_equipment", [])
+            if available_equipment:
+                context_parts.append(f"- Available Equipment: {', '.join(available_equipment)}")
+
+            # Exercise preferences
+            favorite_exercises = user_preferences.get("favorite_exercises", [])
+            if favorite_exercises:
+                context_parts.append(f"- Favorite Exercises: {', '.join(favorite_exercises)}")
+
+            disliked_exercises = user_preferences.get("disliked_exercises", [])
+            if disliked_exercises:
+                context_parts.append(f"- Disliked Exercises: {', '.join(disliked_exercises)} (AVOID)")
+
+            exercise_restrictions = user_preferences.get("exercise_restrictions", {})
+            if exercise_restrictions:
+                context_parts.append("- Exercise Restrictions:")
+                for exercise, reason in exercise_restrictions.items():
+                    context_parts.append(f"  * {exercise}: {reason}")
+
+            # Training style
+            prefers_supersets = user_preferences.get("prefers_supersets", False)
+            if prefers_supersets:
+                context_parts.append("- Prefers Supersets: Yes")
+
+            prefers_dropsets = user_preferences.get("prefers_dropsets", False)
+            if prefers_dropsets:
+                context_parts.append("- Prefers Dropsets: Yes")
+
+            # Coaching style
+            coaching_style = user_preferences.get("coaching_style")
+            if coaching_style:
+                context_parts.append(f"- Coaching Style: {coaching_style}")
+
+            context_parts.append("")
+
         # Instructions for AI
         context_parts.append(
-            "**Important:** Use this context to provide personalized advice. Consider their injury history, current volume, recovery status, experience level, recent PRs, and training consistency when making recommendations."
+            "**Important:** Use this context to provide personalized advice. Consider their injury history, current volume, recovery status, experience level, recent PRs, training consistency, sleep quality, wearable data, health snapshot insights, and user preferences when making recommendations. Strictly respect user preferences (equipment, exercise dislikes, coaching style)."
         )
 
         context = "\n".join(context_parts)
@@ -472,6 +737,44 @@ class UserContextBuilder:
             print(f"Error fetching recent PRs: {e}")
             return []
 
+    async def _get_daily_metrics(
+        self, user_id: str, days: int = 7
+    ) -> List[Dict[str, Any]]:
+        """Fetch daily metrics from wearables (last N days)"""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).date().isoformat()
+            result = (
+                self.supabase.table("daily_metrics")
+                .select("*")
+                .eq("user_id", user_id)
+                .gte("date", cutoff_date)
+                .order("date", desc=True)
+                .execute()
+            )
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching daily metrics: {e}")
+            return []
+
+    async def _get_nutrition_summary(
+        self, user_id: str, days: int = 7
+    ) -> List[Dict[str, Any]]:
+        """Fetch nutrition summaries (last N days)"""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).date().isoformat()
+            result = (
+                self.supabase.table("daily_nutrition_summary")
+                .select("*")
+                .eq("user_id", user_id)
+                .gte("date", cutoff_date)
+                .order("date", desc=True)
+                .execute()
+            )
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching nutrition summary: {e}")
+            return []
+
     async def _get_recent_runs(
         self, user_id: str, days: int = 14
     ) -> List[Dict[str, Any]]:
@@ -552,3 +855,106 @@ class UserContextBuilder:
             return (now - date).days
         except Exception:
             return 0
+
+    async def _get_wearable_connections(self, user_id: str) -> List[Dict[str, Any]]:
+        """Fetch user's connected wearable providers"""
+        try:
+            result = (
+                self.supabase.table("wearable_provider_connections")
+                .select("provider, last_sync_at, sync_status")
+                .eq("user_id", user_id)
+                .execute()
+            )
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching wearable connections: {e}")
+            return []
+
+    async def _get_health_metrics(
+        self, user_id: str, days: int = 7
+    ) -> List[Dict[str, Any]]:
+        """Fetch health metrics from wearables (last N days)"""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).date().isoformat()
+            result = (
+                self.supabase.table("health_metrics")
+                .select("*")
+                .eq("user_id", user_id)
+                .gte("date", cutoff_date)
+                .order("date", desc=True)
+                .order("source_priority", desc=True)
+                .execute()
+            )
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching health metrics: {e}")
+            return []
+
+    async def _get_sleep_sessions(
+        self, user_id: str, days: int = 7
+    ) -> List[Dict[str, Any]]:
+        """Fetch sleep sessions from wearables (last N days)"""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).date().isoformat()
+            result = (
+                self.supabase.table("sleep_sessions")
+                .select("*")
+                .eq("user_id", user_id)
+                .gte("start_time", cutoff_date)
+                .order("start_time", desc=True)
+                .execute()
+            )
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching sleep sessions: {e}")
+            return []
+
+    async def _get_daily_summaries(
+        self, user_id: str, days: int = 7
+    ) -> List[Dict[str, Any]]:
+        """Fetch daily summaries from wearables (last N days)"""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).date().isoformat()
+            result = (
+                self.supabase.table("daily_summaries")
+                .select("*")
+                .eq("user_id", user_id)
+                .gte("date", cutoff_date)
+                .order("date", desc=True)
+                .execute()
+            )
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching daily summaries: {e}")
+            return []
+
+    async def _get_latest_health_snapshot(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch the latest health snapshot for the user"""
+        try:
+            result = (
+                self.supabase.table("health_snapshots")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("date", desc=True)
+                .limit(1)
+                .execute()
+            )
+            return result.data[0] if result.data else None
+        except Exception as e:
+            print(f"Error fetching health snapshot: {e}")
+            return None
+
+    async def _get_user_preferences(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Fetch user preferences"""
+        try:
+            result = (
+                self.supabase.table("user_preferences")
+                .select("*")
+                .eq("user_id", user_id)
+                .single()
+                .execute()
+            )
+            return result.data if result.data else None
+        except Exception as e:
+            print(f"Error fetching user preferences: {e}")
+            return None

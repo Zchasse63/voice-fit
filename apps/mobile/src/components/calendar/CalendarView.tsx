@@ -1,32 +1,57 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
-import { ChevronLeft, ChevronRight } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react-native';
 import { database } from '../../services/database/watermelon/database';
-import WorkoutLog from '../../services/database/watermelon/models/WorkoutLog';
+import ScheduledWorkout from '../../services/database/watermelon/models/ScheduledWorkout';
 import { Q } from '@nozbe/watermelondb';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
+import CalendarService, { type ConflictInfo } from '../../services/calendar/CalendarService';
+import ConflictWarningModal from './ConflictWarningModal';
+import { useAuthStore } from '../../store/auth.store';
+import { tokens } from '../../theme/tokens';
 
 interface CalendarDay {
   date: Date;
   isCurrentMonth: boolean;
   hasWorkout: boolean;
   workoutCount: number;
+  hasConflict?: boolean;
+}
+
+interface DraggingWorkout {
+  id: string;
+  name: string;
+  originalDate: Date;
 }
 
 export default function CalendarView() {
   const { isDark } = useTheme();
+  const user = useAuthStore((state) => state.user);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [calendarDays, setCalendarDays] = useState<CalendarDay[]>([]);
   const [workoutDates, setWorkoutDates] = useState<Map<string, number>>(new Map());
+  const [conflictDates, setConflictDates] = useState<Set<string>>(new Set());
+  const [draggingWorkout, setDraggingWorkout] = useState<DraggingWorkout | null>(null);
+  const [showConflictModal, setShowConflictModal] = useState(false);
+  const [pendingReschedule, setPendingReschedule] = useState<{
+    workoutId: string;
+    newDate: string;
+    conflicts: ConflictInfo;
+  } | null>(null);
+
+  const calendarService = new CalendarService();
 
   useEffect(() => {
     loadWorkoutDates();
+    loadConflicts();
   }, [currentDate]);
 
   useEffect(() => {
     generateCalendar();
-  }, [currentDate, workoutDates]);
+  }, [currentDate, workoutDates, conflictDates]);
 
   const loadWorkoutDates = async () => {
     try {
@@ -34,22 +59,49 @@ export default function CalendarView() {
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
 
       const workouts = await database
-        .get<WorkoutLog>('workout_logs')
+        .get<ScheduledWorkout>('scheduled_workouts')
         .query(
-          Q.where('start_time', Q.gte(startOfMonth.getTime())),
-          Q.where('start_time', Q.lte(endOfMonth.getTime()))
+          Q.where('scheduled_date', Q.gte(startOfMonth.getTime())),
+          Q.where('scheduled_date', Q.lte(endOfMonth.getTime())),
+          Q.where('status', Q.oneOf(['scheduled', 'rescheduled']))
         )
         .fetch();
 
       const dateMap = new Map<string, number>();
       workouts.forEach((workout) => {
-        const dateKey = new Date(workout.startTime).toISOString().split('T')[0];
+        const dateKey = new Date(workout.scheduledDate).toISOString().split('T')[0];
         dateMap.set(dateKey, (dateMap.get(dateKey) || 0) + 1);
       });
 
       setWorkoutDates(dateMap);
     } catch (error) {
       console.error('Failed to load workout dates:', error);
+    }
+  };
+
+  const loadConflicts = async () => {
+    if (!user?.id) return;
+
+    try {
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
+      const conflicts = await calendarService.getConflictsForRange(
+        user.id,
+        startOfMonth.toISOString().split('T')[0],
+        endOfMonth.toISOString().split('T')[0]
+      );
+
+      const conflictSet = new Set<string>();
+      Object.entries(conflicts).forEach(([date, info]) => {
+        if (info.has_conflict) {
+          conflictSet.add(date);
+        }
+      });
+
+      setConflictDates(conflictSet);
+    } catch (error) {
+      console.error('Failed to load conflicts:', error);
     }
   };
 
@@ -73,6 +125,7 @@ export default function CalendarView() {
         isCurrentMonth: false,
         hasWorkout: workoutDates.has(dateKey),
         workoutCount: workoutDates.get(dateKey) || 0,
+        hasConflict: conflictDates.has(dateKey),
       });
     }
 
@@ -85,6 +138,7 @@ export default function CalendarView() {
         isCurrentMonth: true,
         hasWorkout: workoutDates.has(dateKey),
         workoutCount: workoutDates.get(dateKey) || 0,
+        hasConflict: conflictDates.has(dateKey),
       });
     }
 
@@ -98,6 +152,7 @@ export default function CalendarView() {
         isCurrentMonth: false,
         hasWorkout: workoutDates.has(dateKey),
         workoutCount: workoutDates.get(dateKey) || 0,
+        hasConflict: conflictDates.has(dateKey),
       });
     }
 
@@ -138,6 +193,86 @@ export default function CalendarView() {
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
+  // Drag-and-drop handlers
+  const handleLongPress = async (date: Date) => {
+    if (!user?.id) return;
+
+    // Find workouts on this date
+    const dateKey = new Date(date).toISOString().split('T')[0];
+    const workouts = await database
+      .get<ScheduledWorkout>('scheduled_workouts')
+      .query(
+        Q.where('scheduled_date', Q.eq(date.getTime())),
+        Q.where('status', Q.oneOf(['scheduled', 'rescheduled']))
+      )
+      .fetch();
+
+    if (workouts.length === 0) return;
+
+    // For simplicity, drag the first workout (could show picker for multiple)
+    const workout = workouts[0];
+    setDraggingWorkout({
+      id: workout.id,
+      name: workout.notes || 'Workout',
+      originalDate: new Date(workout.scheduledDate),
+    });
+  };
+
+  const handleDrop = async (targetDate: Date) => {
+    if (!draggingWorkout || !user?.id) {
+      setDraggingWorkout(null);
+      return;
+    }
+
+    const newDateKey = targetDate.toISOString().split('T')[0];
+
+    // Check for conflicts
+    const conflicts = await calendarService.checkConflicts(user.id, newDateKey, draggingWorkout.id);
+
+    if (conflicts.has_conflict) {
+      // Show conflict modal
+      setPendingReschedule({
+        workoutId: draggingWorkout.id,
+        newDate: newDateKey,
+        conflicts,
+      });
+      setShowConflictModal(true);
+      setDraggingWorkout(null);
+    } else {
+      // No conflicts, proceed with reschedule
+      await performReschedule(draggingWorkout.id, newDateKey);
+      setDraggingWorkout(null);
+    }
+  };
+
+  const performReschedule = async (workoutId: string, newDate: string) => {
+    try {
+      await calendarService.rescheduleWorkout(workoutId, newDate);
+
+      // Refresh calendar data
+      await loadWorkoutDates();
+      await loadConflicts();
+
+      Alert.alert('Success', 'Workout rescheduled successfully');
+    } catch (error) {
+      console.error('Failed to reschedule workout:', error);
+      Alert.alert('Error', 'Failed to reschedule workout. Please try again.');
+    }
+  };
+
+  const handleConflictProceed = async () => {
+    if (!pendingReschedule) return;
+
+    await performReschedule(pendingReschedule.workoutId, pendingReschedule.newDate);
+    setShowConflictModal(false);
+    setPendingReschedule(null);
+  };
+
+  const handleConflictCancel = () => {
+    setShowConflictModal(false);
+    setPendingReschedule(null);
+  };
 
   return (
     <View
@@ -245,12 +380,19 @@ export default function CalendarView() {
           return (
             <Pressable
               key={index}
-              onPress={() => setSelectedDate(day.date)}
+              onPress={() => {
+                if (draggingWorkout) {
+                  handleDrop(day.date);
+                } else {
+                  setSelectedDate(day.date);
+                }
+              }}
+              onLongPress={() => day.hasWorkout && handleLongPress(day.date)}
               accessibilityLabel={`${day.date.toLocaleDateString()}, ${
                 day.hasWorkout
                   ? `${day.workoutCount} workout${day.workoutCount > 1 ? 's' : ''}`
                   : 'No workouts'
-              }`}
+              }${day.hasConflict ? ', has conflict' : ''}`}
               accessibilityRole="button"
               style={{
                 width: '14.28%',
@@ -262,10 +404,15 @@ export default function CalendarView() {
                   ? isDark
                     ? `${tokens.colors.dark.accent.green}20`
                     : `${tokens.colors.light.accent.green}20`
+                  : draggingWorkout
+                  ? `${colors.accent.blue}10`
                   : 'transparent',
+                borderWidth: draggingWorkout ? 2 : 0,
+                borderColor: draggingWorkout ? colors.accent.blue : 'transparent',
+                borderStyle: 'dashed',
               }}
             >
-              <View style={{ alignItems: 'center' }}>
+              <View style={{ alignItems: 'center', position: 'relative' }}>
                 <Text
                   style={{
                     fontSize: tokens.typography.fontSize.sm,
@@ -290,6 +437,23 @@ export default function CalendarView() {
                     }}
                   />
                 )}
+                {day.hasConflict && (
+                  <View
+                    style={{
+                      position: 'absolute',
+                      top: -4,
+                      right: -4,
+                      width: 12,
+                      height: 12,
+                      borderRadius: 6,
+                      backgroundColor: tokens.colors.light.accent.orange,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <AlertTriangle color="#FFFFFF" size={8} />
+                  </View>
+                )}
               </View>
             </Pressable>
           );
@@ -301,33 +465,103 @@ export default function CalendarView() {
         style={{
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
+          justifyContent: 'space-around',
           marginTop: tokens.spacing.md,
           paddingTop: tokens.spacing.md,
           borderTopWidth: 1,
           borderTopColor: colors.border.subtle,
         }}
       >
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: 999,
+              marginRight: tokens.spacing.xs,
+              backgroundColor: isDark
+                ? tokens.colors.dark.accent.green
+                : tokens.colors.light.accent.green,
+            }}
+          />
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
+            Scheduled
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <View
+            style={{
+              width: 12,
+              height: 12,
+              borderRadius: 6,
+              marginRight: tokens.spacing.xs,
+              backgroundColor: tokens.colors.light.accent.orange,
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}
+          >
+            <AlertTriangle color="#FFFFFF" size={8} />
+          </View>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
+            Conflict
+          </Text>
+        </View>
+      </View>
+
+      {/* Dragging Indicator */}
+      {draggingWorkout && (
         <View
           style={{
-            width: 8,
-            height: 8,
-            borderRadius: 999,
-            marginRight: tokens.spacing.xs,
-            backgroundColor: isDark
-              ? tokens.colors.dark.accent.green
-              : tokens.colors.light.accent.green,
-          }}
-        />
-        <Text
-          style={{
-            fontSize: tokens.typography.fontSize.xs,
-            color: colors.text.secondary,
+            marginTop: tokens.spacing.md,
+            padding: tokens.spacing.md,
+            backgroundColor: `${colors.accent.blue}20`,
+            borderRadius: tokens.borderRadius.md,
+            borderWidth: 1,
+            borderColor: colors.accent.blue,
           }}
         >
-          Workout completed
-        </Text>
-      </View>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: colors.text.primary,
+              textAlign: 'center',
+            }}
+          >
+            📍 Dragging: {draggingWorkout.name}
+          </Text>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+              textAlign: 'center',
+              marginTop: 4,
+            }}
+          >
+            Tap a date to reschedule
+          </Text>
+        </View>
+      )}
+
+      {/* Conflict Warning Modal */}
+      {pendingReschedule && (
+        <ConflictWarningModal
+          visible={showConflictModal}
+          onClose={handleConflictCancel}
+          onProceed={handleConflictProceed}
+          conflicts={pendingReschedule.conflicts}
+          targetDate={pendingReschedule.newDate}
+        />
+      )}
     </View>
   );
 }

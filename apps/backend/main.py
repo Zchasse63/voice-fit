@@ -92,9 +92,17 @@ from program_adherence_monitor import ProgramAdherenceMonitor
 from program_generation_service import ProgramGenerationService
 from rag_integration_service import RAGIntegrationService, get_rag_service
 from rate_limit_middleware import add_rate_limiting
+from schedule_optimization_service import ScheduleOptimizationService
+from health_intelligence_service import HealthIntelligenceService
+from personalization_service import PersonalizationService
+from warmup_cooldown_service import WarmupCooldownService
+from csv_import_service import CSVImportService
+from voice_session_service import VoiceSessionService
+from wearables_ingestion_service import WearablesIngestionService
 from user_context_builder import UserContextBuilder
 from volume_tracking_service import VolumeTrackingService
 from weather_service import WeatherService
+from health_snapshot_service import HealthSnapshotService
 
 # Load environment variables
 load_dotenv()
@@ -139,6 +147,14 @@ chat_classifier: ChatClassifier = None
 onboarding_service: OnboardingService = None
 exercise_matching_service: ExerciseMatchingService = None
 rag_service: RAGIntegrationService = None
+schedule_optimization_service: ScheduleOptimizationService = None
+health_intelligence_service: HealthIntelligenceService = None
+personalization_service: PersonalizationService = None
+warmup_cooldown_service: WarmupCooldownService = None
+csv_import_service: CSVImportService = None
+voice_session_service: VoiceSessionService = None
+wearables_ingestion_service: WearablesIngestionService = None
+health_snapshot_service: HealthSnapshotService = None
 
 
 def get_supabase_client() -> Client:
@@ -196,7 +212,9 @@ def get_program_generation_service() -> ProgramGenerationService:
     global program_generation_service
 
     if program_generation_service is None:
-        program_generation_service = ProgramGenerationService()
+        # Inject WarmupCooldownService for multi-sport support
+        warmup_service = get_warmup_cooldown_service()
+        program_generation_service = ProgramGenerationService(warmup_cooldown_service=warmup_service)
 
     return program_generation_service
 
@@ -262,12 +280,96 @@ def get_exercise_matching_service() -> ExerciseMatchingService:
     return exercise_matching_service
 
 
+def get_schedule_optimization_service() -> ScheduleOptimizationService:
+    """Get or create ScheduleOptimizationService instance"""
+    global schedule_optimization_service
+    if schedule_optimization_service is None:
+        supabase = get_supabase_client()
+        schedule_optimization_service = ScheduleOptimizationService(supabase)
+    return schedule_optimization_service
+
+
+def get_health_intelligence_service() -> HealthIntelligenceService:
+    """Get or create HealthIntelligenceService instance"""
+    global health_intelligence_service
+    if health_intelligence_service is None:
+        supabase = get_supabase_client()
+        health_intelligence_service = HealthIntelligenceService(supabase)
+    return health_intelligence_service
+
+
+def get_personalization_service() -> PersonalizationService:
+    """Get or create PersonalizationService instance"""
+    global personalization_service
+    if personalization_service is None:
+        supabase = get_supabase_client()
+        personalization_service = PersonalizationService(supabase)
+    return personalization_service
+
+
+def get_warmup_cooldown_service() -> WarmupCooldownService:
+    """Get or create WarmupCooldownService instance"""
+    global warmup_cooldown_service
+    if warmup_cooldown_service is None:
+        supabase = get_supabase_client()
+        warmup_cooldown_service = WarmupCooldownService(supabase)
+    return warmup_cooldown_service
+
+
+def get_csv_import_service() -> CSVImportService:
+    """Get or create CSVImportService instance"""
+    global csv_import_service
+    if csv_import_service is None:
+        supabase = get_supabase_client()
+        csv_import_service = CSVImportService(supabase)
+    return csv_import_service
+
+
+def get_voice_session_service() -> VoiceSessionService:
+    """Get or create VoiceSessionService instance"""
+    global voice_session_service
+    if voice_session_service is None:
+        supabase = get_supabase_client()
+        voice_session_service = VoiceSessionService(supabase)
+    return voice_session_service
+
+
+def get_wearables_ingestion_service() -> WearablesIngestionService:
+    """Get or create WearablesIngestionService instance"""
+    global wearables_ingestion_service
+    if wearables_ingestion_service is None:
+        supabase = get_supabase_client()
+        wearables_ingestion_service = WearablesIngestionService(supabase)
+    return wearables_ingestion_service
+
+
+def get_health_snapshot_service() -> HealthSnapshotService:
+    """Get or create HealthSnapshotService instance"""
+    global health_snapshot_service
+    if health_snapshot_service is None:
+        supabase = get_supabase_client()
+        health_snapshot_service = HealthSnapshotService(supabase)
+    return health_snapshot_service
+
+
 def get_rag_service() -> RAGIntegrationService:
     """Get or create RAG Integration service instance"""
     global rag_service
     if rag_service is None:
         rag_service = RAGIntegrationService()
     return rag_service
+
+
+def get_schedule_optimization_service() -> ScheduleOptimizationService:
+    """Get ScheduleOptimizationService instance"""
+    supabase = get_supabase_client()
+    return ScheduleOptimizationService(supabase)
+
+
+def get_health_intelligence_service() -> HealthIntelligenceService:
+    """Get HealthIntelligenceService instance"""
+    supabase = get_supabase_client()
+    return HealthIntelligenceService(supabase)
 
 
 # PHASE 7 TASK 7.4: Authentication middleware
@@ -964,6 +1066,7 @@ async def coach_ask(
     coach_service: AICoachService = Depends(get_ai_coach_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
     rag_service: RAGIntegrationService = Depends(get_rag_service),
+    personalization_service: PersonalizationService = Depends(get_personalization_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -1025,14 +1128,30 @@ async def coach_ask(
             cache_ttl=1800,
         )
 
+        # Extract preferences from user message
+        user_id = user["id"]
+        current_preferences = personalization_service.get_user_preferences(user_id)
+        preference_updates = personalization_service.extract_preferences_from_conversation(
+            user_id, request.question, current_preferences
+        )
+
         # Call AI Coach service with user context and RAG
-        # Note: coach_service.ask may need updating to accept rag_context
         result = coach_service.ask(
             question=request.question,
             conversation_history=request.conversation_history,
             user_context=user_context,
             rag_context=rag_context,
         )
+
+        # If preferences were extracted, append notification to answer
+        if preference_updates:
+            high_confidence_updates = [u for u in preference_updates if u["confidence"] >= 0.8]
+            if high_confidence_updates:
+                update_summary = ", ".join([
+                    f"{u['preference_key']}: {u['new_value']}"
+                    for u in high_confidence_updates
+                ])
+                result["answer"] += f"\n\n✅ **Preferences Updated**: {update_summary}"
 
         return CoachQuestionResponse(
             answer=result["answer"],
@@ -1048,6 +1167,61 @@ async def coach_ask(
         )
 
 
+@app.post("/api/health/insights")
+async def get_health_insights(
+    user_id: str,
+    health_service: HealthIntelligenceService = Depends(get_health_intelligence_service),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get AI-powered health insights based on wearable data, nutrition, and training.
+
+    Returns:
+        {
+            "insights": [{"type": str, "severity": str, "message": str, "recommendation": str}],
+            "overall_health_score": float,
+            "trends": {"sleep": str, "recovery": str, "strain": str, "nutrition": str}
+        }
+    """
+    try:
+        # Build user context
+        user_context = await context_builder.build_context(user_id)
+
+        # Analyze health trends
+        analysis = health_service.analyze_health_trends(user_id, user_context, days=14)
+
+        return analysis
+
+    except Exception as e:
+        print(f"Error getting health insights: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get health insights: {str(e)}"
+        )
+
+
+@app.get("/api/health/alerts/{user_id}")
+async def get_health_alerts(
+    user_id: str,
+    health_service: HealthIntelligenceService = Depends(get_health_intelligence_service),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get proactive health alerts for user.
+
+    Returns list of alerts that should be surfaced in chat or notifications.
+    """
+    try:
+        alerts = health_service.check_proactive_alerts(user_id)
+        return {"alerts": alerts}
+
+    except Exception as e:
+        print(f"Error getting health alerts: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get health alerts: {str(e)}"
+        )
+
+
 # ============================================================================
 # PROGRAM GENERATION ENDPOINTS - Strength & Running
 # ============================================================================
@@ -1059,6 +1233,7 @@ async def generate_strength_program(
     program_service: ProgramGenerationService = Depends(get_program_generation_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
     rag_service: RAGIntegrationService = Depends(get_rag_service),
+    personalization_service: PersonalizationService = Depends(get_personalization_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -1092,6 +1267,9 @@ async def generate_strength_program(
         # Build comprehensive user context
         user_context = await context_builder.build_context(user_id)
 
+        # Get user preferences
+        user_preferences = personalization_service.get_user_preferences(user_id)
+
         # Get RAG context using SmartNamespaceSelector
         rag_context = rag_service.get_rag_context(
             endpoint="/api/program/generate/strength",
@@ -1102,10 +1280,12 @@ async def generate_strength_program(
             cache_ttl=3600,
         )
 
-        # Generate strength program with user context and RAG
-        # Note: program_service.generate_program may need updating to accept rag_context
+        # Generate strength program with user context, RAG, and preferences
         result = program_service.generate_program(
-            request.questionnaire, user_context, rag_context=rag_context
+            request.questionnaire,
+            user_context,
+            rag_context=rag_context,
+            user_preferences=user_preferences
         )
 
         # Invalidate user context cache after generating program
@@ -1131,6 +1311,7 @@ async def generate_running_program(
     program_service: ProgramGenerationService = Depends(get_program_generation_service),
     context_builder: UserContextBuilder = Depends(get_user_context_builder),
     rag_service: RAGIntegrationService = Depends(get_rag_service),
+    personalization_service: PersonalizationService = Depends(get_personalization_service),
     user: dict = Depends(verify_token),
 ):
     """
@@ -1164,6 +1345,9 @@ async def generate_running_program(
         # Build comprehensive user context
         user_context = await context_builder.build_context(user_id)
 
+        # Get user preferences
+        user_preferences = personalization_service.get_user_preferences(user_id)
+
         # Get RAG context using SmartNamespaceSelector
         rag_context = rag_service.get_rag_context(
             endpoint="/api/program/generate/running",
@@ -1174,9 +1358,12 @@ async def generate_running_program(
             cache_ttl=3600,
         )
 
-        # Generate running program with user context and RAG
+        # Generate running program with user context, RAG, and preferences
         result = program_service.generate_program(
-            request.questionnaire, user_context, rag_context=rag_context
+            request.questionnaire,
+            user_context,
+            rag_context=rag_context,
+            user_preferences=user_preferences
         )
 
         # Invalidate user context cache after generating program
@@ -1212,6 +1399,283 @@ async def generate_program_legacy(
     return await generate_strength_program(
         request, program_service, context_builder, user
     )
+
+
+# ============================================================================
+# CALENDAR & SCHEDULING ENDPOINTS - Advanced Features
+# ============================================================================
+
+
+@app.patch("/api/calendar/reschedule")
+async def reschedule_workout(
+    scheduled_workout_id: str,
+    new_date: str,
+    reason: Optional[str] = None,
+    schedule_service: ScheduleOptimizationService = Depends(
+        get_schedule_optimization_service
+    ),
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Reschedule a workout to a new date with conflict detection
+
+    Args:
+        scheduled_workout_id: ID of the workout to reschedule
+        new_date: New date (YYYY-MM-DD)
+        reason: Optional reason for rescheduling
+
+    Returns:
+        Updated workout and conflict warnings
+    """
+    try:
+        user_id = user.get("sub")
+
+        # Get the workout to reschedule
+        workout_result = (
+            supabase.table("scheduled_workouts")
+            .select("*")
+            .eq("id", scheduled_workout_id)
+            .eq("user_id", user_id)
+            .single()
+            .execute()
+        )
+
+        if not workout_result.data:
+            raise HTTPException(status_code=404, detail="Workout not found")
+
+        workout = workout_result.data
+        original_date = workout["scheduled_date"]
+
+        # Check for conflicts on new date
+        conflicts = schedule_service.check_conflicts(
+            user_id, new_date, exclude_workout_id=scheduled_workout_id
+        )
+
+        # Update the workout
+        from datetime import datetime
+
+        new_date_obj = datetime.strptime(new_date, "%Y-%m-%d").date()
+
+        # Recalculate week_number and day_of_week
+        program_result = (
+            supabase.table("generated_programs")
+            .select("start_date")
+            .eq("id", workout["program_id"])
+            .single()
+            .execute()
+        )
+
+        if program_result.data:
+            start_date = datetime.strptime(
+                program_result.data["start_date"], "%Y-%m-%d"
+            ).date()
+            days_diff = (new_date_obj - start_date).days
+            week_number = (days_diff // 7) + 1
+            day_of_week = new_date_obj.weekday()
+        else:
+            week_number = workout["week_number"]
+            day_of_week = new_date_obj.weekday()
+
+        # Update workout
+        update_data = {
+            "scheduled_date": new_date,
+            "week_number": week_number,
+            "day_of_week": day_of_week,
+            "status": "rescheduled",
+            "rescheduled_from": original_date,
+            "reschedule_reason": reason,
+        }
+
+        updated_result = (
+            supabase.table("scheduled_workouts")
+            .update(update_data)
+            .eq("id", scheduled_workout_id)
+            .execute()
+        )
+
+        return {
+            "success": True,
+            "workout": updated_result.data[0] if updated_result.data else None,
+            "conflicts": conflicts,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error rescheduling workout: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to reschedule workout: {str(e)}"
+        )
+
+
+@app.get("/api/calendar/conflicts/{user_id}")
+async def get_schedule_conflicts(
+    user_id: str,
+    start_date: str,
+    end_date: str,
+    schedule_service: ScheduleOptimizationService = Depends(
+        get_schedule_optimization_service
+    ),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get scheduling conflicts for a date range
+
+    Args:
+        user_id: User ID
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
+
+    Returns:
+        List of dates with conflicts
+    """
+    try:
+        from datetime import datetime, timedelta
+
+        start = datetime.strptime(start_date, "%Y-%m-%d").date()
+        end = datetime.strptime(end_date, "%Y-%m-%d").date()
+
+        conflicts_by_date = {}
+        current_date = start
+
+        while current_date <= end:
+            date_str = current_date.isoformat()
+            conflict_info = schedule_service.check_conflicts(user_id, date_str)
+
+            if conflict_info.get("has_conflict"):
+                conflicts_by_date[date_str] = conflict_info
+
+            current_date += timedelta(days=1)
+
+        return {"conflicts": conflicts_by_date, "total_conflict_days": len(conflicts_by_date)}
+
+    except Exception as e:
+        print(f"Error getting conflicts: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get conflicts: {str(e)}"
+        )
+
+
+@app.post("/api/calendar/availability")
+async def create_availability_window(
+    user_id: str,
+    start_date: str,
+    end_date: str,
+    availability_type: str,
+    notes: Optional[str] = None,
+    schedule_service: ScheduleOptimizationService = Depends(
+        get_schedule_optimization_service
+    ),
+    user: dict = Depends(verify_token),
+):
+    """
+    Create an availability window (travel, vacation, injury, etc.)
+
+    Args:
+        user_id: User ID
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
+        availability_type: Type (travel|vacation|injury|other)
+        notes: Optional notes
+
+    Returns:
+        Created availability window
+    """
+    try:
+        window = schedule_service.create_availability_window(
+            user_id, start_date, end_date, availability_type, notes
+        )
+
+        return {"success": True, "availability_window": window}
+
+    except Exception as e:
+        print(f"Error creating availability window: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create availability window: {str(e)}"
+        )
+
+
+@app.get("/api/calendar/availability/{user_id}")
+async def get_availability_windows(
+    user_id: str,
+    start_date: str,
+    end_date: str,
+    schedule_service: ScheduleOptimizationService = Depends(
+        get_schedule_optimization_service
+    ),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get availability windows for a date range
+
+    Args:
+        user_id: User ID
+        start_date: Start date (YYYY-MM-DD)
+        end_date: End date (YYYY-MM-DD)
+
+    Returns:
+        List of availability windows
+    """
+    try:
+        windows = schedule_service.get_availability_windows(
+            user_id, start_date, end_date
+        )
+
+        return {"availability_windows": windows}
+
+    except Exception as e:
+        print(f"Error getting availability windows: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to get availability windows: {str(e)}"
+        )
+
+
+@app.post("/api/calendar/suggest-optimizations")
+async def suggest_schedule_optimizations(
+    user_id: str,
+    schedule_service: ScheduleOptimizationService = Depends(
+        get_schedule_optimization_service
+    ),
+    context_builder: UserContextBuilder = Depends(get_user_context_builder),
+    rag_service: RAGIntegrationService = Depends(get_rag_service),
+    user: dict = Depends(verify_token),
+):
+    """
+    Generate AI-powered schedule optimization suggestions
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        List of schedule suggestions
+    """
+    try:
+        # Build user context
+        user_context = await context_builder.build_context(user_id)
+
+        # Get RAG context for scheduling best practices
+        rag_context = rag_service.get_rag_context(
+            endpoint="/api/calendar/suggest-optimizations",
+            request_data={"user_id": user_id},
+            user_context=user_context,
+            max_chunks=20,
+            use_cache=True,
+            cache_ttl=3600,
+        )
+
+        # Generate suggestions
+        suggestions = schedule_service.generate_schedule_suggestions(
+            user_id, user_context, rag_context
+        )
+
+        return {"suggestions": suggestions, "count": len(suggestions)}
+
+    except Exception as e:
+        print(f"Error generating schedule suggestions: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate suggestions: {str(e)}"
+        )
 
 
 # ============================================================================
@@ -3482,6 +3946,1539 @@ async def adherence_check_in(
         print(f"Error processing adherence check-in: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to process check-in: {str(e)}"
+        )
+
+
+# ============================================================================
+# WEARABLES & NUTRITION INGESTION ENDPOINTS
+# ============================================================================
+
+
+@app.post("/api/wearables/ingest")
+async def ingest_wearable_data(
+    user_id: str,
+    source: str,
+    data: Dict[str, Any],
+    wearables_service: WearablesIngestionService = Depends(get_wearables_ingestion_service),
+    user: dict = Depends(verify_token),
+):
+    """
+    Ingest wearable/nutrition data from various sources
+
+    Args:
+        user_id: User ID
+        source: Data source (terra, whoop, garmin, apple_health, oura, myfitnesspal)
+        data: Raw data from the source
+
+    Returns:
+        {
+            "success": bool,
+            "metrics_ingested": int,
+            "duplicates_skipped": int
+        }
+    """
+    try:
+        result = await wearables_service.ingest_data(user_id, source, data)
+        return result
+    except Exception as e:
+        print(f"Error ingesting wearable data: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to ingest data: {str(e)}"
+        )
+
+
+@app.post("/api/wearables/webhook/terra")
+async def terra_webhook(
+    request: Request,
+    wearables_service: WearablesIngestionService = Depends(get_wearables_ingestion_service),
+    supabase: Client = Depends(get_supabase_client),
+):
+    """
+    Terra webhook endpoint for automatic data ingestion.
+
+    Handles all Terra webhook types:
+    - activity: Workout/exercise sessions
+    - sleep: Sleep sessions
+    - body: Body measurements (weight, body fat, etc.)
+    - daily: Daily summary metrics
+    - athlete: User profile updates
+    """
+    try:
+        body = await request.json()
+        body_bytes = await request.body()
+
+        # Verify Terra webhook signature
+        terra_signature = request.headers.get("terra-signature")
+        terra_secret = os.getenv("TERRA_WEBHOOK_SECRET")
+
+        if terra_secret and terra_signature:
+            import hmac
+            import hashlib
+
+            # Terra uses HMAC-SHA256 for webhook signatures
+            expected_signature = hmac.new(
+                terra_secret.encode('utf-8'),
+                body_bytes,
+                hashlib.sha256
+            ).hexdigest()
+
+            if not hmac.compare_digest(terra_signature, expected_signature):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid Terra webhook signature"
+                )
+
+        # Extract event type and user
+        event_type = body.get("type")  # activity, sleep, body, daily, athlete
+        user_reference = body.get("user", {}).get("user_id")
+
+        # Get user_id from wearable_provider_connections
+        connection_result = supabase.table("wearable_provider_connections").select("user_id").eq(
+            "provider", "terra"
+        ).eq("provider_user_id", user_reference).execute()
+
+        if not connection_result.data:
+            return {"success": False, "error": "User not found"}
+
+        user_id = connection_result.data[0]["user_id"]
+
+        # Route to appropriate ingestion method based on event type
+        result = {"success": False}
+
+        if event_type == "sleep":
+            result = wearables_service.ingest_terra_sleep(user_id, body)
+        elif event_type == "activity":
+            result = wearables_service.ingest_terra_activity(user_id, body)
+        elif event_type == "body":
+            # Body metrics return a list, so we need to insert each one
+            metrics = wearables_service.normalization_service.normalize_terra_body(body)
+            inserted = []
+            for metric in metrics:
+                metric['user_id'] = user_id
+                metric_result = supabase.table('health_metrics').insert(metric).execute()
+                inserted.append(metric_result.data[0] if metric_result.data else None)
+            result = {"success": True, "metrics_inserted": len(inserted)}
+        elif event_type == "daily":
+            # Daily summary
+            summary = wearables_service.normalization_service.normalize_terra_daily(body)
+            summary['user_id'] = user_id
+
+            # Merge with existing summary
+            merged = wearables_service.priority_service.merge_daily_summary(
+                user_id, summary['date'], summary, 'terra'
+            )
+
+            # Upsert
+            upsert_result = supabase.table('daily_summaries').upsert(merged).execute()
+            result = {"success": True, "summary_id": upsert_result.data[0]['id'] if upsert_result.data else None}
+        elif event_type == "athlete":
+            # User profile update - store in metadata for now
+            result = {"success": True, "message": "Athlete profile update received"}
+        else:
+            result = {"success": False, "error": f"Unknown event type: {event_type}"}
+
+        return result
+
+    except Exception as e:
+        print(f"Error processing Terra webhook: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process webhook: {str(e)}"
+        )
+
+
+@app.post("/api/wearables/webhook/whoop")
+async def whoop_webhook(
+    request: Request,
+    wearables_service: WearablesIngestionService = Depends(get_wearables_ingestion_service),
+    supabase: Client = Depends(get_supabase_client),
+):
+    """
+    WHOOP webhook endpoint for automatic data ingestion.
+
+    Handles all WHOOP webhook types:
+    - recovery.updated: Recovery score and HRV data
+    - sleep.updated: Sleep session data
+    - workout.updated: Workout/activity data
+    - cycle.updated: Daily cycle data
+    """
+    try:
+        body = await request.json()
+        body_bytes = await request.body()
+
+        # Verify WHOOP webhook signature
+        whoop_signature = request.headers.get("x-whoop-signature")
+        whoop_secret = os.getenv("WHOOP_WEBHOOK_SECRET")
+
+        if whoop_secret and whoop_signature:
+            import hmac
+            import hashlib
+
+            # WHOOP uses HMAC-SHA256 for webhook signatures
+            expected_signature = hmac.new(
+                whoop_secret.encode('utf-8'),
+                body_bytes,
+                hashlib.sha256
+            ).hexdigest()
+
+            if not hmac.compare_digest(whoop_signature, expected_signature):
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid WHOOP webhook signature"
+                )
+
+        # Extract event type and user
+        event_type = body.get("type")  # recovery.updated, sleep.updated, workout.updated, cycle.updated
+        user_reference = body.get("user_id")
+
+        # Get user_id from wearable_provider_connections
+        connection_result = supabase.table("wearable_provider_connections").select("user_id").eq(
+            "provider", "whoop"
+        ).eq("provider_user_id", user_reference).execute()
+
+        if not connection_result.data:
+            return {"success": False, "error": "User not found"}
+
+        user_id = connection_result.data[0]["user_id"]
+
+        # Route to appropriate ingestion method based on event type
+        result = {"success": False}
+
+        if event_type == "recovery.updated":
+            result = wearables_service.ingest_whoop_recovery(user_id, body)
+        elif event_type == "sleep.updated":
+            result = wearables_service.ingest_whoop_sleep(user_id, body)
+        elif event_type == "workout.updated":
+            result = wearables_service.ingest_whoop_workout(user_id, body)
+        elif event_type == "cycle.updated":
+            # Cycle data contains daily summary
+            # Extract relevant fields and store in daily_summaries
+            cycle_data = body.get("data", {})
+            summary = {
+                'date': cycle_data.get('days', [{}])[0].get('day'),
+                'strain_score': cycle_data.get('score', {}).get('strain'),
+                'recovery_score': cycle_data.get('score', {}).get('recovery_score'),
+                'sleep_score': cycle_data.get('score', {}).get('sleep_performance_percentage'),
+                'sources': ['whoop'],
+                'metadata': cycle_data
+            }
+            summary['user_id'] = user_id
+
+            # Merge with existing summary
+            merged = wearables_service.priority_service.merge_daily_summary(
+                user_id, summary['date'], summary, 'whoop'
+            )
+
+            # Upsert
+            upsert_result = supabase.table('daily_summaries').upsert(merged).execute()
+            result = {"success": True, "summary_id": upsert_result.data[0]['id'] if upsert_result.data else None}
+        else:
+            result = {"success": False, "error": f"Unknown event type: {event_type}"}
+
+        return result
+
+    except Exception as e:
+        print(f"Error processing WHOOP webhook: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500, detail=f"Failed to process webhook: {str(e)}"
+        )
+
+
+@app.get("/api/wearables/metrics/{user_id}")
+async def get_user_metrics(
+    user_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    metric_type: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get user's health metrics from wearables.
+
+    Args:
+        user_id: User ID
+        start_date: Optional start date (YYYY-MM-DD)
+        end_date: Optional end date (YYYY-MM-DD)
+        metric_type: Optional metric type filter (recovery_score, hrv, resting_hr, etc.)
+
+    Returns:
+        List of health metrics
+    """
+    try:
+        # Verify user has access (either own data or is assigned coach)
+        if user["id"] != user_id:
+            # Check if user is a coach assigned to this client
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        query = supabase.table("health_metrics").select("*").eq("user_id", user_id)
+
+        if start_date:
+            query = query.gte("date", start_date)
+        if end_date:
+            query = query.lte("date", end_date)
+        if metric_type:
+            query = query.eq("metric_type", metric_type)
+
+        result = query.order("date", desc=True).order("source_priority", desc=True).execute()
+        return {"metrics": result.data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching metrics: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch metrics: {str(e)}"
+        )
+
+
+@app.get("/api/wearables/sleep/{user_id}")
+async def get_sleep_sessions(
+    user_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get user's sleep sessions.
+
+    Args:
+        user_id: User ID
+        start_date: Optional start date (YYYY-MM-DD)
+        end_date: Optional end date (YYYY-MM-DD)
+
+    Returns:
+        List of sleep sessions
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        query = supabase.table("sleep_sessions").select("*").eq("user_id", user_id)
+
+        if start_date:
+            query = query.gte("start_time", start_date)
+        if end_date:
+            query = query.lte("end_time", end_date)
+
+        result = query.order("start_time", desc=True).execute()
+        return {"sleep_sessions": result.data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching sleep sessions: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch sleep sessions: {str(e)}"
+        )
+
+
+@app.get("/api/wearables/activity/{user_id}")
+async def get_activity_sessions(
+    user_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    activity_type: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get user's activity/workout sessions.
+
+    Args:
+        user_id: User ID
+        start_date: Optional start date (YYYY-MM-DD)
+        end_date: Optional end date (YYYY-MM-DD)
+        activity_type: Optional activity type filter
+
+    Returns:
+        List of activity sessions
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        query = supabase.table("activity_sessions").select("*").eq("user_id", user_id)
+
+        if start_date:
+            query = query.gte("start_time", start_date)
+        if end_date:
+            query = query.lte("end_time", end_date)
+        if activity_type:
+            query = query.eq("activity_type", activity_type)
+
+        result = query.order("start_time", desc=True).execute()
+        return {"activity_sessions": result.data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching activity sessions: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch activity sessions: {str(e)}"
+        )
+
+
+@app.get("/api/wearables/daily/{user_id}")
+async def get_daily_summaries(
+    user_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get user's daily summaries.
+
+    Args:
+        user_id: User ID
+        start_date: Optional start date (YYYY-MM-DD)
+        end_date: Optional end date (YYYY-MM-DD)
+
+    Returns:
+        List of daily summaries
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        query = supabase.table("daily_summaries").select("*").eq("user_id", user_id)
+
+        if start_date:
+            query = query.gte("date", start_date)
+        if end_date:
+            query = query.lte("date", end_date)
+
+        result = query.order("date", desc=True).execute()
+        return {"daily_summaries": result.data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching daily summaries: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch daily summaries: {str(e)}"
+        )
+
+
+@app.get("/api/wearables/connections/{user_id}")
+async def get_wearable_connections(
+    user_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get user's wearable provider connections.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        List of connected wearable providers
+    """
+    try:
+        # Verify user is requesting their own connections
+        if user["id"] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        result = supabase.table("wearable_provider_connections").select(
+            "provider, connected_at, last_sync_at, sync_status, metadata"
+        ).eq("user_id", user_id).execute()
+
+        return {"connections": result.data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching connections: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch connections: {str(e)}"
+        )
+
+
+@app.post("/api/wearables/connect/{provider}")
+async def initiate_wearable_connection(
+    provider: str,
+    user_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Initiate OAuth connection to a wearable provider.
+
+    Args:
+        provider: Provider name (terra, whoop, garmin, oura)
+        user_id: User ID
+
+    Returns:
+        OAuth authorization URL
+    """
+    try:
+        # Verify user is connecting their own account
+        if user["id"] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Generate OAuth URL based on provider
+        # This is a simplified version - in production, implement full OAuth flow
+        oauth_urls = {
+            "terra": f"https://api.tryterra.co/v2/auth?user_id={user_id}",
+            "whoop": f"https://api.prod.whoop.com/oauth/authorize?user_id={user_id}",
+            "garmin": f"https://connect.garmin.com/oauth/authorize?user_id={user_id}",
+            "oura": f"https://cloud.ouraring.com/oauth/authorize?user_id={user_id}",
+        }
+
+        if provider not in oauth_urls:
+            raise HTTPException(status_code=400, detail=f"Unknown provider: {provider}")
+
+        return {
+            "authorization_url": oauth_urls[provider],
+            "provider": provider,
+            "user_id": user_id
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error initiating connection: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to initiate connection: {str(e)}"
+        )
+
+
+@app.delete("/api/wearables/disconnect/{provider}")
+async def disconnect_wearable_provider(
+    provider: str,
+    user_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Disconnect a wearable provider.
+
+    Args:
+        provider: Provider name (terra, whoop, garmin, oura)
+        user_id: User ID
+
+    Returns:
+        Success message
+    """
+    try:
+        # Verify user is disconnecting their own account
+        if user["id"] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Delete connection
+        result = supabase.table("wearable_provider_connections").delete().eq(
+            "user_id", user_id
+        ).eq("provider", provider).execute()
+
+        return {
+            "success": True,
+            "message": f"Disconnected from {provider}",
+            "provider": provider
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error disconnecting provider: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to disconnect provider: {str(e)}"
+        )
+
+
+# ============================================================================
+# HEALTH SNAPSHOT ENDPOINTS
+# ============================================================================
+
+
+@app.get("/api/health/snapshots/{user_id}")
+async def get_health_snapshots(
+    user_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    limit: Optional[int] = 30,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get user's health snapshots.
+
+    Args:
+        user_id: User ID
+        start_date: Optional start date (YYYY-MM-DD)
+        end_date: Optional end date (YYYY-MM-DD)
+        limit: Maximum number of snapshots to return (default: 30)
+
+    Returns:
+        List of health snapshots
+    """
+    try:
+        # Verify access (user or assigned coach)
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        query = supabase.table("health_snapshots").select("*").eq("user_id", user_id)
+
+        if start_date:
+            query = query.gte("date", start_date)
+        if end_date:
+            query = query.lte("date", end_date)
+
+        result = query.order("date", desc=True).limit(limit).execute()
+        return {"snapshots": result.data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching health snapshots: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch health snapshots: {str(e)}"
+        )
+
+
+@app.get("/api/health/snapshots/{user_id}/latest")
+async def get_latest_health_snapshot(
+    user_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get user's most recent health snapshot.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Latest health snapshot
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        result = (
+            supabase.table("health_snapshots")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("date", desc=True)
+            .limit(1)
+            .execute()
+        )
+
+        if not result.data:
+            return {"snapshot": None, "message": "No snapshots found"}
+
+        return {"snapshot": result.data[0]}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching latest snapshot: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch latest snapshot: {str(e)}"
+        )
+
+
+@app.post("/api/health/snapshots/{user_id}/generate")
+async def generate_health_snapshot(
+    user_id: str,
+    date: Optional[str] = None,
+    snapshot_service: HealthSnapshotService = Depends(get_health_snapshot_service),
+    user: dict = Depends(verify_token),
+):
+    """
+    Generate a health snapshot for a specific date.
+
+    Args:
+        user_id: User ID
+        date: Date in YYYY-MM-DD format (defaults to today)
+
+    Returns:
+        Generated health snapshot
+    """
+    try:
+        # Verify user is requesting their own snapshot
+        if user["id"] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        snapshot = await snapshot_service.generate_snapshot(user_id, date)
+        return {"snapshot": snapshot, "message": "Snapshot generated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating snapshot: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate snapshot: {str(e)}"
+        )
+
+
+# ============================================================================
+# COACH/CLIENT INVITATION ENDPOINTS
+# ============================================================================
+
+
+@app.post("/api/coach/invite-client")
+async def invite_client(
+    client_email: str,
+    message: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Coach invites a client by email.
+
+    Args:
+        client_email: Email address of the client to invite
+        message: Optional message to include with the invitation
+
+    Returns:
+        Invitation details including ID and expiration
+    """
+    try:
+        coach_id = user["id"]
+
+        # Check if user is a coach
+        profile_result = supabase.table("user_profiles").select("user_type").eq(
+            "user_id", coach_id
+        ).execute()
+
+        if not profile_result.data or profile_result.data[0].get("user_type") != "coach":
+            raise HTTPException(status_code=403, detail="Only coaches can invite clients")
+
+        # Check if invitation already exists
+        existing = supabase.table("coach_client_invitations").select("*").eq(
+            "coach_id", coach_id
+        ).eq("client_email", client_email).eq("status", "pending").execute()
+
+        if existing.data:
+            raise HTTPException(status_code=400, detail="Pending invitation already exists for this client")
+
+        # Create invitation
+        invitation_data = {
+            "coach_id": coach_id,
+            "client_email": client_email,
+            "message": message,
+            "status": "pending"
+        }
+
+        result = supabase.table("coach_client_invitations").insert(invitation_data).execute()
+
+        if not result.data:
+            raise HTTPException(status_code=500, detail="Failed to create invitation")
+
+        invitation = result.data[0]
+
+        # TODO: Send email notification to client
+
+        return {
+            "success": True,
+            "invitation": invitation,
+            "message": f"Invitation sent to {client_email}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating invitation: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create invitation: {str(e)}")
+
+
+@app.get("/api/coach/invitations")
+async def get_coach_invitations(
+    status: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get all invitations sent by the coach.
+
+    Args:
+        status: Optional filter by status (pending, accepted, declined, expired)
+
+    Returns:
+        List of invitations
+    """
+    try:
+        coach_id = user["id"]
+
+        query = supabase.table("coach_client_invitations").select("*").eq("coach_id", coach_id)
+
+        if status:
+            query = query.eq("status", status)
+
+        result = query.order("created_at", desc=True).execute()
+
+        return {
+            "success": True,
+            "invitations": result.data or []
+        }
+    except Exception as e:
+        print(f"Error fetching invitations: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch invitations: {str(e)}")
+
+
+@app.post("/api/client/accept-invitation")
+async def accept_invitation(
+    invitation_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Client accepts a coach invitation.
+
+    Args:
+        invitation_id: ID of the invitation to accept
+
+    Returns:
+        Updated invitation and created assignment
+    """
+    try:
+        client_id = user["id"]
+        client_email = user.get("email")
+
+        # Get invitation
+        invitation_result = supabase.table("coach_client_invitations").select("*").eq(
+            "id", invitation_id
+        ).execute()
+
+        if not invitation_result.data:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+
+        invitation = invitation_result.data[0]
+
+        # Verify client can accept this invitation
+        if invitation["client_email"] != client_email and invitation.get("client_id") != client_id:
+            raise HTTPException(status_code=403, detail="This invitation is not for you")
+
+        if invitation["status"] != "pending":
+            raise HTTPException(status_code=400, detail=f"Invitation is {invitation['status']}")
+
+        # Check if expired
+        from datetime import datetime
+        expires_at = datetime.fromisoformat(invitation["expires_at"].replace("Z", "+00:00"))
+        if expires_at < datetime.now(expires_at.tzinfo):
+            raise HTTPException(status_code=400, detail="Invitation has expired")
+
+        # Update invitation
+        update_data = {
+            "status": "accepted",
+            "client_id": client_id,
+            "responded_at": "now()"
+        }
+
+        result = supabase.table("coach_client_invitations").update(update_data).eq(
+            "id", invitation_id
+        ).execute()
+
+        # The trigger will automatically create the client_assignment
+
+        return {
+            "success": True,
+            "invitation": result.data[0] if result.data else None,
+            "message": "Invitation accepted successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error accepting invitation: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to accept invitation: {str(e)}")
+
+
+@app.post("/api/client/decline-invitation")
+async def decline_invitation(
+    invitation_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Client declines a coach invitation.
+
+    Args:
+        invitation_id: ID of the invitation to decline
+
+    Returns:
+        Updated invitation
+    """
+    try:
+        client_id = user["id"]
+        client_email = user.get("email")
+
+        # Get invitation
+        invitation_result = supabase.table("coach_client_invitations").select("*").eq(
+            "id", invitation_id
+        ).execute()
+
+        if not invitation_result.data:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+
+        invitation = invitation_result.data[0]
+
+        # Verify client can decline this invitation
+        if invitation["client_email"] != client_email and invitation.get("client_id") != client_id:
+            raise HTTPException(status_code=403, detail="This invitation is not for you")
+
+        if invitation["status"] != "pending":
+            raise HTTPException(status_code=400, detail=f"Invitation is {invitation['status']}")
+
+        # Update invitation
+        update_data = {
+            "status": "declined",
+            "client_id": client_id,
+            "responded_at": "now()"
+        }
+
+        result = supabase.table("coach_client_invitations").update(update_data).eq(
+            "id", invitation_id
+        ).execute()
+
+        return {
+            "success": True,
+            "invitation": result.data[0] if result.data else None,
+            "message": "Invitation declined"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error declining invitation: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to decline invitation: {str(e)}")
+
+
+@app.delete("/api/client/revoke-coach-access")
+async def revoke_coach_access(
+    coach_id: str,
+    reason: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Client revokes a coach's access to their data.
+
+    Args:
+        coach_id: ID of the coach to revoke access from
+        reason: Optional reason for revocation
+
+    Returns:
+        Success message
+    """
+    try:
+        client_id = user["id"]
+
+        # Find assignment
+        assignment_result = supabase.table("client_assignments").select("*").eq(
+            "client_id", client_id
+        ).eq("coach_id", coach_id).is_("revoked_at", "null").execute()
+
+        if not assignment_result.data:
+            raise HTTPException(status_code=404, detail="Active coach assignment not found")
+
+        # Revoke access
+        update_data = {
+            "revoked_at": "now()",
+            "revoked_by": client_id,
+            "revocation_reason": reason
+        }
+
+        result = supabase.table("client_assignments").update(update_data).eq(
+            "client_id", client_id
+        ).eq("coach_id", coach_id).execute()
+
+        return {
+            "success": True,
+            "message": "Coach access revoked successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error revoking coach access: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to revoke access: {str(e)}")
+
+
+# ============================================================================
+# PERSONALIZATION ENDPOINTS
+# ============================================================================
+
+
+@app.get("/api/preferences/{user_id}")
+async def get_user_preferences(
+    user_id: str,
+    personalization_service: PersonalizationService = Depends(get_personalization_service),
+    user: dict = Depends(verify_token),
+):
+    """Get user preferences"""
+    try:
+        preferences = personalization_service.get_user_preferences(user_id)
+        return preferences
+    except Exception as e:
+        print(f"Error fetching preferences: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch preferences: {str(e)}"
+        )
+
+
+@app.patch("/api/preferences/{user_id}")
+async def update_user_preferences(
+    user_id: str,
+    updates: Dict[str, Any],
+    personalization_service: PersonalizationService = Depends(get_personalization_service),
+    user: dict = Depends(verify_token),
+):
+    """Update user preferences"""
+    try:
+        result = personalization_service.update_preferences(user_id, updates)
+        return result
+    except Exception as e:
+        print(f"Error updating preferences: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update preferences: {str(e)}"
+        )
+
+
+@app.post("/api/preferences/extract")
+async def extract_preferences_from_conversation(
+    user_id: str,
+    conversation_text: str,
+    personalization_service: PersonalizationService = Depends(get_personalization_service),
+    user: dict = Depends(verify_token),
+):
+    """Extract preferences from conversational text using AI"""
+    try:
+        result = await personalization_service.extract_preferences_from_conversation(
+            user_id, conversation_text
+        )
+        return result
+    except Exception as e:
+        print(f"Error extracting preferences: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to extract preferences: {str(e)}"
+        )
+
+
+# ============================================================================
+# WARMUP/COOLDOWN ENDPOINTS
+# ============================================================================
+
+
+@app.post("/api/warmup/generate")
+async def generate_warmup(
+    user_id: str,
+    workout_focus: str,
+    duration_minutes: int = 10,
+    warmup_service: WarmupCooldownService = Depends(get_warmup_cooldown_service),
+    user: dict = Depends(verify_token),
+):
+    """Generate personalized warmup based on workout and injuries"""
+    try:
+        result = await warmup_service.generate_warmup(
+            user_id, workout_focus, duration_minutes
+        )
+        return result
+    except Exception as e:
+        print(f"Error generating warmup: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate warmup: {str(e)}"
+        )
+
+
+@app.post("/api/cooldown/generate")
+async def generate_cooldown(
+    user_id: str,
+    workout_focus: str,
+    duration_minutes: int = 10,
+    warmup_service: WarmupCooldownService = Depends(get_warmup_cooldown_service),
+    user: dict = Depends(verify_token),
+):
+    """Generate personalized cooldown based on workout and injuries"""
+    try:
+        result = await warmup_service.generate_cooldown(
+            user_id, workout_focus, duration_minutes
+        )
+        return result
+    except Exception as e:
+        print(f"Error generating cooldown: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate cooldown: {str(e)}"
+        )
+
+
+@app.get("/api/warmup-cooldown/templates")
+async def get_warmup_cooldown_templates(
+    sport: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Get warmup/cooldown templates"""
+    try:
+        query = supabase.table("warmup_cooldown_templates").select("*")
+        if sport:
+            query = query.eq("sport", sport)
+        result = query.execute()
+        return {"templates": result.data}
+    except Exception as e:
+        print(f"Error fetching templates: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch templates: {str(e)}"
+        )
+
+
+@app.post("/api/warmup-cooldown/templates")
+async def create_warmup_cooldown_template(
+    template_data: Dict[str, Any],
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Create custom warmup/cooldown template"""
+    try:
+        result = supabase.table("warmup_cooldown_templates").insert(template_data).execute()
+        return {"template": result.data[0]}
+    except Exception as e:
+        print(f"Error creating template: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create template: {str(e)}"
+        )
+
+
+# ============================================================================
+# CSV IMPORT ENDPOINTS (Enterprise/B2B)
+# ============================================================================
+
+
+@app.post("/api/csv/analyze")
+async def analyze_csv_schema(
+    file_name: str,
+    csv_content: str,
+    csv_service: CSVImportService = Depends(get_csv_import_service),
+    user: dict = Depends(verify_token),
+):
+    """Analyze CSV schema and suggest field mappings using AI"""
+    try:
+        result = await csv_service.analyze_csv_schema(csv_content, file_name)
+        return result
+    except Exception as e:
+        print(f"Error analyzing CSV: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to analyze CSV: {str(e)}"
+        )
+
+
+@app.post("/api/csv/import")
+async def import_csv_program(
+    coach_id: str,
+    csv_content: str,
+    field_mapping: Dict[str, str],
+    program_metadata: Dict[str, Any],
+    csv_service: CSVImportService = Depends(get_csv_import_service),
+    user: dict = Depends(verify_token),
+):
+    """Import program from CSV with AI-assisted mapping"""
+    try:
+        result = await csv_service.import_program(
+            coach_id, csv_content, field_mapping, program_metadata
+        )
+        return result
+    except Exception as e:
+        print(f"Error importing CSV: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to import CSV: {str(e)}"
+        )
+
+
+@app.post("/api/csv/review")
+async def review_program_quality(
+    program_data: Dict[str, Any],
+    csv_service: CSVImportService = Depends(get_csv_import_service),
+    user: dict = Depends(verify_token),
+):
+    """AI-powered program quality review"""
+    try:
+        result = await csv_service.review_program_quality(program_data)
+        return result
+    except Exception as e:
+        print(f"Error reviewing program: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to review program: {str(e)}"
+        )
+
+
+@app.post("/api/csv/publish")
+async def publish_program_to_clients(
+    program_id: str,
+    client_ids: List[str],
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Publish imported program to selected clients"""
+    try:
+        # Assign program to clients
+        assignments = []
+        for client_id in client_ids:
+            assignment = {
+                "user_id": client_id,
+                "program_id": program_id,
+                "assigned_at": datetime.now().isoformat(),
+                "status": "active"
+            }
+            assignments.append(assignment)
+
+        result = supabase.table("user_programs").insert(assignments).execute()
+        return {
+            "success": True,
+            "assignments": len(result.data),
+            "program_id": program_id
+        }
+    except Exception as e:
+        print(f"Error publishing program: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to publish program: {str(e)}"
+        )
+
+
+@app.get("/api/csv/imports/{coach_id}")
+async def get_import_history(
+    coach_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Get CSV import history for a coach"""
+    try:
+        result = supabase.table("csv_import_history").select("*").eq(
+            "coach_id", coach_id
+        ).order("created_at", desc=True).execute()
+        return {"imports": result.data}
+    except Exception as e:
+        print(f"Error fetching import history: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch import history: {str(e)}"
+        )
+
+
+# ============================================================================
+# VOICE SESSION ENDPOINTS
+# ============================================================================
+
+
+@app.post("/api/sessions/create")
+async def create_voice_session(
+    user_id: str,
+    session_type: str,
+    initial_context: Optional[Dict[str, Any]] = None,
+    session_service: VoiceSessionService = Depends(get_voice_session_service),
+    user: dict = Depends(verify_token),
+):
+    """Create a new voice session"""
+    try:
+        result = session_service.create_session(user_id, session_type, initial_context)
+        return result
+    except Exception as e:
+        print(f"Error creating session: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create session: {str(e)}"
+        )
+
+
+@app.get("/api/sessions/{session_id}")
+async def get_voice_session(
+    session_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Get voice session details"""
+    try:
+        result = supabase.table("voice_sessions").select("*").eq("id", session_id).single().execute()
+        return result.data
+    except Exception as e:
+        print(f"Error fetching session: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch session: {str(e)}"
+        )
+
+
+@app.patch("/api/sessions/{session_id}")
+async def update_voice_session(
+    session_id: str,
+    updates: Dict[str, Any],
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Update voice session (e.g., add context, mark complete)"""
+    try:
+        result = supabase.table("voice_sessions").update(updates).eq("id", session_id).execute()
+        return result.data[0]
+    except Exception as e:
+        print(f"Error updating session: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update session: {str(e)}"
+        )
+
+
+@app.post("/api/sessions/{session_id}/end")
+async def end_voice_session(
+    session_id: str,
+    session_service: VoiceSessionService = Depends(get_voice_session_service),
+    user: dict = Depends(verify_token),
+):
+    """End a voice session"""
+    try:
+        result = session_service.end_session(session_id)
+        return result
+    except Exception as e:
+        print(f"Error ending session: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to end session: {str(e)}"
+        )
+
+
+@app.get("/api/sessions/active/{user_id}")
+async def get_active_sessions(
+    user_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Get active sessions for a user"""
+    try:
+        result = supabase.table("voice_sessions").select("*").eq(
+            "user_id", user_id
+        ).eq("status", "active").execute()
+        return {"sessions": result.data}
+    except Exception as e:
+        print(f"Error fetching active sessions: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch active sessions: {str(e)}"
+        )
+
+
+# ============================================================================
+# COACH-CLIENT INVITATION ENDPOINTS
+# ============================================================================
+
+
+@app.post("/api/invitations")
+async def create_invitation(
+    request: dict,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Create a coach-client invitation
+
+    Coach sends invitation to client by email.
+    Client must accept before coach can access their data.
+    """
+    try:
+        coach_id = user["sub"]
+        client_email = request.get("client_email")
+        message = request.get("message")
+
+        # Check if coach
+        profile = supabase.table("user_profiles").select("user_type").eq(
+            "user_id", coach_id
+        ).single().execute()
+
+        if not profile.data or profile.data.get("user_type") != "coach":
+            raise HTTPException(status_code=403, detail="Only coaches can send invitations")
+
+        # Create invitation
+        invitation_data = {
+            "coach_id": coach_id,
+            "client_email": client_email,
+            "status": "pending",
+            "message": message,
+        }
+
+        result = supabase.table("coach_client_invitations").insert(
+            invitation_data
+        ).execute()
+
+        return {"success": True, "invitation": result.data[0]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error creating invitation: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to create invitation: {str(e)}"
+        )
+
+
+@app.get("/api/invitations/sent")
+async def get_sent_invitations(
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Get invitations sent by coach"""
+    try:
+        coach_id = user["sub"]
+
+        result = supabase.table("coach_client_invitations").select("*").eq(
+            "coach_id", coach_id
+        ).order("invited_at", desc=True).execute()
+
+        return {"invitations": result.data}
+
+    except Exception as e:
+        print(f"Error fetching sent invitations: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch invitations: {str(e)}"
+        )
+
+
+@app.get("/api/invitations/received")
+async def get_received_invitations(
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Get invitations received by client"""
+    try:
+        user_id = user["sub"]
+
+        # Get user email
+        user_data = supabase.auth.get_user()
+        user_email = user_data.user.email
+
+        result = supabase.table("coach_client_invitations").select("*").or_(
+            f"client_id.eq.{user_id},client_email.eq.{user_email}"
+        ).order("invited_at", desc=True).execute()
+
+        return {"invitations": result.data}
+
+    except Exception as e:
+        print(f"Error fetching received invitations: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to fetch invitations: {str(e)}"
+        )
+
+
+@app.patch("/api/invitations/{invitation_id}")
+async def update_invitation(
+    invitation_id: str,
+    request: dict,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Update invitation status (accept/decline)
+
+    Client accepts or declines coach invitation.
+    Accepting creates a client_assignment.
+    """
+    try:
+        user_id = user["sub"]
+        status = request.get("status")
+
+        if status not in ["accepted", "declined"]:
+            raise HTTPException(status_code=400, detail="Invalid status")
+
+        # Get invitation
+        invitation = supabase.table("coach_client_invitations").select("*").eq(
+            "id", invitation_id
+        ).single().execute()
+
+        if not invitation.data:
+            raise HTTPException(status_code=404, detail="Invitation not found")
+
+        # Verify user is the recipient
+        user_data = supabase.auth.get_user()
+        user_email = user_data.user.email
+
+        if invitation.data["client_email"] != user_email:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Update invitation
+        update_data = {
+            "status": status,
+            "client_id": user_id,
+            "responded_at": datetime.utcnow().isoformat(),
+        }
+
+        result = supabase.table("coach_client_invitations").update(
+            update_data
+        ).eq("id", invitation_id).execute()
+
+        return {"success": True, "invitation": result.data[0]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating invitation: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to update invitation: {str(e)}"
+        )
+
+
+@app.post("/api/assignments/{assignment_id}/revoke")
+async def revoke_coach_access(
+    assignment_id: str,
+    request: dict,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Revoke coach access to client data
+
+    Client can revoke coach access at any time.
+    """
+    try:
+        user_id = user["sub"]
+        reason = request.get("reason")
+
+        # Get assignment
+        assignment = supabase.table("client_assignments").select("*").eq(
+            "id", assignment_id
+        ).single().execute()
+
+        if not assignment.data:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+
+        # Verify user is the client
+        if assignment.data["client_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Revoke access
+        update_data = {
+            "revoked_at": datetime.utcnow().isoformat(),
+            "revoked_by": user_id,
+            "revocation_reason": reason,
+        }
+
+        result = supabase.table("client_assignments").update(
+            update_data
+        ).eq("id", assignment_id).execute()
+
+        return {"success": True, "assignment": result.data[0]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error revoking access: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to revoke access: {str(e)}"
         )
 
 

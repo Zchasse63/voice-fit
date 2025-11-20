@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 251 247 245; /* #FBF7F5 */
+    --foreground: 0 0 0;
+  }
+
+  .dark {
+    --background: 26 26 26; /* #1A1A1A */
+    --foreground: 255 255 255;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Card utility matching iOS design */
+  .card {
+    @apply bg-background-light-primary dark:bg-background-dark-secondary rounded-md shadow-md p-md;
+  }
+  
+  /* Button utilities */
+  .btn-primary {
+    @apply bg-primary-500 dark:bg-primary-dark text-white font-semibold py-sm px-md rounded-md hover:bg-primary-600 transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary-500 dark:bg-secondary-dark text-white font-semibold py-sm px-md rounded-md hover:bg-secondary-600 transition-colors;
+  }
+  
+  /* Input utilities */
+  .input {
+    @apply border border-border-light-light dark:border-border-dark-light rounded-sm px-sm py-sm bg-background-light-primary dark:bg-background-dark-primary text-text-light-primary dark:text-text-dark-primary focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-dark;
+  }
+}
+

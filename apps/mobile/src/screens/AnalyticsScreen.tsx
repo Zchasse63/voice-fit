@@ -1,8 +1,11 @@
 /**
  * Analytics Screen
- * 
+ *
  * Displays volume tracking, fatigue monitoring, and deload recommendations.
  * Premium feature only.
+ *
+ * Supports both Premium mode (own data) and Coach mode (client data).
+ * When clientId is provided, analytics are scoped to that client.
  */
 
 import React, { useState, useEffect } from 'react';
@@ -11,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { tokens } from '../theme/tokens';
 import { useTheme } from '../hooks/useTheme';
 import { useAuth } from '../hooks/useAuth';
+import { useCoachStore } from '../store/coach.store';
 import AnalyticsAPIClient, {
   VolumeAnalytics,
   FatigueAnalytics,
@@ -20,10 +24,26 @@ import { VolumeChart } from '../components/analytics/VolumeChart';
 import { FatigueChart } from '../components/analytics/FatigueChart';
 import { DeloadCard } from '../components/analytics/DeloadCard';
 
-export default function AnalyticsScreen() {
+interface AnalyticsScreenProps {
+  route?: {
+    params?: {
+      clientId?: string; // For coach mode - view client's analytics
+    };
+  };
+}
+
+export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
   const { isDark } = useTheme();
   const { user, token } = useAuth();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
+  // Coach mode: use clientId from route params or coach store
+  const { selectedClientId } = useCoachStore();
+  const clientId = route?.params?.clientId || selectedClientId;
+  const isCoachMode = !!clientId;
+
+  // Use clientId if in coach mode, otherwise use current user's ID
+  const effectiveUserId = isCoachMode ? clientId : user?.id;
 
   const [volumeAnalytics, setVolumeAnalytics] = useState<VolumeAnalytics | null>(null);
   const [fatigueAnalytics, setFatigueAnalytics] = useState<FatigueAnalytics | null>(null);
@@ -34,7 +54,7 @@ export default function AnalyticsScreen() {
 
   // Fetch analytics data
   const fetchAnalytics = async (isRefresh = false) => {
-    if (!user || !token) {
+    if (!effectiveUserId || !token) {
       setError('User not authenticated');
       setIsLoading(false);
       return;
@@ -50,9 +70,9 @@ export default function AnalyticsScreen() {
 
       // Fetch all analytics data in parallel
       const [volume, fatigue, deload] = await Promise.all([
-        AnalyticsAPIClient.getVolumeAnalytics(user.id, token),
-        AnalyticsAPIClient.getFatigueAnalytics(user.id, token),
-        AnalyticsAPIClient.getDeloadRecommendation(user.id, token),
+        AnalyticsAPIClient.getVolumeAnalytics(effectiveUserId, token),
+        AnalyticsAPIClient.getFatigueAnalytics(effectiveUserId, token),
+        AnalyticsAPIClient.getDeloadRecommendation(effectiveUserId, token),
       ]);
 
       setVolumeAnalytics(volume);
@@ -71,7 +91,7 @@ export default function AnalyticsScreen() {
   // Load analytics on mount
   useEffect(() => {
     fetchAnalytics();
-  }, [user, token]);
+  }, [effectiveUserId, token]);
 
   // Handle refresh
   const handleRefresh = () => {

@@ -22,7 +22,13 @@ export interface WorkoutActivityState {
   lastSetWeight?: number;
   lastSetReps?: number;
   lastSetRPE?: number;
-  status: 'active' | 'paused' | 'completed';
+  restTimeRemaining?: number; // seconds remaining in rest period
+  restTimerActive: boolean; // whether rest timer is currently running
+  targetRestTime: number; // target rest time in seconds (e.g., 90, 120, 180)
+  restStartedAt?: number; // elapsed time when rest started
+  status: 'active' | 'paused' | 'resting' | 'completed';
+  showElapsedTimer: boolean; // user setting to show/hide elapsed timer
+  showRestTimer: boolean; // user setting to show/hide rest timer
 }
 
 // Live Activity data structure
@@ -36,7 +42,13 @@ class LiveActivityService {
   private activeActivityId: string | null = null;
   private startTime: number | null = null;
   private updateInterval: NodeJS.Timeout | null = null;
+  private restInterval: NodeJS.Timeout | null = null;
   private isSupported: boolean = false;
+  private currentState: WorkoutActivityState | null = null;
+  private userSettings = {
+    showElapsedTimer: true,
+    showRestTimer: true,
+  };
 
   constructor() {
     this.checkSupport();
@@ -85,7 +97,11 @@ class LiveActivityService {
         currentSet: 0,
         totalSets: 0,
         elapsedTime: 0,
+        restTimerActive: false,
+        targetRestTime: 90, // default 90 seconds
         status: 'active',
+        showElapsedTimer: this.userSettings.showElapsedTimer,
+        showRestTimer: this.userSettings.showRestTimer,
       };
 
       // In a real implementation, this would call the native module
@@ -121,16 +137,23 @@ class LiveActivityService {
         : 0;
 
       const updatedState: WorkoutActivityState = {
-        currentExercise: data.currentExercise || null,
-        currentSet: data.currentSet || 0,
-        totalSets: data.totalSets || 0,
+        currentExercise: data.currentExercise ?? this.currentState?.currentExercise ?? null,
+        currentSet: data.currentSet ?? this.currentState?.currentSet ?? 0,
+        totalSets: data.totalSets ?? this.currentState?.totalSets ?? 0,
         elapsedTime,
-        lastSetWeight: data.lastSetWeight,
-        lastSetReps: data.lastSetReps,
-        lastSetRPE: data.lastSetRPE,
-        status: data.status || 'active',
+        lastSetWeight: data.lastSetWeight ?? this.currentState?.lastSetWeight,
+        lastSetReps: data.lastSetReps ?? this.currentState?.lastSetReps,
+        lastSetRPE: data.lastSetRPE ?? this.currentState?.lastSetRPE,
+        restTimeRemaining: data.restTimeRemaining ?? this.currentState?.restTimeRemaining,
+        restTimerActive: data.restTimerActive ?? this.currentState?.restTimerActive ?? false,
+        targetRestTime: data.targetRestTime ?? this.currentState?.targetRestTime ?? 90,
+        restStartedAt: data.restStartedAt ?? this.currentState?.restStartedAt,
+        status: data.status ?? this.currentState?.status ?? 'active',
+        showElapsedTimer: this.userSettings.showElapsedTimer,
+        showRestTimer: this.userSettings.showRestTimer,
       };
 
+      this.currentState = updatedState;
       await this.updateNativeActivity(this.activeActivityId, updatedState);
       console.log('✅ Live Activity updated');
       return true;
@@ -179,6 +202,106 @@ class LiveActivityService {
   }
 
   /**
+   * Start rest timer after completing a set
+   */
+  public async startRestTimer(targetRestTime: number = 90): Promise<boolean> {
+    if (!this.activeActivityId) {
+      console.warn('⚠️ No active Live Activity to start rest timer');
+      return false;
+    }
+
+    try {
+      const elapsedTime = this.startTime
+        ? Math.floor((Date.now() - this.startTime) / 1000)
+        : 0;
+
+      // Stop any existing rest timer
+      this.stopRestTimer();
+
+      // Update state to show rest timer
+      await this.updateActivity({
+        restTimerActive: true,
+        restTimeRemaining: targetRestTime,
+        targetRestTime,
+        restStartedAt: elapsedTime,
+        status: 'resting',
+      });
+
+      // Start countdown interval (update every second)
+      this.restInterval = setInterval(() => {
+        if (this.currentState?.restTimeRemaining && this.currentState.restTimeRemaining > 0) {
+          this.updateActivity({
+            restTimeRemaining: this.currentState.restTimeRemaining - 1,
+          });
+        } else {
+          // Rest timer completed
+          this.stopRestTimer();
+        }
+      }, 1000);
+
+      console.log(`✅ Rest timer started: ${targetRestTime}s`);
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to start rest timer:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Skip rest timer and prepare for next set
+   */
+  public async skipRest(): Promise<boolean> {
+    if (!this.activeActivityId) {
+      console.warn('⚠️ No active Live Activity to skip rest');
+      return false;
+    }
+
+    try {
+      this.stopRestTimer();
+
+      await this.updateActivity({
+        restTimerActive: false,
+        restTimeRemaining: undefined,
+        restStartedAt: undefined,
+        status: 'active',
+      });
+
+      console.log('✅ Rest timer skipped');
+      return true;
+    } catch (error) {
+      console.error('❌ Failed to skip rest:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Stop the rest timer
+   */
+  private stopRestTimer(): void {
+    if (this.restInterval) {
+      clearInterval(this.restInterval);
+      this.restInterval = null;
+    }
+  }
+
+  /**
+   * Update user settings for timers
+   */
+  public updateSettings(settings: { showElapsedTimer?: boolean; showRestTimer?: boolean }): void {
+    if (settings.showElapsedTimer !== undefined) {
+      this.userSettings.showElapsedTimer = settings.showElapsedTimer;
+    }
+    if (settings.showRestTimer !== undefined) {
+      this.userSettings.showRestTimer = settings.showRestTimer;
+    }
+
+    // Update active Live Activity with new settings
+    if (this.activeActivityId) {
+      this.updateActivity({});
+    }
+  }
+
+  /**
    * Start automatic elapsed time updates (every 5 seconds)
    */
   private startElapsedTimeUpdater(): void {
@@ -199,6 +322,7 @@ class LiveActivityService {
       clearInterval(this.updateInterval);
       this.updateInterval = null;
     }
+    this.stopRestTimer();
   }
 
   /**

@@ -239,5 +239,43 @@ export const migrations = schemaMigrations({
         }),
       ],
     },
+    // Migration from v7 to v8 (Advanced Calendar Features)
+    {
+      toVersion: 8,
+      steps: [
+        addColumns({
+          table: "scheduled_workouts",
+          columns: [
+            { name: "rescheduled_from", type: "number", isOptional: true },
+            { name: "reschedule_reason", type: "string", isOptional: true },
+            { name: "conflict_acknowledged", type: "boolean", isOptional: true },
+          ],
+        }),
+      ],
+    },
+    // Migration from v8 to v9 (Multi-Sport Support & Warmup/Cooldown)
+    {
+      toVersion: 9,
+      steps: [
+        addColumns({
+          table: "scheduled_workouts",
+          columns: [
+            { name: "warmup_routine", type: "string", isOptional: true },
+            { name: "cooldown_routine", type: "string", isOptional: true },
+            { name: "warmup_duration_min", type: "number", isOptional: true },
+            { name: "cooldown_duration_min", type: "number", isOptional: true },
+          ],
+        }),
+        addColumns({
+          table: "workout_logs",
+          columns: [
+            { name: "warmup_routine", type: "string", isOptional: true },
+            { name: "cooldown_routine", type: "string", isOptional: true },
+            { name: "warmup_duration_min", type: "number", isOptional: true },
+            { name: "cooldown_duration_min", type: "number", isOptional: true },
+          ],
+        }),
+      ],
+    },
   ],
 });
