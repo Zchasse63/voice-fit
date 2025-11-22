@@ -304,5 +304,19 @@ export const migrations = schemaMigrations({
         // after ensuring all data has been migrated to the new structure.
       ],
     },
+    // Migration from v10 to v11 (Running Workout Type Tracking)
+    {
+      toVersion: 11,
+      steps: [
+        // Add workout type tracking to runs table
+        addColumns({
+          table: "runs",
+          columns: [
+            { name: "workout_type", type: "string", isOptional: true }, // 'free_run', 'custom_workout', 'scheduled_workout'
+            { name: "workout_name", type: "string", isOptional: true }, // name of the workout if applicable
+          ],
+        }),
+      ],
+    },
   ],
 });

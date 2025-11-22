@@ -19,7 +19,6 @@ export const tokens = {
     get backgroundSoft() { return this.light.backgroundSoft; },
     get state() { return this.light.state; },
     get overlay() { return this.light.overlay; },
-    get badge() { return this.light.badge; },
     get notebook() { return this.light.notebook; },
     get border() { return this.light.border; },
     get chat() { return this.light.chat; },
@@ -276,6 +275,17 @@ export const tokens = {
       normal: 1.4, // Body text
       relaxed: 1.6, // Long-form content
     },
+
+    // Font variants
+    variants: {
+      tabular: {
+        fontVariant: ['tabular-nums'],
+      },
+      rounded: {
+        // If custom font is available: fontFamily: 'System-Rounded'
+        // For now, we'll stick to system but this placeholder allows future expansion
+      },
+    },
   },
 
   // ============================================================================
@@ -335,6 +345,19 @@ export const tokens = {
       shadowOpacity: 0.16,
       shadowRadius: 16,
       elevation: 8,
+    },
+  },
+  // Standardized borders
+  borders: {
+    primary: {
+      width: 1,
+      colorLight: "#E9ECEF",
+      colorDark: "#2C2C2E",
+    },
+    secondary: {
+      width: 1,
+      colorLight: "#DDE2E6",
+      colorDark: "#3C3C3E",
     },
   },
 
@@ -437,6 +460,53 @@ export const tokens = {
         md: 48,
         lg: 80,
       },
+    },
+  },
+  // ============================================================================
+  // HAPTICS (Expo Haptics Presets)
+  // ============================================================================
+  haptics: {
+    light: 'light',
+    medium: 'medium',
+    heavy: 'heavy',
+    success: 'success',
+    warning: 'warning',
+    error: 'error',
+    selection: 'selection',
+  },
+
+  // ============================================================================
+  // ANIMATION (Reanimated Constants)
+  // ============================================================================
+  animation: {
+    spring: {
+      bouncy: { damping: 10, stiffness: 100 },
+      stiff: { damping: 20, stiffness: 200 },
+      gentle: { damping: 15, stiffness: 120 },
+    },
+    duration: {
+      fast: 200,
+      normal: 350,
+      slow: 500,
+    },
+    scale: {
+      pressed: 0.96,
+    },
+  },
+
+  // ============================================================================
+  // BLUR (Glassmorphism)
+  // ============================================================================
+  blur: {
+    intensity: {
+      light: 10,
+      medium: 20,
+      heavy: 30,
+    },
+    tint: {
+      light: 'light',
+      dark: 'dark',
+      default: 'default',
     },
   },
 };

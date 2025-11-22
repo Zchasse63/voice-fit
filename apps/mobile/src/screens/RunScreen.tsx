@@ -1,24 +1,32 @@
 import React, { useEffect, useRef } from "react";
-import { View, Text, Pressable, StyleSheet, Alert } from "react-native";
+import { View, Text, Pressable, StyleSheet, Alert, ScrollView } from "react-native";
+import { ScalePressable } from "../components/common/ScalePressable";
 import MapView, { Polyline, PROVIDER_DEFAULT } from "react-native-maps";
 import { useTheme } from "../theme/ThemeContext";
 import { tokens } from "../theme/tokens";
 import { useRunStore } from "../store/run.store";
-import { Play, Pause, Square, MapPin, Mic } from "lucide-react-native";
+import { Play, Pause, Square, MapPin, Settings, ChevronDown, ChevronUp } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CountdownOverlay } from "../components/run/CountdownOverlay";
 
 export default function RunScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const mapRef = useRef<MapView>(null);
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
+  const [isIntervalExpanded, setIsIntervalExpanded] = React.useState(false);
 
   const {
     isTracking,
     isPaused,
+    isWaitingForMotion,
+    isCountingDown,
+    countdownValue,
     coordinates,
     stats,
-    error,
+    activeWorkout,
     hasPermission,
     requestPermissions,
     startRun,
@@ -64,7 +72,9 @@ export default function RunScreen() {
       );
       return;
     }
-    await startRun();
+    // Pass activeWorkout to startRun if it exists
+    console.log('🏃 Starting run with activeWorkout:', activeWorkout ? activeWorkout.name : 'None (Free Run)');
+    await startRun(activeWorkout || undefined);
   };
 
   const handlePause = async () => {
@@ -77,18 +87,17 @@ export default function RunScreen() {
 
   const handleStop = () => {
     Alert.alert(
-      "Stop Run",
-      "Are you sure you want to stop this run? Your progress will be saved.",
+      "Complete Run",
+      "Are you sure you want to complete this run?",
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Stop",
-          style: "destructive",
+          text: "Complete",
+          style: "default",
           onPress: async () => {
             await stopRun();
-            Alert.alert("Run Saved", "Your run has been saved successfully!", [
-              { text: "OK", onPress: () => reset() },
-            ]);
+            reset();
+            // Stay on Run screen - user can view splits or start a new run
           },
         },
       ],
@@ -179,7 +188,7 @@ export default function RunScreen() {
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, justifyContent: "flex-end" }}>
       {/* Full-Screen Map */}
       <MapView
         ref={mapRef}
@@ -207,374 +216,625 @@ export default function RunScreen() {
         )}
       </MapView>
 
-      {/* Goal Row */}
+      {/* UNIFIED FLOATING OVERLAY - Expands based on state */}
       <View
         style={{
           position: "absolute",
-          top: 20,
-          left: 0,
-          right: 0,
-          paddingHorizontal: tokens.spacing.lg,
-          flexDirection: "row",
-          justifyContent: "space-between",
-          gap: tokens.spacing.sm,
+          top: insets.top + 12,
+          left: tokens.spacing.md,
+          right: tokens.spacing.md,
+          zIndex: 20,
+          backgroundColor: isDark ? 'rgba(28, 28, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          borderRadius: tokens.borderRadius.xl,
+          padding: tokens.spacing.md,
+          ...tokens.shadows.lg,
+          borderWidth: 1,
+          borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
         }}
       >
-        {["Easy", "Distance", "Time"].map((label) => (
-          <Pressable
-            key={label}
-            style={({ pressed }) => ({
-              flex: 1,
-              backgroundColor: colors.background.secondary,
-              borderRadius: tokens.borderRadius.full,
-              paddingVertical: tokens.spacing.sm,
+        {/* Top Row: Back + Content + Settings */}
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          {/* Back Button */}
+          <ScalePressable
+            onPress={() => navigation.goBack()}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
               alignItems: "center",
               justifyContent: "center",
-              borderWidth: 1,
-              borderColor: colors.border.light,
-              opacity: pressed ? 0.85 : 1,
-            })}
-            onPress={() => Alert.alert("Goal", `${label} goal coming soon`)}
+            }}
           >
+            <Text style={{ fontSize: 16, color: colors.text.primary }}>←</Text>
+          </ScalePressable>
+
+          {/* Center Content - Changes based on state */}
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: tokens.spacing.sm }}>
+            {!isTracking && activeWorkout && (
+              // Pre-run with workout: Show "CUSTOM WORKOUT" label centered
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.tertiary,
+                  fontWeight: tokens.typography.fontWeight.medium,
+                  textAlign: 'center',
+                }}
+              >
+                CUSTOM WORKOUT
+              </Text>
+            )}
+            {!isTracking && !activeWorkout && (
+              // Pre-run without workout: Show "NO SCHEDULED RUN" centered
+              <Text
+                style={{
+                  fontSize: tokens.typography.fontSize.xs,
+                  color: colors.text.tertiary,
+                  fontWeight: tokens.typography.fontWeight.medium,
+                  textAlign: 'center',
+                }}
+              >
+                NO SCHEDULED RUN
+              </Text>
+            )}
+            {isTracking && (
+              // Active run: Show distance centered
+              <View style={{ alignItems: 'center' }}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize["2xl"],
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  {formatDistance(stats.distance)}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                    fontWeight: tokens.typography.fontWeight.medium,
+                  }}
+                >
+                  MI
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Settings Button */}
+          <ScalePressable
+            onPress={() => navigation.navigate("RunSettings")}
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: 18,
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Settings size={16} color={colors.text.primary} />
+          </ScalePressable>
+        </View>
+
+        {/* PRE-RUN CONTENT - Below top row */}
+        {!isTracking && activeWorkout && (
+          <View style={{ marginTop: 4, alignItems: 'center' }}>
             <Text
               style={{
+                fontSize: tokens.typography.fontSize.lg,
+                fontWeight: tokens.typography.fontWeight.bold,
                 color: colors.text.primary,
-                fontWeight: tokens.typography.fontWeight.semibold,
+                marginBottom: 2,
+                textAlign: 'center',
               }}
             >
-              {label}
+              {activeWorkout.name}
             </Text>
-          </Pressable>
-        ))}
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.secondary,
+                textAlign: 'center',
+              }}
+            >
+              {activeWorkout.segments.length} segments • {activeWorkout.segments[0]?.name || 'N/A'}
+            </Text>
+          </View>
+        )}
+
+        {!isTracking && !activeWorkout && (
+          <View style={{ marginTop: tokens.spacing.sm, alignItems: 'center' }}>
+            {/* Two Buttons Side by Side */}
+            <View style={{ flexDirection: 'row', gap: tokens.spacing.sm, width: '100%' }}>
+              <ScalePressable
+                onPress={handleStart}
+                style={{
+                  flex: 1,
+                  paddingVertical: tokens.spacing.sm,
+                  paddingHorizontal: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.lg,
+                  backgroundColor: colors.accent.green,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    color: 'white',
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    fontSize: tokens.typography.fontSize.sm,
+                  }}
+                >
+                  Free Run
+                </Text>
+              </ScalePressable>
+
+              <ScalePressable
+                onPress={() => navigation.navigate("WorkoutBuilder")}
+                style={{
+                  flex: 1,
+                  paddingVertical: tokens.spacing.sm,
+                  paddingHorizontal: tokens.spacing.md,
+                  borderRadius: tokens.borderRadius.lg,
+                  backgroundColor: colors.accent.blue,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    color: 'white',
+                    fontWeight: tokens.typography.fontWeight.semibold,
+                    fontSize: tokens.typography.fontSize.sm,
+                  }}
+                >
+                  Create Workout
+                </Text>
+              </ScalePressable>
+            </View>
+          </View>
+        )}
+
+        {/* ACTIVE RUN CONTENT - Stats */}
+        {isTracking && (
+          <View style={{ marginTop: 4 }}>
+            {/* Stats Row: Time | Pace | Heart Rate - Pulled closer to distance */}
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                paddingVertical: tokens.spacing.xs,
+              }}
+            >
+              {/* Time */}
+              <View style={{ flex: 1, alignItems: "center" }}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.lg,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  {formatDuration(stats.duration)}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                    marginTop: 2,
+                    fontWeight: tokens.typography.fontWeight.medium,
+                  }}
+                >
+                  TIME
+                </Text>
+              </View>
+
+              <View style={{ width: 1, height: 32, backgroundColor: colors.border.light }} />
+
+              {/* Pace */}
+              <View style={{ flex: 1, alignItems: "center" }}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.lg,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  {formatPace(stats.pace)}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                    marginTop: 2,
+                    fontWeight: tokens.typography.fontWeight.medium,
+                  }}
+                >
+                  PACE
+                </Text>
+              </View>
+
+              <View style={{ width: 1, height: 32, backgroundColor: colors.border.light }} />
+
+              {/* Heart Rate - Placeholder */}
+              <View style={{ flex: 1, alignItems: "center" }}>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.lg,
+                    fontWeight: tokens.typography.fontWeight.bold,
+                    color: colors.text.primary,
+                    fontVariant: ["tabular-nums"],
+                  }}
+                >
+                  --
+                </Text>
+                <Text
+                  style={{
+                    fontSize: tokens.typography.fontSize.xs,
+                    color: colors.text.secondary,
+                    marginTop: 2,
+                    fontWeight: tokens.typography.fontWeight.medium,
+                  }}
+                >
+                  HR
+                </Text>
+              </View>
+            </View>
+
+            {/* Current Interval - Only if structured workout - Pulled closer to stats */}
+            {activeWorkout && (
+              <Pressable
+                onPress={() => setIsIntervalExpanded(!isIntervalExpanded)}
+                style={{
+                  marginTop: tokens.spacing.xs,
+                  paddingTop: tokens.spacing.xs,
+                  borderTopWidth: 1,
+                  borderTopColor: colors.border.light,
+                }}
+              >
+                {/* Collapsed View - Current Interval */}
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.xs,
+                        color: colors.text.tertiary,
+                        marginBottom: 2,
+                      }}
+                    >
+                      CURRENT INTERVAL
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: tokens.typography.fontSize.md,
+                        fontWeight: tokens.typography.fontWeight.bold,
+                        color: colors.accent.blue,
+                      }}
+                    >
+                      {activeWorkout.segments[activeWorkout.currentSegmentIndex]?.name || 'Complete'}
+                    </Text>
+                    {activeWorkout.segments[activeWorkout.currentSegmentIndex] && (
+                      <Text
+                        style={{
+                          fontSize: tokens.typography.fontSize.xs,
+                          color: colors.text.secondary,
+                          marginTop: 2,
+                        }}
+                      >
+                        {(() => {
+                          const seg = activeWorkout.segments[activeWorkout.currentSegmentIndex];
+                          if (seg.distance && seg.targetPace) {
+                            return `${(seg.distance * 0.000621371).toFixed(2)} mi @ ${Math.floor(seg.targetPace)}:${Math.floor((seg.targetPace % 1) * 60).toString().padStart(2, '0')}/mi`;
+                          } else if (seg.distance) {
+                            return `${(seg.distance * 0.000621371).toFixed(2)} miles`;
+                          } else if (seg.duration) {
+                            return `${Math.floor(seg.duration / 60)}:${(seg.duration % 60).toString().padStart(2, '0')}`;
+                          }
+                          return '';
+                        })()}
+                      </Text>
+                    )}
+                  </View>
+
+                  {/* Segment Progress Badge + Chevron */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.xs }}>
+                    <View
+                      style={{
+                        backgroundColor: colors.accent.blue + '20',
+                        paddingHorizontal: tokens.spacing.sm,
+                        paddingVertical: 4,
+                        borderRadius: tokens.borderRadius.md,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: tokens.typography.fontSize.xs,
+                          fontWeight: tokens.typography.fontWeight.semibold,
+                          color: colors.accent.blue,
+                        }}
+                      >
+                        {activeWorkout.currentSegmentIndex + 1}/{activeWorkout.segments.length}
+                      </Text>
+                    </View>
+                    {isIntervalExpanded ? (
+                      <ChevronUp size={20} color={colors.text.tertiary} />
+                    ) : (
+                      <ChevronDown size={20} color={colors.text.tertiary} />
+                    )}
+                  </View>
+                </View>
+
+                {/* Expanded View - All Segments */}
+                {isIntervalExpanded && (
+                  <ScrollView
+                    style={{
+                      marginTop: tokens.spacing.sm,
+                      maxHeight: 200,
+                    }}
+                    showsVerticalScrollIndicator={true}
+                  >
+                    {activeWorkout.segments.map((segment, index) => {
+                      const isCurrent = index === activeWorkout.currentSegmentIndex;
+                      const isPast = index < activeWorkout.currentSegmentIndex;
+
+                      return (
+                        <View
+                          key={segment.id}
+                          style={{
+                            paddingVertical: tokens.spacing.sm,
+                            paddingHorizontal: tokens.spacing.sm,
+                            marginBottom: tokens.spacing.xs,
+                            borderRadius: tokens.borderRadius.md,
+                            backgroundColor: isCurrent
+                              ? colors.accent.blue + '15'
+                              : isPast
+                              ? colors.background.secondary
+                              : 'transparent',
+                            borderLeftWidth: isCurrent ? 3 : 0,
+                            borderLeftColor: isCurrent ? colors.accent.blue : 'transparent',
+                          }}
+                        >
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <View style={{ flex: 1 }}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: tokens.spacing.xs }}>
+                                <Text
+                                  style={{
+                                    fontSize: tokens.typography.fontSize.xs,
+                                    color: colors.text.tertiary,
+                                    fontWeight: tokens.typography.fontWeight.medium,
+                                  }}
+                                >
+                                  {index + 1}.
+                                </Text>
+                                <Text
+                                  style={{
+                                    fontSize: tokens.typography.fontSize.sm,
+                                    fontWeight: isCurrent ? tokens.typography.fontWeight.bold : tokens.typography.fontWeight.semibold,
+                                    color: isCurrent ? colors.accent.blue : colors.text.primary,
+                                  }}
+                                >
+                                  {segment.name}
+                                </Text>
+                                <View
+                                  style={{
+                                    paddingHorizontal: tokens.spacing.xs,
+                                    paddingVertical: 2,
+                                    borderRadius: tokens.borderRadius.sm,
+                                    backgroundColor: (() => {
+                                      switch (segment.type) {
+                                        case 'warmup': return colors.accent.orange + '20';
+                                        case 'interval': return colors.accent.red + '20';
+                                        case 'recovery': return colors.accent.green + '20';
+                                        case 'cooldown': return colors.accent.blue + '20';
+                                        default: return colors.background.secondary;
+                                      }
+                                    })(),
+                                  }}
+                                >
+                                  <Text
+                                    style={{
+                                      fontSize: tokens.typography.fontSize.xs,
+                                      color: (() => {
+                                        switch (segment.type) {
+                                          case 'warmup': return colors.accent.orange;
+                                          case 'interval': return colors.accent.red;
+                                          case 'recovery': return colors.accent.green;
+                                          case 'cooldown': return colors.accent.blue;
+                                          default: return colors.text.secondary;
+                                        }
+                                      })(),
+                                      fontWeight: tokens.typography.fontWeight.medium,
+                                    }}
+                                  >
+                                    {segment.type.toUpperCase()}
+                                  </Text>
+                                </View>
+                              </View>
+                              <Text
+                                style={{
+                                  fontSize: tokens.typography.fontSize.xs,
+                                  color: colors.text.secondary,
+                                  marginTop: 4,
+                                }}
+                              >
+                                {(() => {
+                                  if (segment.distance && segment.targetPace) {
+                                    return `${(segment.distance * 0.000621371).toFixed(2)} mi @ ${Math.floor(segment.targetPace)}:${Math.floor((segment.targetPace % 1) * 60).toString().padStart(2, '0')}/mi`;
+                                  } else if (segment.distance) {
+                                    return `${(segment.distance * 0.000621371).toFixed(2)} miles`;
+                                  } else if (segment.duration) {
+                                    return `${Math.floor(segment.duration / 60)}:${(segment.duration % 60).toString().padStart(2, '0')}`;
+                                  }
+                                  return '';
+                                })()}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </ScrollView>
+                )}
+              </Pressable>
+            )}
+          </View>
+        )}
       </View>
 
-      {/* Stats Overlay - Runna Style */}
-      {isTracking && (
+      {/* Bottom Controls Container */}
+      <View
+        style={{
+          paddingBottom: insets.bottom + 20,
+          paddingHorizontal: tokens.spacing.lg,
+          backgroundColor: 'transparent',
+        }}
+      >
+        {/* Background container for buttons */}
         <View
           style={{
-            position: "absolute",
-            top: 80,
-            left: tokens.spacing.lg,
-            right: tokens.spacing.lg,
-            backgroundColor: isDark
-              ? 'rgba(30, 30, 30, 0.95)'
-              : 'rgba(255, 255, 255, 0.95)',
+            backgroundColor: isDark ? 'rgba(28, 28, 30, 0.92)' : 'rgba(255, 255, 255, 0.92)',
             borderRadius: tokens.borderRadius.xl,
             padding: tokens.spacing.lg,
             ...tokens.shadows.lg,
+            borderWidth: 1,
+            borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)',
           }}
         >
-          {/* Primary Stats - Large Display */}
-          <View style={{ marginBottom: tokens.spacing.md }}>
+          {!isTracking && activeWorkout ? (
+            // Start Screen Layout - Only show start button if activeWorkout exists
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <ScalePressable
+                style={{
+                  width: 70,
+                  height: 70,
+                  borderRadius: 35,
+                  backgroundColor: colors.accent.green,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  ...tokens.shadows.lg,
+                }}
+                onPress={handleStart}
+                accessibilityLabel="Start Run"
+                accessibilityRole="button"
+              >
+                <Play color="white" size={32} fill="white" strokeWidth={2} />
+              </ScalePressable>
+            </View>
+          ) : (
+            // Active Run Controls - Smaller, more compact
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: tokens.spacing.md,
+              }}
+            >
+              {/* Pause/Resume Button - Smaller */}
+              <ScalePressable
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  backgroundColor: isPaused
+                    ? colors.accent.green
+                    : colors.accent.orange,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  ...tokens.shadows.md,
+                }}
+                onPress={isPaused ? handleResume : handlePause}
+                accessibilityLabel={isPaused ? "Resume Run" : "Pause Run"}
+                accessibilityRole="button"
+              >
+                {isPaused ? (
+                  <Play color="white" size={24} fill="white" strokeWidth={2} />
+                ) : (
+                  <Pause color="white" size={24} fill="white" strokeWidth={2} />
+                )}
+              </ScalePressable>
+
+              {/* Stop Button - Smaller */}
+              <ScalePressable
+                style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  backgroundColor: colors.accent.coral,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  ...tokens.shadows.md,
+                }}
+                onPress={handleStop}
+                accessibilityLabel="Stop Run"
+                accessibilityRole="button"
+              >
+                <Square color="white" size={22} fill="white" strokeWidth={2} />
+              </ScalePressable>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {/* Countdown Overlay */}
+      <CountdownOverlay value={countdownValue} isVisible={isCountingDown} />
+
+      {/* Waiting for Motion Indicator */}
+      {isWaitingForMotion && (
+        <View
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: 0,
+            right: 0,
+            alignItems: "center",
+            zIndex: 100,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: isDark ? 'rgba(30, 30, 30, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+              paddingHorizontal: tokens.spacing.xl,
+              paddingVertical: tokens.spacing.lg,
+              borderRadius: tokens.borderRadius.lg,
+              ...tokens.shadows.lg,
+            }}
+          >
             <Text
               style={{
-                fontSize: tokens.typography.fontSize["3xl"],
-                fontWeight: tokens.typography.fontWeight.bold,
-                color: colors.text.primary,
+                fontSize: tokens.typography.fontSize.lg,
+                fontWeight: tokens.typography.fontWeight.semibold,
+                color: colors.accent.blue,
                 textAlign: "center",
               }}
             >
-              {formatDistance(stats.distance)}
+              Waiting for motion...
             </Text>
             <Text
               style={{
                 fontSize: tokens.typography.fontSize.sm,
                 color: colors.text.secondary,
                 textAlign: "center",
-                marginTop: 4,
+                marginTop: tokens.spacing.xs,
               }}
             >
-              MILES
+              Start moving to begin tracking
             </Text>
           </View>
-
-          {/* Secondary Stats - Row */}
-          <View
-            style={{
-              flexDirection: "row",
-              justifyContent: "space-around",
-              paddingTop: tokens.spacing.md,
-              borderTopWidth: 1,
-              borderTopColor: colors.border.light,
-            }}
-          >
-            <View style={{ alignItems: "center" }}>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.lg,
-                  fontWeight: tokens.typography.fontWeight.bold,
-                  color: colors.text.primary,
-                }}
-              >
-                {formatDuration(stats.duration)}
-              </Text>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.xs,
-                  color: colors.text.secondary,
-                  marginTop: 4,
-                }}
-              >
-                TIME
-              </Text>
-            </View>
-
-            <View style={{ alignItems: "center" }}>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.lg,
-                  fontWeight: tokens.typography.fontWeight.bold,
-                  color: colors.text.primary,
-                }}
-              >
-                {formatPace(stats.pace)}
-              </Text>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.xs,
-                  color: colors.text.secondary,
-                  marginTop: 4,
-                }}
-              >
-                PACE /MI
-              </Text>
-            </View>
-
-            <View style={{ alignItems: "center" }}>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.lg,
-                  fontWeight: tokens.typography.fontWeight.bold,
-                  color: colors.text.primary,
-                }}
-              >
-                {stats.calories}
-              </Text>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.xs,
-                  color: colors.text.secondary,
-                  marginTop: 4,
-                }}
-              >
-                CALORIES
-              </Text>
-            </View>
-          </View>
-
-          {/* Elevation Stats (if available) */}
-          {(stats.elevationGain > 0 || stats.elevationLoss > 0) && (
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-around",
-                paddingTop: tokens.spacing.md,
-                marginTop: tokens.spacing.md,
-                borderTopWidth: 1,
-                borderTopColor: colors.border.light,
-              }}
-            >
-              <View style={{ alignItems: "center" }}>
-                <Text
-                  style={{
-                    fontSize: tokens.typography.fontSize.base,
-                    fontWeight: tokens.typography.fontWeight.semibold,
-                    color: colors.accent.green,
-                  }}
-                >
-                  +{Math.round(stats.elevationGain)}m
-                </Text>
-                <Text
-                  style={{
-                    fontSize: tokens.typography.fontSize.xs,
-                    color: colors.text.tertiary,
-                    marginTop: 4,
-                  }}
-                >
-                  ELEVATION ↑
-                </Text>
-              </View>
-
-              <View style={{ alignItems: "center" }}>
-                <Text
-                  style={{
-                    fontSize: tokens.typography.fontSize.base,
-                    fontWeight: tokens.typography.fontWeight.semibold,
-                    color: colors.accent.coral,
-                  }}
-                >
-                  -{Math.round(stats.elevationLoss)}m
-                </Text>
-                <Text
-                  style={{
-                    fontSize: tokens.typography.fontSize.xs,
-                    color: colors.text.tertiary,
-                    marginTop: 4,
-                  }}
-                >
-                  ELEVATION ↓
-                </Text>
-              </View>
-            </View>
-          )}
         </View>
       )}
-
-      {/* Control Buttons - Bottom Fixed */}
-      <View
-        style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: isDark
-            ? "rgba(30, 30, 30, 0.95)"
-            : "rgba(255, 255, 255, 0.95)",
-          paddingTop: tokens.spacing.lg,
-          paddingBottom: tokens.spacing.xl + 20,
-          paddingHorizontal: tokens.spacing.xl,
-          borderTopLeftRadius: tokens.borderRadius.xl,
-          borderTopRightRadius: tokens.borderRadius.xl,
-          ...tokens.shadows.xl,
-        }}
-      >
-        {/* Voice shortcut hint */}
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: tokens.spacing.sm,
-            marginBottom: tokens.spacing.sm,
-          }}
-        >
-          <Mic size={16} color={colors.text.secondary} />
-          <Text style={{ color: colors.text.secondary, fontSize: tokens.typography.fontSize.sm }}>
-            Try: “Mark lap” or “Pause run”
-          </Text>
-        </View>
-
-        {error && (
-          <Text
-            style={{
-              fontSize: tokens.typography.fontSize.sm,
-              color: colors.accent.coral,
-              textAlign: "center",
-              marginBottom: tokens.spacing.md,
-            }}
-          >
-            {error}
-          </Text>
-        )}
-
-        <View
-          style={{
-            flexDirection: "row",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: tokens.spacing.lg,
-          }}
-        >
-          {!isTracking ? (
-            // Start Button - Large and centered
-            <Pressable
-              style={({ pressed }) => ({
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: colors.accent.green,
-                alignItems: "center",
-                justifyContent: "center",
-                opacity: pressed ? 0.8 : 1,
-                ...tokens.shadows.lg,
-              })}
-              onPress={handleStart}
-              accessibilityLabel="Start Run"
-              accessibilityRole="button"
-            >
-              <Play color="white" size={36} fill="white" strokeWidth={2} />
-            </Pressable>
-          ) : (
-            <>
-              {/* Pause/Resume Button */}
-              <Pressable
-                style={({ pressed }) => ({
-                  width: 70,
-                  height: 70,
-                  borderRadius: 35,
-                  backgroundColor: isPaused
-                    ? colors.accent.green
-                    : colors.accent.orange,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.8 : 1,
-                  ...tokens.shadows.md,
-                })}
-                onPress={isPaused ? handleResume : handlePause}
-                accessibilityLabel={isPaused ? "Resume Run" : "Pause Run"}
-                accessibilityRole="button"
-              >
-                {isPaused ? (
-                  <Play color="white" size={30} fill="white" strokeWidth={2} />
-                ) : (
-                  <Pause color="white" size={30} fill="white" strokeWidth={2} />
-                )}
-              </Pressable>
-
-              {/* Stop Button */}
-              <Pressable
-                style={({ pressed }) => ({
-                  width: 70,
-                  height: 70,
-                  borderRadius: 35,
-                  backgroundColor: colors.accent.coral,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  opacity: pressed ? 0.8 : 1,
-                  ...tokens.shadows.md,
-                })}
-                onPress={handleStop}
-                accessibilityLabel="Stop Run"
-                accessibilityRole="button"
-              >
-                <Square color="white" size={28} fill="white" strokeWidth={2} />
-              </Pressable>
-            </>
-        )}
-      </View>
-
-      <Pressable
-        onPress={() => navigation.navigate("Splits")}
-        style={({ pressed }) => ({
-          marginTop: tokens.spacing.md,
-          alignItems: "center",
-          opacity: pressed ? 0.85 : 1,
-        })}
-      >
-        <Text
-          style={{
-            color: colors.accent.blue,
-            fontWeight: tokens.typography.fontWeight.semibold,
-          }}
-        >
-          View splits
-        </Text>
-      </Pressable>
-
-      {/* Instructions */}
-      {!isTracking && (
-        <Text
-          style={{
-            fontSize: tokens.typography.fontSize.sm,
-              color: colors.text.secondary,
-              textAlign: "center",
-              marginTop: tokens.spacing.md,
-            }}
-          >
-            Tap to start tracking your run
-          </Text>
-        )}
-      </View>
     </View>
   );
 }

@@ -9,6 +9,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { tokens } from "./tokens";
 
 const THEME_STORAGE_KEY = "@voicefit_theme";
 
@@ -17,6 +18,7 @@ type ThemeMode = "light" | "dark" | "auto";
 interface ThemeContextValue {
   theme: ThemeMode;
   isDark: boolean;
+  colors: typeof tokens.colors.light;
   setTheme: (theme: ThemeMode) => void;
 }
 
@@ -61,21 +63,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setTheme = async (newTheme: ThemeMode) => {
+    setThemeState(newTheme);
     try {
-      setThemeState(newTheme);
       await AsyncStorage.setItem(THEME_STORAGE_KEY, newTheme);
     } catch (error) {
       console.error("Failed to save theme preference:", error);
     }
   };
 
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+
+  const value = {
+    theme,
+    isDark,
+    colors,
+    setTheme,
+  };
+
   // Don't render children until theme is loaded
   if (isLoading) {
-    return null;
+    return null; // Or a loading spinner
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, setTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
@@ -83,8 +94,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
   const context = useContext(ThemeContext);
-  if (!context) {
-    throw new Error("useTheme must be used within ThemeProvider");
+  if (context === undefined) {
+    throw new Error("useTheme must be used within a ThemeProvider");
   }
   return context;
 }

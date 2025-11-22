@@ -15,6 +15,7 @@ interface User {
   email: string;
   name?: string;
   tier?: "free" | "premium" | "admin";
+  authProvider?: string;
 }
 
 interface AuthState {
@@ -56,6 +57,7 @@ const mapSupabaseUser = (supabaseUser: SupabaseUser | null): User | null => {
     email: supabaseUser.email || "",
     name: userMetadata.name || supabaseUser.user_metadata?.name,
     tier,
+    authProvider: appMetadata.provider || (supabaseUser.identities?.[0]?.provider),
   };
 };
 

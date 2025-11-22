@@ -8,7 +8,7 @@
 import { appSchema, tableSchema } from "@nozbe/watermelondb";
 
 export const schema = appSchema({
-  version: 10,
+  version: 11,
   tables: [
     tableSchema({
       name: "workout_logs",
@@ -63,6 +63,8 @@ export const schema = appSchema({
         { name: "grade_percent", type: "number", isOptional: true }, // average grade percentage
         { name: "terrain_difficulty", type: "string", isOptional: true }, // flat, rolling, moderate_uphill, etc.
         { name: "route", type: "string" }, // JSON string of coordinates
+        { name: "workout_type", type: "string", isOptional: true }, // 'free_run', 'custom_workout', 'scheduled_workout'
+        { name: "workout_name", type: "string", isOptional: true }, // name of the workout if applicable
         { name: "synced", type: "boolean" },
         { name: "created_at", type: "number" },
         { name: "updated_at", type: "number" },

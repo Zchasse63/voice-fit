@@ -35,6 +35,10 @@ export default class ScheduledWorkout extends Model {
 
   // Computed properties
   get scheduledDateObject(): Date {
+    // Handle null/undefined scheduledDate gracefully
+    if (!this.scheduledDate) {
+      return new Date(); // Return current date as fallback
+    }
     return new Date(this.scheduledDate);
   }
 
@@ -55,12 +59,14 @@ export default class ScheduledWorkout extends Model {
   }
 
   get isPast(): boolean {
+    if (!this.scheduledDate) return false;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return this.scheduledDateObject < today;
   }
 
   get isToday(): boolean {
+    if (!this.scheduledDate) return false;
     const today = new Date();
     const scheduledDate = this.scheduledDateObject;
     return (
@@ -71,6 +77,7 @@ export default class ScheduledWorkout extends Model {
   }
 
   get isFuture(): boolean {
+    if (!this.scheduledDate) return false;
     return !this.isPast && !this.isToday;
   }
 
@@ -105,7 +112,11 @@ export default class ScheduledWorkout extends Model {
   }
 
   get formattedDate(): string {
-    return this.scheduledDateObject.toLocaleDateString('en-US', {
+    if (!this.scheduledDate) return 'No date';
+    const dateObj = this.scheduledDateObject;
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) return 'Invalid date';
+    return dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric',
@@ -113,7 +124,11 @@ export default class ScheduledWorkout extends Model {
   }
 
   get formattedDateShort(): string {
-    return this.scheduledDateObject.toLocaleDateString('en-US', {
+    if (!this.scheduledDate) return 'No date';
+    const dateObj = this.scheduledDateObject;
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) return 'Invalid date';
+    return dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
     });

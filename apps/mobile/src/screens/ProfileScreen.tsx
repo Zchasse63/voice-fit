@@ -17,13 +17,13 @@ import {
   View,
   Text,
   ScrollView,
-  Pressable,
   Modal,
   Alert,
   ActivityIndicator,
   Switch,
   SafeAreaView,
 } from "react-native";
+import { ScalePressable } from "../components/common/ScalePressable";
 import {
   X,
   Camera,
@@ -170,7 +170,7 @@ export default function ProfileScreenRedesign({
     const IconComponent = item.icon;
 
     return (
-      <Pressable
+      <ScalePressable
         key={item.id}
         onPress={item.action}
         style={({ pressed }) => ({
@@ -245,7 +245,7 @@ export default function ProfileScreenRedesign({
             </>
           )}
         </View>
-      </Pressable>
+      </ScalePressable>
     );
   };
 
@@ -272,7 +272,7 @@ export default function ProfileScreenRedesign({
         >
           Profile
         </Text>
-        <Pressable
+        <ScalePressable
           onPress={() => navigation?.goBack()}
           style={({ pressed }) => ({
             padding: tokens.spacing.sm,
@@ -280,7 +280,7 @@ export default function ProfileScreenRedesign({
           })}
         >
           <X color={textPrimary} size={24} />
-        </Pressable>
+        </ScalePressable>
       </View>
 
       <ScrollView
@@ -328,7 +328,7 @@ export default function ProfileScreenRedesign({
             </View>
 
             {/* Camera Button */}
-            <Pressable
+            <ScalePressable
               style={({ pressed }) => ({
                 position: "absolute",
                 bottom: 0,
@@ -345,7 +345,7 @@ export default function ProfileScreenRedesign({
               })}
             >
               <Camera color="#FFFFFF" size={16} />
-            </Pressable>
+            </ScalePressable>
           </View>
 
           {/* User Info */}
@@ -417,7 +417,7 @@ export default function ProfileScreenRedesign({
             marginTop: tokens.spacing.xl,
           }}
         >
-          <Pressable
+          <ScalePressable
             onPress={() => setShowSignOutConfirm(true)}
             disabled={isLoading}
             style={({ pressed }) => ({
@@ -452,7 +452,7 @@ export default function ProfileScreenRedesign({
             >
               Sign Out
             </Text>
-          </Pressable>
+          </ScalePressable>
         </View>
 
         {/* Version */}
@@ -515,7 +515,7 @@ export default function ProfileScreenRedesign({
                 gap: tokens.spacing.md,
               }}
             >
-              <Pressable
+              <ScalePressable
                 onPress={() => setShowSignOutConfirm(false)}
                 disabled={isLoading}
                 style={({ pressed }) => ({
@@ -537,9 +537,9 @@ export default function ProfileScreenRedesign({
                 >
                   Cancel
                 </Text>
-              </Pressable>
+              </ScalePressable>
 
-              <Pressable
+              <ScalePressable
                 onPress={() => {
                   setShowSignOutConfirm(false);
                   handleSignOut();
@@ -568,7 +568,7 @@ export default function ProfileScreenRedesign({
                     Sign Out
                   </Text>
                 )}
-              </Pressable>
+              </ScalePressable>
             </View>
           </View>
         </View>
