@@ -7,25 +7,61 @@
 import React from 'react';
 import { View, Text, Dimensions } from 'react-native';
 import { VictoryLine, VictoryChart, VictoryTheme, VictoryAxis, VictoryArea } from 'victory-native';
-import { FatigueHistory, CurrentFatigue } from '../../services/api/AnalyticsAPIClient';
+import { FatigueHistory as ApiFatigueHistory, CurrentFatigue as ApiCurrentFatigue } from '../../services/api/AnalyticsAPIClient';
 import { tokens } from '../../theme/tokens';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../theme/ThemeContext';
 
-interface FatigueChartProps {
-  fatigueHistory: FatigueHistory;
-  currentFatigue: CurrentFatigue;
+// Local interfaces to match usage
+interface FatigueHistoryData {
+  weeks: {
+    week_start: string;
+    fatigue_score: number;
+  }[];
 }
 
-export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, currentFatigue }) => {
+interface CurrentFatigueData {
+  fatigue_level: 'low' | 'moderate' | 'high' | 'very_high';
+  fatigue_score: number;
+  recovery_recommendation: 'continue' | 'reduce_volume' | 'deload' | 'rest';
+  days_until_recovery: number;
+  indicators: {
+    readiness_trend: string;
+    rpe_trend: string;
+    volume_status: string;
+    sleep_quality: string;
+    soreness_level: string;
+  };
+}
+
+interface FatigueChartProps {
+  fatigueHistory: ApiFatigueHistory;
+  currentFatigue: ApiCurrentFatigue;
+}
+
+export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory: apiFatigueHistory, currentFatigue: apiCurrentFatigue }) => {
   const { isDark } = useTheme();
   const screenWidth = Dimensions.get('window').width;
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const accentColors = colors.accent;
+
+  // Cast to local types
+  const fatigueHistory = apiFatigueHistory as unknown as FatigueHistoryData;
+  const currentFatigue = apiCurrentFatigue as unknown as CurrentFatigueData;
 
   // Prepare data for chart
-  const chartData = fatigueHistory.weeks.map((week, index) => ({
+  const chartData = fatigueHistory.weeks ? fatigueHistory.weeks.map((week, index) => ({
     x: index + 1,
     y: week.fatigue_score,
     label: new Date(week.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-  }));
+  })) : [];
+
+  // Zone data (spanning the full x-axis)
+  const xMax = chartData.length + 0.5;
+  const xMin = 0.5;
+  const zoneData = [
+    { x: xMin },
+    { x: xMax },
+  ];
 
   // Get fatigue level color
   const getFatigueLevelColor = (level: string) => {
@@ -121,9 +157,6 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
     return colors.text.tertiary;
   };
 
-  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
-  const accentColors = colors.accent;
-
   return (
     <View
       style={{
@@ -173,6 +206,29 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
           theme={VictoryTheme.material}
           padding={{ top: 20, bottom: 40, left: 50, right: 20 }}
         >
+          {/* Background Zones */}
+          {/* Green Zone (0-30) */}
+          <VictoryArea
+            data={zoneData}
+            y0={() => 0}
+            y={() => 30}
+            style={{ data: { fill: accentColors.green, opacity: 0.1 } }}
+          />
+          {/* Orange Zone (30-70) */}
+          <VictoryArea
+            data={zoneData}
+            y0={() => 30}
+            y={() => 70}
+            style={{ data: { fill: accentColors.orange, opacity: 0.1 } }}
+          />
+          {/* Red Zone (70-100) */}
+          <VictoryArea
+            data={zoneData}
+            y0={() => 70}
+            y={() => 100}
+            style={{ data: { fill: accentColors.red, opacity: 0.1 } }}
+          />
+
           <VictoryAxis
             tickValues={chartData.map((d) => d.x)}
             tickFormat={chartData.map((d) => d.label)}
@@ -181,6 +237,7 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
               tickLabels: {
                 fill: colors.text.tertiary,
                 fontSize: 10,
+                fontFamily: tokens.typography.fontFamily.system,
               },
             }}
           />
@@ -192,6 +249,7 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
               tickLabels: {
                 fill: colors.text.tertiary,
                 fontSize: 10,
+                fontFamily: tokens.typography.fontFamily.system,
               },
               grid: {
                 stroke: isDark
@@ -217,7 +275,7 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
         <View
           style={{
             padding: tokens.spacing.lg,
-            borderRadius: tokens.borderRadius['2xl'],
+            borderRadius: tokens.borderRadius.xl,
             backgroundColor: colors.background.tertiary,
           }}
         >
@@ -255,6 +313,7 @@ export const FatigueChart: React.FC<FatigueChartProps> = ({ fatigueHistory, curr
             fontSize: tokens.typography.fontSize['2xl'],
             fontWeight: tokens.typography.fontWeight.bold,
             color: getFatigueLevelColor(currentFatigue.fatigue_level),
+            fontVariant: ['tabular-nums'],
           }}
         >
           {currentFatigue.fatigue_score.toFixed(0)}/100

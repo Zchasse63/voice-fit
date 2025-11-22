@@ -11,6 +11,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, Modal, ScrollView, ActivityIndicator } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 import { X, TrendingUp, TrendingDown, Minus } from 'lucide-react-native';
 
 interface InjuryLog {
@@ -52,7 +53,7 @@ export default function RecoveryCheckInModal({
 
     try {
       setIsSubmitting(true);
-      
+
       const checkInData: CheckInData = {
         painLevel,
         romQuality,
@@ -60,12 +61,12 @@ export default function RecoveryCheckInModal({
       };
 
       await onSubmit(checkInData);
-      
+
       // Reset form
       setPainLevel(5);
       setRomQuality('same');
       setActivityTolerance('plateau');
-      
+
       onClose();
     } catch (error) {
       console.error('Failed to submit check-in:', error);
@@ -98,8 +99,8 @@ export default function RecoveryCheckInModal({
       >
         <View
           style={{
-            borderTopLeftRadius: tokens.borderRadius['3xl'],
-            borderTopRightRadius: tokens.borderRadius['3xl'],
+            borderTopLeftRadius: tokens.borderRadius.xl,
+            borderTopRightRadius: tokens.borderRadius.xl,
             padding: tokens.spacing.lg,
             backgroundColor: colors.background.secondary,
             maxHeight: '90%',
@@ -168,10 +169,10 @@ export default function RecoveryCheckInModal({
                     fontWeight: tokens.typography.fontWeight.bold,
                     color:
                       painLevel >= 7
-                        ? tokens.colors.light.state.danger
+                        ? tokens.colors.light.accent.red
                         : painLevel >= 4
-                        ? tokens.colors.light.state.warning
-                        : tokens.colors.light.state.success,
+                          ? tokens.colors.light.accent.orange
+                          : tokens.colors.light.accent.green,
                   }}
                 >
                   {painLevel}
@@ -187,20 +188,20 @@ export default function RecoveryCheckInModal({
                 onValueChange={setPainLevel}
                 minimumTrackTintColor={
                   painLevel >= 7
-                    ? tokens.colors.light.state.danger
+                    ? tokens.colors.light.accent.red
                     : painLevel >= 4
-                    ? tokens.colors.light.state.warning
-                    : tokens.colors.light.state.success,
+                      ? tokens.colors.light.accent.orange
+                      : tokens.colors.light.accent.green
                 }
                 maximumTrackTintColor={
-                  isDark ? tokens.colors.dark.border.subtle : tokens.colors.light.border.subtle,
+                  isDark ? tokens.colors.dark.border.subtle : tokens.colors.light.border.subtle
                 }
                 thumbTintColor={
                   painLevel >= 7
-                    ? tokens.colors.light.state.danger
+                    ? tokens.colors.light.accent.red
                     : painLevel >= 4
-                    ? tokens.colors.light.state.warning
-                    : tokens.colors.light.state.success,
+                      ? tokens.colors.light.accent.orange
+                      : tokens.colors.light.accent.green
                 }
               />
 
@@ -260,23 +261,23 @@ export default function RecoveryCheckInModal({
                     backgroundColor:
                       romQuality === 'better'
                         ? isDark
-                          ? `${tokens.colors.dark.state.success}20`
-                          : `${tokens.colors.light.state.success}20`
+                          ? `${tokens.colors.dark.accent.green}20`
+                          : `${tokens.colors.light.accent.green}20`
                         : colors.background.tertiary,
                     borderWidth: romQuality === 'better' ? 2 : 0,
                     borderColor:
                       romQuality === 'better'
                         ? isDark
-                          ? tokens.colors.dark.state.success
-                          : tokens.colors.light.state.success
+                          ? tokens.colors.dark.accent.green
+                          : tokens.colors.light.accent.green
                         : 'transparent',
                   }}
                 >
                   <TrendingUp
                     color={
                       romQuality === 'better'
-                        ? tokens.colors.light.state.success
-                        : colors.text.tertiary,
+                        ? tokens.colors.light.accent.green
+                        : colors.text.tertiary
                     }
                     size={20}
                   />
@@ -286,7 +287,7 @@ export default function RecoveryCheckInModal({
                       fontWeight: tokens.typography.fontWeight.bold,
                       color:
                         romQuality === 'better'
-                          ? tokens.colors.light.state.success
+                          ? tokens.colors.light.accent.green
                           : colors.text.secondary,
                     }}
                   >
@@ -306,23 +307,23 @@ export default function RecoveryCheckInModal({
                     backgroundColor:
                       romQuality === 'same'
                         ? isDark
-                          ? `${tokens.colors.dark.state.warning}20`
-                          : `${tokens.colors.light.state.warning}20`
+                          ? `${tokens.colors.dark.accent.orange}20`
+                          : `${tokens.colors.light.accent.orange}20`
                         : colors.background.tertiary,
                     borderWidth: romQuality === 'same' ? 2 : 0,
                     borderColor:
                       romQuality === 'same'
                         ? isDark
-                          ? tokens.colors.dark.state.warning
-                          : tokens.colors.light.state.warning
+                          ? tokens.colors.dark.accent.orange
+                          : tokens.colors.light.accent.orange
                         : 'transparent',
                   }}
                 >
                   <Minus
                     color={
                       romQuality === 'same'
-                        ? tokens.colors.light.state.warning
-                        : colors.text.tertiary,
+                        ? tokens.colors.light.accent.orange
+                        : colors.text.tertiary
                     }
                     size={20}
                   />
@@ -332,7 +333,7 @@ export default function RecoveryCheckInModal({
                       fontWeight: tokens.typography.fontWeight.bold,
                       color:
                         romQuality === 'same'
-                          ? tokens.colors.light.state.warning
+                          ? tokens.colors.light.accent.orange
                           : colors.text.secondary,
                     }}
                   >
@@ -352,23 +353,23 @@ export default function RecoveryCheckInModal({
                     backgroundColor:
                       romQuality === 'worse'
                         ? isDark
-                          ? `${tokens.colors.dark.state.danger}20`
-                          : `${tokens.colors.light.state.danger}20`
+                          ? `${tokens.colors.dark.accent.red}20`
+                          : `${tokens.colors.light.accent.red}20`
                         : colors.background.tertiary,
                     borderWidth: romQuality === 'worse' ? 2 : 0,
                     borderColor:
                       romQuality === 'worse'
                         ? isDark
-                          ? tokens.colors.dark.state.danger
-                          : tokens.colors.light.state.danger
+                          ? tokens.colors.dark.accent.red
+                          : tokens.colors.light.accent.red
                         : 'transparent',
                   }}
                 >
                   <TrendingDown
                     color={
                       romQuality === 'worse'
-                        ? tokens.colors.light.state.danger
-                        : colors.text.tertiary,
+                        ? tokens.colors.light.accent.red
+                        : colors.text.tertiary
                     }
                     size={20}
                   />
@@ -378,7 +379,7 @@ export default function RecoveryCheckInModal({
                       fontWeight: tokens.typography.fontWeight.bold,
                       color:
                         romQuality === 'worse'
-                          ? tokens.colors.light.state.danger
+                          ? tokens.colors.light.accent.red
                           : colors.text.secondary,
                     }}
                   >
@@ -409,15 +410,15 @@ export default function RecoveryCheckInModal({
                     backgroundColor:
                       activityTolerance === 'improving'
                         ? isDark
-                          ? `${tokens.colors.dark.state.success}20`
-                          : `${tokens.colors.light.state.success}20`
+                          ? `${tokens.colors.dark.accent.green}20`
+                          : `${tokens.colors.light.accent.green}20`
                         : colors.background.tertiary,
                     borderWidth: activityTolerance === 'improving' ? 2 : 0,
                     borderColor:
                       activityTolerance === 'improving'
                         ? isDark
-                          ? tokens.colors.dark.state.success
-                          : tokens.colors.light.state.success
+                          ? tokens.colors.dark.accent.green
+                          : tokens.colors.light.accent.green
                         : 'transparent',
                   }}
                 >
@@ -426,7 +427,7 @@ export default function RecoveryCheckInModal({
                       fontWeight: tokens.typography.fontWeight.bold,
                       color:
                         activityTolerance === 'improving'
-                          ? tokens.colors.light.state.success
+                          ? tokens.colors.light.accent.green
                           : colors.text.primary,
                     }}
                   >
@@ -438,7 +439,7 @@ export default function RecoveryCheckInModal({
                       fontSize: tokens.typography.fontSize.xs,
                       color:
                         activityTolerance === 'improving'
-                          ? tokens.colors.light.state.success
+                          ? tokens.colors.light.accent.green
                           : colors.text.secondary,
                     }}
                   >
@@ -454,15 +455,15 @@ export default function RecoveryCheckInModal({
                     backgroundColor:
                       activityTolerance === 'plateau'
                         ? isDark
-                          ? `${tokens.colors.dark.state.warning}20`
-                          : `${tokens.colors.light.state.warning}20`
+                          ? `${tokens.colors.dark.accent.orange}20`
+                          : `${tokens.colors.light.accent.orange}20`
                         : colors.background.tertiary,
                     borderWidth: activityTolerance === 'plateau' ? 2 : 0,
                     borderColor:
                       activityTolerance === 'plateau'
                         ? isDark
-                          ? tokens.colors.dark.state.warning
-                          : tokens.colors.light.state.warning
+                          ? tokens.colors.dark.accent.orange
+                          : tokens.colors.light.accent.orange
                         : 'transparent',
                   }}
                 >
@@ -471,7 +472,7 @@ export default function RecoveryCheckInModal({
                       fontWeight: tokens.typography.fontWeight.bold,
                       color:
                         activityTolerance === 'plateau'
-                          ? tokens.colors.light.state.warning
+                          ? tokens.colors.light.accent.orange
                           : colors.text.primary,
                     }}
                   >
@@ -483,7 +484,7 @@ export default function RecoveryCheckInModal({
                       fontSize: tokens.typography.fontSize.xs,
                       color:
                         activityTolerance === 'plateau'
-                          ? tokens.colors.light.state.warning
+                          ? tokens.colors.light.accent.orange
                           : colors.text.secondary,
                     }}
                   >
@@ -499,15 +500,15 @@ export default function RecoveryCheckInModal({
                     backgroundColor:
                       activityTolerance === 'declining'
                         ? isDark
-                          ? `${tokens.colors.dark.state.danger}20`
-                          : `${tokens.colors.light.state.danger}20`
+                          ? `${tokens.colors.dark.accent.red}20`
+                          : `${tokens.colors.light.accent.red}20`
                         : colors.background.tertiary,
                     borderWidth: activityTolerance === 'declining' ? 2 : 0,
                     borderColor:
                       activityTolerance === 'declining'
                         ? isDark
-                          ? tokens.colors.dark.state.danger
-                          : tokens.colors.light.state.danger
+                          ? tokens.colors.dark.accent.red
+                          : tokens.colors.light.accent.red
                         : 'transparent',
                   }}
                 >
@@ -516,7 +517,7 @@ export default function RecoveryCheckInModal({
                       fontWeight: tokens.typography.fontWeight.bold,
                       color:
                         activityTolerance === 'declining'
-                          ? tokens.colors.light.state.danger
+                          ? tokens.colors.light.accent.red
                           : colors.text.primary,
                     }}
                   >
@@ -528,7 +529,7 @@ export default function RecoveryCheckInModal({
                       fontSize: tokens.typography.fontSize.xs,
                       color:
                         activityTolerance === 'declining'
-                          ? tokens.colors.light.state.danger
+                          ? tokens.colors.light.accent.red
                           : colors.text.secondary,
                     }}
                   >
@@ -552,8 +553,8 @@ export default function RecoveryCheckInModal({
               backgroundColor: isSubmitting
                 ? colors.background.tertiary
                 : isDark
-                ? tokens.colors.dark.accent.green
-                : tokens.colors.light.accent.green,
+                  ? tokens.colors.dark.accent.green
+                  : tokens.colors.light.accent.green,
             }}
           >
             {isSubmitting ? (

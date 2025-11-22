@@ -7,7 +7,7 @@
  */
 
 import React, { useState } from 'react';
-import { Pressable, View, Text, TextInput, Modal, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, Modal, ActivityIndicator } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,11 +17,21 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Mic, X } from 'lucide-react-native';
 import { voiceAPIClient, VoiceAPIError } from '../../services/api';
-import { VoiceParseResponse } from '../../services/api/config';
 import { useWorkoutStore } from '../../store/workout.store';
 import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
 import { hapticsService } from '../../services/haptics';
+import { ScalePressable } from '../common/ScalePressable';
+
+interface VoiceCommandParsedData {
+  exercise_name: string;
+  weight?: number;
+  weight_unit?: string;
+  reps?: number;
+  rpe?: number;
+  confidence: number;
+  requires_confirmation: boolean;
+}
 
 export default function VoiceFAB() {
   const { isDark } = useTheme();
@@ -30,7 +40,7 @@ export default function VoiceFAB() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [parsedData, setParsedData] = useState<VoiceParseResponse | null>(null);
+  const [parsedData, setParsedData] = useState<VoiceCommandParsedData | null>(null);
 
   const addSet = useWorkoutStore((state) => state.addSet);
 
@@ -86,18 +96,20 @@ export default function VoiceFAB() {
 
     try {
       // Call FastAPI backend to parse voice command
-      const response = await voiceAPIClient.parseVoiceCommand({
+      const response = await (voiceAPIClient as any).parseVoiceCommand({
         transcript: transcript.trim(),
       });
 
       console.log('[VoiceFAB] Parsed response:', response);
 
       // Store parsed data for confirmation
-      setParsedData(response);
+      // Cast response to our local interface as we can't access the shared type definition
+      const data = response as unknown as VoiceCommandParsedData;
+      setParsedData(data);
 
       // Auto-accept if high confidence (≥85%)
-      if (!response.requires_confirmation) {
-        handleAcceptSet(response);
+      if (!data.requires_confirmation) {
+        handleAcceptSet(data);
       }
     } catch (err) {
       console.error('[VoiceFAB] Error parsing voice command:', err);
@@ -123,7 +135,7 @@ export default function VoiceFAB() {
     }
   };
 
-  const handleAcceptSet = (data: any) => {
+  const handleAcceptSet = (data: VoiceCommandParsedData) => {
     // Haptic feedback for success
     hapticsService.success();
 
@@ -173,7 +185,7 @@ export default function VoiceFAB() {
           },
         ]}
       >
-        <Pressable
+        <ScalePressable
           style={({ pressed }) => ({
             width: 64,
             height: 64,
@@ -185,16 +197,16 @@ export default function VoiceFAB() {
             ...tokens.shadows.lg,
           })}
           onPress={() => {
-            hapticsService.medium();
             setShowInput(true);
           }}
+          haptic="medium"
           accessibilityLabel="Voice Input"
           accessibilityHint="Opens voice input to log workout sets"
           accessibilityRole="button"
           testID="voice-fab"
         >
           <Mic color="#FFFFFF" size={32} />
-        </Pressable>
+        </ScalePressable>
       </Animated.View>
 
       {/* Keyboard Input Modal (Web Testing) */}
@@ -232,15 +244,16 @@ export default function VoiceFAB() {
               >
                 Voice Input
               </Text>
-              <Pressable
+              <ScalePressable
                 onPress={handleClose}
+                haptic="light"
                 accessibilityLabel="Close"
                 accessibilityHint="Closes voice input modal"
                 accessibilityRole="button"
                 testID="close-button"
               >
                 <X color={colors.text.tertiary} size={24} />
-              </Pressable>
+              </ScalePressable>
             </View>
 
             {/* Input Field */}
@@ -342,7 +355,7 @@ export default function VoiceFAB() {
 
             {/* Action Buttons */}
             {!parsedData ? (
-              <Pressable
+              <ScalePressable
                 style={({ pressed }) => ({
                   padding: tokens.spacing.md,
                   borderRadius: tokens.borderRadius.xl,
@@ -355,6 +368,7 @@ export default function VoiceFAB() {
                 })}
                 onPress={() => handleVoiceInput(inputText)}
                 disabled={isLoading}
+                haptic="selection"
                 accessibilityLabel="Parse Command"
                 accessibilityHint="Processes the voice input to log a workout set"
                 accessibilityRole="button"
@@ -373,7 +387,7 @@ export default function VoiceFAB() {
                     Parse Command
                   </Text>
                 )}
-              </Pressable>
+              </ScalePressable>
             ) : (
               <View
                 style={{
@@ -381,7 +395,7 @@ export default function VoiceFAB() {
                   columnGap: tokens.spacing.sm,
                 }}
               >
-                <Pressable
+                <ScalePressable
                   style={({ pressed }) => ({
                     flex: 1,
                     padding: tokens.spacing.md,
@@ -392,6 +406,7 @@ export default function VoiceFAB() {
                     opacity: pressed ? 0.9 : 1,
                   })}
                   onPress={handleReject}
+                  haptic="medium"
                   accessibilityLabel="Reject"
                   accessibilityHint="Rejects the parsed command and allows re-entry"
                   accessibilityRole="button"
@@ -406,8 +421,8 @@ export default function VoiceFAB() {
                   >
                     Reject
                   </Text>
-                </Pressable>
-                <Pressable
+                </ScalePressable>
+                <ScalePressable
                   style={({ pressed }) => ({
                     flex: 1,
                     padding: tokens.spacing.md,
@@ -418,6 +433,7 @@ export default function VoiceFAB() {
                     opacity: pressed ? 0.9 : 1,
                   })}
                   onPress={() => handleAcceptSet(parsedData)}
+                  haptic="success"
                   accessibilityLabel="Accept and Log"
                   accessibilityHint="Accepts the parsed command and logs the workout set"
                   accessibilityRole="button"
@@ -432,7 +448,7 @@ export default function VoiceFAB() {
                   >
                     Accept & Log
                   </Text>
-                </Pressable>
+                </ScalePressable>
               </View>
             )}
 

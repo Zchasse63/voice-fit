@@ -29,6 +29,7 @@ export default function MetricCard({
 }: MetricCardProps) {
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const borderColor = isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight;
 
   const getTrendColor = () => {
     if (!trend) return colors.text.secondary;
@@ -55,8 +56,8 @@ export default function MetricCard({
         padding: variant === 'compact' ? tokens.spacing.md : tokens.spacing.lg,
         height: variant === 'compact' ? 140 : 120,
         ...tokens.shadows.md,
-        borderWidth: 1,
-        borderColor: colors.border.primary,
+        borderWidth: tokens.borders.primary.width,
+        borderColor,
       }}
     >
       {/* Header with Icon and Chevron */}
@@ -92,6 +93,7 @@ export default function MetricCard({
           fontWeight: tokens.typography.fontWeight.bold,
           color: colors.text.primary,
           marginBottom: tokens.spacing.xs,
+          fontVariant: ['tabular-nums'],
         }}
       >
         {value}

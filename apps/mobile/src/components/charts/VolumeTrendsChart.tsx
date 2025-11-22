@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
 import { useAuthStore } from '../../store/auth.store';
@@ -21,6 +21,7 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
   const user = useAuthStore((state) => state.user);
   const [data, setData] = useState<VolumeDataPoint[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [range, setRange] = useState<'4w' | '8w' | '12w'>('12w');
   const { state, isActive } = useChartPressState({ x: 0, y: { tonnage: 0 } });
 
   useEffect(() => {
@@ -57,18 +58,28 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
 
   // Transform data for Victory Native XL
   const chartData = useMemo(() => {
-    return data.map((point) => ({
+    const limit =
+      range === '4w' ? 4 :
+      range === '8w' ? 8 : 12;
+    const sliced = data.slice(-limit);
+    return sliced.map((point) => ({
       x: new Date(point.week).getTime(),
       tonnage: point.tonnage,
     }));
-  }, [data]);
+  }, [data, range]);
 
   // Calculate average weekly volume
   const averageVolume = useMemo(() => {
-    if (data.length === 0) return 0;
-    const total = data.reduce((sum, point) => sum + point.tonnage, 0);
-    return Math.round(total / data.length);
-  }, [data]);
+    const source = chartData;
+    if (source.length === 0) return 0;
+    const total = source.reduce((sum, point) => sum + point.tonnage, 0);
+    return Math.round(total / source.length);
+  }, [chartData]);
+
+  const lastPoint = chartData[chartData.length - 1];
+  const prevPoint = chartData[chartData.length - 2];
+  const delta =
+    lastPoint && prevPoint ? lastPoint.tonnage - prevPoint.tonnage : 0;
 
   if (isLoading) {
     return (
@@ -124,6 +135,36 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
       >
         Weekly Volume Trends
       </Text>
+      <View style={{ flexDirection: 'row', gap: tokens.spacing.xs, marginBottom: tokens.spacing.md }}>
+        {(['4w', '8w', '12w'] as const).map((r) => (
+          <Pressable
+            key={r}
+            onPress={() => setRange(r)}
+            style={({ pressed }) => {
+              const isActive = range === r;
+              return {
+                paddingHorizontal: tokens.spacing.md,
+                paddingVertical: tokens.spacing.xs,
+                borderRadius: tokens.borderRadius.full,
+                borderWidth: tokens.borders.primary.width,
+                borderColor: isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight,
+                backgroundColor: isActive ? colors.backgroundSoft.accent : colors.background.secondary,
+                opacity: pressed ? 0.85 : 1,
+              };
+            }}
+          >
+            <Text
+              style={{
+                fontSize: tokens.typography.fontSize.sm,
+                color: colors.text.primary,
+                fontWeight: tokens.typography.fontWeight.semibold,
+              }}
+            >
+              {r.toUpperCase()}
+            </Text>
+          </Pressable>
+        ))}
+      </View>
       <Text
         style={{
           fontSize: tokens.typography.fontSize.sm,
@@ -131,7 +172,7 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
           color: colors.text.secondary,
         }}
       >
-        Last 12 weeks of training volume
+        Training volume
       </Text>
 
       {data.length === 0 ? (
@@ -249,37 +290,50 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
               >
                 Average Weekly Volume
               </Text>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.lg,
-                  fontWeight: tokens.typography.fontWeight.bold,
-                  color: accentColors.green,
-                }}
-              >
-                {formatVolume(averageVolume)} lbs
-              </Text>
-            </View>
-            <View style={{ alignItems: 'flex-end' }}>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.xs,
-                  color: colors.text.secondary,
-                }}
-              >
-                Last Week
-              </Text>
-              <Text
-                style={{
-                  fontSize: tokens.typography.fontSize.lg,
-                  fontWeight: tokens.typography.fontWeight.bold,
-                  color: colors.text.primary,
-                }}
-              >
-                {formatVolume(data[data.length - 1].tonnage)} lbs
-              </Text>
-            </View>
-          </View>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.lg,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: accentColors.green,
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {formatVolume(averageVolume)} lbs
+          </Text>
         </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.xs,
+              color: colors.text.secondary,
+            }}
+          >
+            Last Week
+          </Text>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.lg,
+              fontWeight: tokens.typography.fontWeight.bold,
+              color: colors.text.primary,
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {formatVolume(data[data.length - 1].tonnage)} lbs
+          </Text>
+          <Text
+            style={{
+              fontSize: tokens.typography.fontSize.sm,
+              color: delta >= 0 ? colors.accent.green : colors.accent.coral,
+              marginTop: 2,
+              fontVariant: ['tabular-nums'],
+            }}
+          >
+            {delta >= 0 ? '+' : ''}
+            {formatVolume(Math.abs(delta))} vs prev
+          </Text>
+        </View>
+      </View>
+    </View>
       )}
 
       {/* Legend */}
@@ -316,4 +370,3 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
 });
 
 export default VolumeTrendsChart;
-

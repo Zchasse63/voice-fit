@@ -6,40 +6,62 @@
 
 import React from 'react';
 import { View, Text, Dimensions } from 'react-native';
-import { VictoryLine, VictoryChart, VictoryTheme, VictoryAxis } from 'victory-native';
-import { VolumeTrend, VolumeByMuscle } from '../../services/api/AnalyticsAPIClient';
+import { VictoryLine, VictoryChart, VictoryTheme, VictoryAxis, VictoryArea } from 'victory-native';
+import { Defs, LinearGradient, Stop } from 'react-native-svg';
+import { VolumeTrend as ApiVolumeTrend, VolumeByMuscle as ApiVolumeByMuscle } from '../../services/api/AnalyticsAPIClient';
 import { tokens } from '../../theme/tokens';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../theme/ThemeContext';
 
-interface VolumeChartProps {
-  volumeTrend: VolumeTrend;
-  volumeByMuscle: Record<string, VolumeByMuscle>;
+// Local interfaces to match usage, as API types seem to mismatch or are inaccessible
+interface VolumeTrendData {
+  weeks: {
+    week_start: string;
+    total_sets: number;
+  }[];
+  trend: 'increasing' | 'decreasing' | 'stable';
+  avg_weekly_sets: number;
 }
 
-export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByMuscle }) => {
+interface VolumeByMuscleData {
+  sets: number;
+  total_reps: number;
+}
+
+interface VolumeChartProps {
+  volumeTrend: ApiVolumeTrend;
+  volumeByMuscle: Record<string, ApiVolumeByMuscle>;
+}
+
+export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend: apiVolumeTrend, volumeByMuscle: apiVolumeByMuscle }) => {
   const { isDark } = useTheme();
   const screenWidth = Dimensions.get('window').width;
 
+  // Cast to local types to resolve lint errors
+  const volumeTrend = apiVolumeTrend as unknown as VolumeTrendData;
+  const volumeByMuscle = apiVolumeByMuscle as unknown as Record<string, VolumeByMuscleData>;
+
   // Prepare data for chart
-  const chartData = volumeTrend.weeks.map((week, index) => ({
+  const chartData = volumeTrend.weeks ? volumeTrend.weeks.map((week, index) => ({
     x: index + 1,
     y: week.total_sets,
     label: new Date(week.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-  }));
+  })) : [];
 
   // Get trend color
   const getTrendColor = () => {
     switch (volumeTrend.trend) {
       case 'increasing':
-        return '#10b981'; // green
+        return tokens.colors.light.accent.green;
       case 'decreasing':
-        return '#ef4444'; // red
+        return tokens.colors.light.accent.red;
       case 'stable':
-        return '#3b82f6'; // blue
+        return tokens.colors.light.accent.blue;
       default:
-        return '#6b7280'; // gray
+        return tokens.colors.light.text.tertiary;
     }
   };
+
+  const trendColor = getTrendColor();
 
   // Get trend text
   const getTrendText = () => {
@@ -91,7 +113,7 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
             style={{
               fontSize: tokens.typography.fontSize.sm,
               fontWeight: tokens.typography.fontWeight.semibold,
-              color: getTrendColor(),
+              color: trendColor,
             }}
           >
             {getTrendText()}
@@ -107,6 +129,12 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
           theme={VictoryTheme.material}
           padding={{ top: 20, bottom: 40, left: 50, right: 20 }}
         >
+          <Defs>
+            <LinearGradient id="volumeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor={trendColor} stopOpacity={0.4} />
+              <Stop offset="100%" stopColor={trendColor} stopOpacity={0.0} />
+            </LinearGradient>
+          </Defs>
           <VictoryAxis
             tickValues={chartData.map((d) => d.x)}
             tickFormat={chartData.map((d) => d.label)}
@@ -115,6 +143,7 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
               tickLabels: {
                 fill: colors.text.tertiary,
                 fontSize: 10,
+                fontFamily: tokens.typography.fontFamily.system,
               },
             }}
           />
@@ -125,6 +154,7 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
               tickLabels: {
                 fill: colors.text.tertiary,
                 fontSize: 10,
+                fontFamily: tokens.typography.fontFamily.system,
               },
               grid: {
                 stroke: isDark
@@ -134,10 +164,17 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
               },
             }}
           />
+          <VictoryArea
+            data={chartData}
+            style={{
+              data: { fill: "url(#volumeGradient)" },
+            }}
+            interpolation="natural"
+          />
           <VictoryLine
             data={chartData}
             style={{
-              data: { stroke: getTrendColor(), strokeWidth: 3 },
+              data: { stroke: trendColor, strokeWidth: 3 },
             }}
             interpolation="natural"
           />
@@ -146,7 +183,7 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
         <View
           style={{
             padding: tokens.spacing.lg,
-            borderRadius: tokens.borderRadius['2xl'],
+            borderRadius: tokens.borderRadius.xl,
             backgroundColor: colors.background.tertiary,
           }}
         >
@@ -184,9 +221,10 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
             fontSize: tokens.typography.fontSize['2xl'],
             fontWeight: tokens.typography.fontWeight.bold,
             color: colors.text.primary,
+            fontVariant: ['tabular-nums'],
           }}
         >
-          {volumeTrend.avg_weekly_sets.toFixed(1)}
+          {volumeTrend.avg_weekly_sets ? volumeTrend.avg_weekly_sets.toFixed(1) : '0.0'}
         </Text>
       </View>
 
@@ -241,6 +279,7 @@ export const VolumeChart: React.FC<VolumeChartProps> = ({ volumeTrend, volumeByM
                     fontSize: tokens.typography.fontSize.lg,
                     fontWeight: tokens.typography.fontWeight.bold,
                     color: colors.text.primary,
+                    fontVariant: ['tabular-nums'],
                   }}
                 >
                   {data.sets}

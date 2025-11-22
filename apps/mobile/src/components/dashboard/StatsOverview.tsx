@@ -53,6 +53,8 @@ export default function StatsOverview({
                 padding: tokens.spacing.lg,
                 minWidth: 140,
                 ...tokens.shadows.sm,
+                borderWidth: tokens.borders.primary.width,
+                borderColor: isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight,
               }}
             >
               <Text
@@ -70,6 +72,7 @@ export default function StatsOverview({
                     fontSize: tokens.typography.fontSize['2xl'],
                     fontWeight: tokens.typography.fontWeight.bold,
                     color: stat.color || colors.text.primary,
+                    fontVariant: ['tabular-nums'],
                   }}
                 >
                   {stat.value}
@@ -80,6 +83,7 @@ export default function StatsOverview({
                       fontSize: tokens.typography.fontSize.sm,
                       color: colors.text.tertiary,
                       marginLeft: tokens.spacing.xs,
+                      fontVariant: ['tabular-nums'],
                     }}
                   >
                     {stat.unit}
@@ -125,6 +129,8 @@ export default function StatsOverview({
               flex: 1,
               minWidth: '45%',
               ...tokens.shadows.sm,
+              borderWidth: tokens.borders.primary.width,
+              borderColor: isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight,
             }}
           >
             <Text
@@ -142,6 +148,7 @@ export default function StatsOverview({
                   fontSize: tokens.typography.fontSize['2xl'],
                   fontWeight: tokens.typography.fontWeight.bold,
                   color: stat.color || colors.text.primary,
+                  fontVariant: ['tabular-nums'],
                 }}
               >
                 {stat.value}
@@ -152,6 +159,7 @@ export default function StatsOverview({
                     fontSize: tokens.typography.fontSize.sm,
                     color: colors.text.tertiary,
                     marginLeft: tokens.spacing.xs,
+                    fontVariant: ['tabular-nums'],
                   }}
                 >
                   {stat.unit}

@@ -8,6 +8,7 @@
 import React from "react";
 import { View, TextInput, Pressable, StyleSheet, ActivityIndicator } from "react-native";
 import { Send, Mic } from "lucide-react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import tokens from "../../theme/tokens";
 import { useTheme } from "../../theme/ThemeContext";
 
@@ -32,6 +33,7 @@ export default function ChatInput({
 }: ChatInputProps) {
   const { isDark } = useTheme();
   const colors = tokens.colors[isDark ? "dark" : "light"];
+  const insets = useSafeAreaInsets();
 
   const handleSend = () => {
     if (value.trim() && !loading && !disabled) {
@@ -48,7 +50,8 @@ export default function ChatInput({
           borderTopWidth: 1,
           borderTopColor: colors.border.light,
           paddingHorizontal: tokens.spacing.md,
-          paddingVertical: tokens.spacing.sm,
+          paddingTop: tokens.spacing.sm,
+          paddingBottom: Math.max(insets.bottom, tokens.spacing.sm),
         },
       ]}
     >

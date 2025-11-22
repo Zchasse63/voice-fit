@@ -15,6 +15,10 @@ import ProgramLogScreen from "../screens/ProgramLogScreen";
 import TrainingCalendarScreen from "../screens/TrainingCalendarScreen";
 import JournalScreen from "../screens/JournalScreen";
 import SplitsScreen from "../screens/SplitsScreen";
+import RunSummaryScreen from "../screens/RunSummaryScreen";
+import RunSettingsScreen from "../screens/RunSettingsScreen";
+import WorkoutCelebrationScreen from "../screens/WorkoutCelebrationScreen";
+import WorkoutBuilderScreen from "../screens/WorkoutBuilderScreen";
 import PersonalInfoScreen from "../screens/PersonalInfoScreen";
 import WearablesScreen from "../screens/WearablesScreen";
 import NotificationSettingsScreen from "../screens/NotificationSettingsScreen";
@@ -31,46 +35,31 @@ import InviteClientScreen from "../screens/coach/InviteClientScreen";
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
+import { GlassTabBar } from "../components/navigation/GlassTabBar";
+import { useRunStore } from "../store/run.store";
+
 function MainTabs() {
   const theme = useTheme();
   const isDark = theme?.isDark ?? false;
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const isTracking = useRunStore((state) => state.isTracking);
 
   return (
     <Tab.Navigator
       initialRouteName="Home"
+      tabBar={(props) => isTracking ? null : <GlassTabBar {...props} />}
       screenOptions={{
+        headerShown: false,
         tabBarActiveTintColor: colors.accent.blue,
         tabBarInactiveTintColor: colors.text.tertiary,
-        tabBarStyle: {
-          height: 84,
-          paddingBottom: 18,
-          paddingTop: 10,
-          backgroundColor: colors.background.primary,
-          borderTopColor: colors.border.light,
-          borderTopWidth: 1,
-        },
-        tabBarLabelStyle: {
-          fontSize: tokens.typography.fontSize.xs,
-          fontFamily: tokens.typography.fontFamily.system,
-          fontWeight: tokens.typography.fontWeight.medium,
-        },
-        headerShown: false,
       }}
     >
       <Tab.Screen
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
-            <Text
-              style={{
-                fontSize: 22,
-                color: focused ? colors.accent.blue : colors.text.tertiary,
-              }}
-            >
-              🏠
-            </Text>
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>🏠</Text>
           ),
           tabBarLabel: "Home",
         }}
@@ -82,26 +71,18 @@ function MainTabs() {
           tabBarIcon: ({ focused }) => (
             <View
               style={{
-                width: 56,
-                height: 56,
+                width: 48,
+                height: 48,
                 borderRadius: tokens.borderRadius.full,
                 alignItems: "center",
                 justifyContent: "center",
                 backgroundColor: focused
                   ? colors.accent.blue
                   : colors.background.secondary,
-                marginTop: -10,
-                ...tokens.shadows.xl,
+                ...tokens.shadows.lg,
               }}
             >
-              <Text
-                style={{
-                  fontSize: 26,
-                  color: "#FFFFFF",
-                }}
-              >
-                🤖
-              </Text>
+              <Text style={{ fontSize: 24 }}>🤖</Text>
             </View>
           ),
           tabBarLabel: "Coach",
@@ -111,15 +92,8 @@ function MainTabs() {
         name="Run"
         component={RunScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
-            <Text
-              style={{
-                fontSize: 22,
-                color: focused ? colors.accent.blue : colors.text.tertiary,
-              }}
-            >
-              🏃
-            </Text>
+          tabBarIcon: ({ color }) => (
+            <Text style={{ fontSize: 22, color }}>🏃</Text>
           ),
           tabBarLabel: "Run",
         }}
@@ -144,6 +118,28 @@ export default function RootNavigator() {
         component={SplitsScreen}
         options={{
           animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="RunSettings"
+        component={RunSettingsScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="RunSummary"
+        component={RunSummaryScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="WorkoutCelebration"
+        component={WorkoutCelebrationScreen}
+        options={{
+          animation: "fade",
+          headerShown: false,
         }}
       />
       <Stack.Screen
@@ -226,6 +222,14 @@ export default function RootNavigator() {
         options={{
           presentation: "modal",
           animation: "slide_from_bottom",
+        }}
+      />
+      {/* Workout Builder */}
+      <Stack.Screen
+        name="WorkoutBuilder"
+        component={WorkoutBuilderScreen}
+        options={{
+          animation: "slide_from_right",
         }}
       />
     </Stack.Navigator>

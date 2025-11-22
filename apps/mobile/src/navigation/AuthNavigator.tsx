@@ -5,7 +5,10 @@ import SignUpScreen from "../screens/SignUpScreen";
 import { useTheme } from "../theme/ThemeContext";
 import { tokens } from "../theme/tokens";
 
+import OnboardingScreen from "../screens/OnboardingScreen";
+
 export type AuthStackParamList = {
+  Onboarding: undefined;
   SignIn: undefined;
   SignUp: undefined;
 };
@@ -19,7 +22,7 @@ export default function AuthNavigator() {
 
   return (
     <Stack.Navigator
-      initialRouteName="SignIn"
+      initialRouteName="Onboarding"
       screenOptions={{
         headerShown: false,
         contentStyle: {
@@ -28,6 +31,7 @@ export default function AuthNavigator() {
         animation: "slide_from_right",
       }}
     >
+      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
       <Stack.Screen name="SignIn" component={SignInScreen} />
       <Stack.Screen name="SignUp" component={SignUpScreen} />
     </Stack.Navigator>

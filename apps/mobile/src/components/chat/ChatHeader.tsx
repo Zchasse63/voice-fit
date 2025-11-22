@@ -7,7 +7,7 @@
 
 import React from "react";
 import { View, Text, Pressable, StyleSheet } from "react-native";
-import { ArrowLeft, Calendar } from "lucide-react-native";
+import { ArrowLeft } from "lucide-react-native";
 import { Avatar } from "../profile";
 import tokens from "../../theme/tokens";
 import { useTheme } from "../../theme/ThemeContext";
@@ -16,14 +16,12 @@ interface ChatHeaderProps {
   title: string;
   onBack: () => void;
   onAvatarPress?: () => void;
-  onWorkoutLogPress?: () => void;
 }
 
 export default function ChatHeader({
   title,
   onBack,
   onAvatarPress,
-  onWorkoutLogPress,
 }: ChatHeaderProps) {
   const { isDark } = useTheme();
   const colors = tokens.colors[isDark ? "dark" : "light"];
@@ -66,37 +64,6 @@ export default function ChatHeader({
 
       {/* Right Side */}
       <View style={{ flexDirection: "row", alignItems: "center" }}>
-        {onWorkoutLogPress && (
-          <Pressable
-            onPress={onWorkoutLogPress}
-            style={({ pressed }) => [
-              {
-                paddingHorizontal: tokens.spacing.md,
-                paddingVertical: tokens.spacing.xs,
-                borderRadius: tokens.borderRadius.full,
-                backgroundColor: colors.background.secondary,
-                marginRight: tokens.spacing.sm,
-                opacity: pressed ? 0.85 : 1,
-                borderWidth: 1,
-                borderColor: colors.border.light,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: tokens.spacing.xs,
-              },
-            ]}
-          >
-            <Calendar color={colors.accent.blue} size={18} />
-            <Text
-              style={{
-                color: colors.text.primary,
-                fontSize: tokens.typography.fontSize.sm,
-                fontWeight: tokens.typography.fontWeight.semibold,
-              }}
-            >
-              Plan
-            </Text>
-          </Pressable>
-        )}
         {onAvatarPress && (
           <Pressable onPress={onAvatarPress}>
             <Avatar size="sm" />

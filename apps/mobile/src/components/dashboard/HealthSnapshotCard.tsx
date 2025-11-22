@@ -23,6 +23,7 @@ interface HealthSnapshotCardProps {
 export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps) {
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
+  const borderColor = isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight;
   const user = useAuthStore((state) => state.user);
   
   const [snapshot, setSnapshot] = useState<HealthSnapshot | null>(null);
@@ -80,6 +81,8 @@ export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps)
           justifyContent: 'center',
           alignItems: 'center',
           ...tokens.shadows.sm,
+          borderWidth: tokens.borders.primary.width,
+          borderColor,
         }}
       >
         <ActivityIndicator size="large" color={colors.accent.blue} />
@@ -96,6 +99,8 @@ export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps)
           padding: tokens.spacing.lg,
           minHeight: 180,
           ...tokens.shadows.sm,
+          borderWidth: tokens.borders.primary.width,
+          borderColor,
         }}
       >
         <Text
@@ -134,6 +139,8 @@ export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps)
         padding: tokens.spacing.lg,
         minHeight: 180,
         ...tokens.shadows.sm,
+        borderWidth: tokens.borders.primary.width,
+        borderColor,
       }}
     >
       {/* Header */}
@@ -172,6 +179,7 @@ export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps)
               fontSize: tokens.typography.fontSize.xl,
               fontWeight: tokens.typography.fontWeight.bold,
               color: recoveryColor,
+              fontVariant: ['tabular-nums'],
             }}
           >
             {recoveryScore}
@@ -263,4 +271,3 @@ export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps)
     </Pressable>
   );
 }
-
