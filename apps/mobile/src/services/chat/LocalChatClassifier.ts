@@ -1,5 +1,6 @@
 export type LocalMessageType =
   | "workout_log"
+  | "run_log"
   | "exercise_swap"
   | "question"
   | "onboarding"
@@ -7,6 +8,7 @@ export type LocalMessageType =
 
 export type LocalSuggestedAction =
   | "parse_with_kimi"
+  | "log_run"
   | "show_exercise_swaps"
   | "call_ai_coach"
   | "continue_onboarding"
@@ -48,6 +50,22 @@ const workoutKeywords = [
   "sets",
 ];
 
+const runKeywords = [
+  "ran",
+  "run",
+  "jog",
+  "jogged",
+  "mile",
+  "miles",
+  "km",
+  "5k",
+  "10k",
+  "half marathon",
+  "marathon",
+  "pace",
+  "distance",
+];
+
 const questionWords = [
   "how",
   "what",
@@ -75,7 +93,20 @@ const hasNumbers = (text: string): boolean => /\d/.test(text);
 export function classifyChatMessageLocal(message: string): LocalChatClassification {
   const messageLower = message.toLowerCase();
 
-  // 1) Exercise swap intent
+  // 1) Run logging patterns (run keywords + numbers/distance)
+  const hasRunKeyword = containsAny(messageLower, runKeywords);
+  const numberPresent = hasNumbers(message);
+  if (hasRunKeyword && numberPresent) {
+    return {
+      message_type: "run_log",
+      confidence: 0.8,
+      reasoning: "Contains run-related keywords and numbers (distance/time)",
+      suggested_action: "log_run",
+      extracted_data: null,
+    };
+  }
+
+  // 2) Exercise swap intent
   const hasSwapKeyword = containsAny(messageLower, swapKeywords);
   if (hasSwapKeyword) {
     return {
@@ -90,8 +121,7 @@ export function classifyChatMessageLocal(message: string): LocalChatClassificati
     };
   }
 
-  // 2) Workout logging patterns (numbers + workout keywords)
-  const numberPresent = hasNumbers(message);
+  // 3) Workout logging patterns (numbers + workout keywords)
   const hasWorkoutKeyword = containsAny(messageLower, workoutKeywords);
   if (numberPresent && hasWorkoutKeyword) {
     return {
@@ -103,7 +133,7 @@ export function classifyChatMessageLocal(message: string): LocalChatClassificati
     };
   }
 
-  // 3) Questions
+  // 4) Questions
   const looksLikeQuestion = containsAny(messageLower, questionWords);
   if (looksLikeQuestion) {
     return {
@@ -115,7 +145,7 @@ export function classifyChatMessageLocal(message: string): LocalChatClassificati
     };
   }
 
-  // 4) Default fallback
+  // 5) Default fallback
   return {
     message_type: "general",
     confidence: 0.3,

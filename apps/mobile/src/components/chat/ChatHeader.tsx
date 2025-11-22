@@ -71,13 +71,30 @@ export default function ChatHeader({
             onPress={onWorkoutLogPress}
             style={({ pressed }) => [
               {
-                padding: tokens.spacing.sm,
+                paddingHorizontal: tokens.spacing.md,
+                paddingVertical: tokens.spacing.xs,
+                borderRadius: tokens.borderRadius.full,
+                backgroundColor: colors.background.secondary,
                 marginRight: tokens.spacing.sm,
-                opacity: pressed ? 0.6 : 1,
+                opacity: pressed ? 0.85 : 1,
+                borderWidth: 1,
+                borderColor: colors.border.light,
+                flexDirection: "row",
+                alignItems: "center",
+                gap: tokens.spacing.xs,
               },
             ]}
           >
-            <Calendar color={colors.accent.blue} size={20} />
+            <Calendar color={colors.accent.blue} size={18} />
+            <Text
+              style={{
+                color: colors.text.primary,
+                fontSize: tokens.typography.fontSize.sm,
+                fontWeight: tokens.typography.fontWeight.semibold,
+              }}
+            >
+              Plan
+            </Text>
           </Pressable>
         )}
         {onAvatarPress && (

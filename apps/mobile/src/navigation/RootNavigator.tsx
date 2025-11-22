@@ -12,6 +12,13 @@ import ChatScreen from "../screens/ChatScreen";
 import RunScreen from "../screens/RunScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ProgramLogScreen from "../screens/ProgramLogScreen";
+import TrainingCalendarScreen from "../screens/TrainingCalendarScreen";
+import JournalScreen from "../screens/JournalScreen";
+import SplitsScreen from "../screens/SplitsScreen";
+import PersonalInfoScreen from "../screens/PersonalInfoScreen";
+import WearablesScreen from "../screens/WearablesScreen";
+import NotificationSettingsScreen from "../screens/NotificationSettingsScreen";
+import SupportScreen from "../screens/SupportScreen";
 
 // Import detail screens
 import VolumeDetailScreen from "../screens/VolumeDetailScreen";
@@ -128,6 +135,55 @@ export default function RootNavigator() {
       <Stack.Screen
         name="ProgramLog"
         component={ProgramLogScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="Splits"
+        component={SplitsScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="TrainingCalendar"
+        component={TrainingCalendarScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="Journal"
+        component={JournalScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="PersonalInfo"
+        component={PersonalInfoScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="Wearables"
+        component={WearablesScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="NotificationSettings"
+        component={NotificationSettingsScreen}
+        options={{
+          animation: "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="Support"
+        component={SupportScreen}
         options={{
           animation: "slide_from_right",
         }}
