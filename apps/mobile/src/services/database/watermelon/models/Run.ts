@@ -18,6 +18,8 @@ export default class Run extends Model {
   @field('grade_percent') gradePercent!: number; // average grade percentage
   @field('terrain_difficulty') terrainDifficulty!: string; // flat, rolling, moderate_uphill, etc.
   @field('route') route!: string; // JSON string of coordinates
+  @field('workout_type') workoutType?: string; // e.g., 'easy', 'tempo', 'interval'
+  @field('workout_name') workoutName?: string; // custom workout name
   @field('synced') synced!: boolean;
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;

@@ -183,7 +183,7 @@ describe('program.store', () => {
           return await callback();
         });
 
-        const result = await useProgramStore.getState().createProgram({
+        await useProgramStore.getState().createProgram({
           name: 'New Program',
           description: 'Test description',
           focus: 'strength',
@@ -313,7 +313,7 @@ describe('program.store', () => {
           return await callback();
         });
 
-        const result = await useProgramStore.getState().createTemplate({
+        await useProgramStore.getState().createTemplate({
           programId: 'program-1',
           name: 'Upper Body',
           workoutType: 'strength',
@@ -414,7 +414,7 @@ describe('program.store', () => {
           return await callback();
         });
 
-        const result = await useProgramStore.getState().scheduleWorkout({
+        await useProgramStore.getState().scheduleWorkout({
           programId: 'program-1',
           templateId: 'template-1',
           scheduledDate: new Date(),
@@ -544,9 +544,9 @@ describe('program.store', () => {
 
       useProgramStore.setState({
         scheduledWorkouts: [
-          { ...mockScheduledWorkout, scheduledDate: today.getTime(), weekNumber: 1 },
-          { ...mockScheduledWorkout, id: 'scheduled-2', scheduledDate: tomorrow.getTime(), weekNumber: 1 },
-          { ...mockScheduledWorkout, id: 'scheduled-3', scheduledDate: today.getTime(), weekNumber: 2 },
+          { ...mockScheduledWorkout, scheduledDate: today.getTime(), weekNumber: 1 } as any,
+          { ...mockScheduledWorkout, id: 'scheduled-2', scheduledDate: tomorrow.getTime(), weekNumber: 1 } as any,
+          { ...mockScheduledWorkout, id: 'scheduled-3', scheduledDate: today.getTime(), weekNumber: 2 } as any,
         ],
       });
     });
@@ -634,10 +634,10 @@ describe('program.store', () => {
     describe('reset', () => {
       it('should reset all state to initial values', () => {
         useProgramStore.setState({
-          programs: [mockProgram],
-          activeProgram: mockProgram,
-          workoutTemplates: [mockTemplate],
-          scheduledWorkouts: [mockScheduledWorkout],
+          programs: [mockProgram as any],
+          activeProgram: mockProgram as any,
+          workoutTemplates: [mockTemplate as any],
+          scheduledWorkouts: [mockScheduledWorkout as any],
           selectedDate: new Date(),
           selectedWeek: 1,
           error: 'Test error',

@@ -10,7 +10,7 @@
 import React, { Suspense } from 'react';
 import { View, ScrollView, ActivityIndicator } from 'react-native';
 import { tokens } from '../../theme/tokens';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../theme/ThemeContext';
 
 // Lazy load chart components for better performance
 const VolumeTrendsChart = React.lazy(() => import('../charts/VolumeTrendsChart'));
@@ -20,7 +20,6 @@ const ReadinessTrendChart = React.lazy(() => import('../readiness/ReadinessTrend
 // Loading fallback component
 const ChartLoader = () => {
   const { isDark } = useTheme();
-  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
   return (
     <View

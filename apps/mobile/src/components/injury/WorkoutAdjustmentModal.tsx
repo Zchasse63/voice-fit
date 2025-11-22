@@ -28,6 +28,8 @@ import ExerciseSubstitutionService, {
 import ExplanationFormatterService, {
   FormattedExplanation,
 } from '../../services/exercise/ExplanationFormatterService';
+import tokens from '../../theme/tokens';
+import { useTheme } from '../../theme/ThemeContext';
 
 interface AffectedExercise {
   exerciseName: string;
@@ -50,6 +52,7 @@ export default function WorkoutAdjustmentModal({
   affectedExercises,
   onSubstitutionsAccepted,
 }: WorkoutAdjustmentModalProps) {
+  const { isDark } = useTheme();
   const [loading, setLoading] = useState(false);
   const [substitutionResults, setSubstitutionResults] = useState<Map<string, SubstitutionResult>>(new Map());
   const [selectedSubstitutions, setSelectedSubstitutions] = useState<Map<string, string>>(new Map());

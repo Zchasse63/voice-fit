@@ -6,7 +6,7 @@
  */
 
 import React from 'react';
-import { View, Text, Modal, Pressable, ScrollView } from 'react-native';
+import { View, Text, Modal, Pressable } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
 import { AlertTriangle, TrendingDown, TrendingUp, CheckCircle, X } from 'lucide-react-native';

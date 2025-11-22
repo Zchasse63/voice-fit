@@ -14,12 +14,15 @@ export const tokens = {
     // Components should use theme-aware colors via useTheme() hook
     get background() { return this.light.background; },
     get text() { return this.light.text; },
+    get icon() { return this.light.icon; },
     get accent() { return this.light.accent; },
     get backgroundSoft() { return this.light.backgroundSoft; },
     get state() { return this.light.state; },
     get overlay() { return this.light.overlay; },
     get badge() { return this.light.badge; },
     get notebook() { return this.light.notebook; },
+    get border() { return this.light.border; },
+    get chat() { return this.light.chat; },
     shared: {
       static: {
         white: "#FFFFFF",
@@ -41,6 +44,16 @@ export const tokens = {
         secondary: "#495057", // Body text
         tertiary: "#6C757D", // Labels, captions
         disabled: "#ADB5BD", // Disabled states
+        inverse: "#FFFFFF", // White text on dark backgrounds
+        onAccent: "#FFFFFF", // Text on accent backgrounds
+      },
+
+      // Icon colors
+      icon: {
+        primary: "#000000", // Primary icons
+        secondary: "#495057", // Secondary icons
+        disabled: "#ADB5BD", // Disabled icons
+        onAccent: "#FFFFFF", // Icons on accent backgrounds
       },
 
       // Accent colors (selective pops of color)
@@ -53,6 +66,24 @@ export const tokens = {
         teal: "#5AC8FA", // Data viz
         yellow: "#FFCC00", // Data viz
         red: "#FF3B30", // Errors, destructive actions
+
+        // Semantic color aliases for common use cases
+        primary: "#007AFF", // Alias for blue
+        success: "#34C759", // Alias for green
+        warning: "#FF9500", // Alias for orange
+        error: "#FF3B30", // Alias for red
+        info: "#5AC8FA", // Alias for teal
+      },
+
+      // Badge colors
+      badge: {
+        background: "#E9ECEF", // Light gray background
+        text: "#495057", // Dark gray text
+        border: "#DEE2E6", // Subtle border
+        gold: "#FFD700", // Gold badge
+        silver: "#C0C0C0", // Silver badge
+        bronze: "#CD7F32", // Bronze badge
+        platinum: "#E5E4E2", // Platinum badge
       },
 
       // Chat bubble colors (iOS Messages style)
@@ -65,6 +96,7 @@ export const tokens = {
 
       // Border colors
       border: {
+        primary: "#DEE2E6", // Primary borders
         subtle: "#E9ECEF", // Extra-subtle borders
         light: "#E9ECEF", // Subtle borders
         medium: "#6C757D", // Medium borders
@@ -92,6 +124,7 @@ export const tokens = {
       state: {
         hover: "#F8F9FA", // Hover state
         pressed: "#E9ECEF", // Pressed state
+        danger: "#FF3B30", // Danger/destructive state
       },
 
       // Notebook-style colors (for LogOverlay)
@@ -117,6 +150,16 @@ export const tokens = {
         secondary: "#E5E5E7", // Light gray body
         tertiary: "#98989D", // Medium gray labels
         disabled: "#48484A", // Dark gray disabled
+        inverse: "#000000", // Black text on light backgrounds
+        onAccent: "#000000", // Text on accent backgrounds (dark mode)
+      },
+
+      // Icon colors
+      icon: {
+        primary: "#FFFFFF", // Primary icons
+        secondary: "#E5E5E7", // Secondary icons
+        disabled: "#48484A", // Disabled icons
+        onAccent: "#000000", // Icons on accent backgrounds (dark mode)
       },
 
       // Accent colors (brighter for dark mode)
@@ -129,6 +172,24 @@ export const tokens = {
         teal: "#64D2FF", // Brighter teal
         yellow: "#FFD60A", // Brighter yellow
         red: "#FF453A", // Brighter red
+
+        // Semantic color aliases for common use cases
+        primary: "#0A84FF", // Alias for blue
+        success: "#30D158", // Alias for green
+        warning: "#FF9F0A", // Alias for orange
+        error: "#FF453A", // Alias for red
+        info: "#64D2FF", // Alias for teal
+      },
+
+      // Badge colors
+      badge: {
+        background: "#2C2C2E", // Dark gray background
+        text: "#E5E5E7", // Light gray text
+        border: "#48484A", // Subtle border
+        gold: "#FFD700", // Gold badge
+        silver: "#C0C0C0", // Silver badge
+        bronze: "#CD7F32", // Bronze badge
+        platinum: "#E5E4E2", // Platinum badge
       },
 
       // Chat bubble colors
@@ -141,6 +202,7 @@ export const tokens = {
 
       // Border colors
       border: {
+        primary: "#3A3A3C", // Primary borders
         subtle: "#2C2C2E", // Extra-subtle borders
         light: "#2C2C2E", // Dark gray borders
         medium: "#48484A", // Medium gray borders
@@ -168,6 +230,7 @@ export const tokens = {
       state: {
         hover: "#2C2C2E", // Dark gray hover
         pressed: "#3C3C3E", // Slightly lighter pressed
+        danger: "#FF453A", // Danger/destructive state (bright red for dark mode)
       },
 
       // Notebook-style colors (for LogOverlay)
@@ -186,6 +249,7 @@ export const tokens = {
   typography: {
     fontFamily: {
       system: "System", // SF Pro on iOS, Roboto on Android
+      notebook: "Courier New", // Monospace for notebook-style text
     },
 
     fontSize: {
@@ -195,6 +259,7 @@ export const tokens = {
       md: 17, // Emphasized body
       lg: 20, // Subheadings
       xl: 24, // Section headers
+      xxl: 26, // Extra large
       "2xl": 28, // Screen titles
       "3xl": 34, // Large titles (MacroFactor "DASHBOARD")
     },
@@ -223,6 +288,7 @@ export const tokens = {
     lg: 24, // Section spacing
     xl: 32, // Screen padding
     "2xl": 48, // Large spacing
+    "3xl": 64, // Extra large spacing
   },
 
   // ============================================================================
@@ -233,6 +299,8 @@ export const tokens = {
     md: 12, // Cards
     lg: 16, // Large cards
     xl: 20, // Hero elements
+    "2xl": 22, // Extra large
+    "3xl": 24, // Extra large elements
     full: 9999, // Circular (avatars, pills)
   },
 
@@ -268,6 +336,53 @@ export const tokens = {
       shadowRadius: 16,
       elevation: 8,
     },
+  },
+
+  // ============================================================================
+  // ANIMATION TOKENS
+  // ============================================================================
+  animation: {
+    // Scale animations for press interactions
+    scale: {
+      pressed: 0.96, // Subtle scale down on press
+      hover: 1.02, // Slight scale up on hover (web)
+    },
+
+    // Spring animation configs
+    spring: {
+      bouncy: {
+        damping: 15,
+        stiffness: 150,
+      },
+      smooth: {
+        damping: 20,
+        stiffness: 200,
+      },
+      snappy: {
+        damping: 25,
+        stiffness: 300,
+      },
+    },
+
+    // Duration values (in ms)
+    duration: {
+      fast: 150,
+      normal: 250,
+      slow: 350,
+    },
+  },
+
+  // ============================================================================
+  // HAPTIC FEEDBACK TOKENS
+  // ============================================================================
+  haptics: {
+    light: 'light' as const,
+    medium: 'medium' as const,
+    heavy: 'heavy' as const,
+    success: 'success' as const,
+    error: 'error' as const,
+    warning: 'warning' as const,
+    selection: 'selection' as const,
   },
 
   // ============================================================================

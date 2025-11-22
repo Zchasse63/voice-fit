@@ -4,9 +4,8 @@ import {
   EnhancedSwapResponse,
   SwapRequestContext,
   ContextBadge,
-  ExerciseSubstitute,
 } from '../services/exercise/EnhancedExerciseSwapService';
-import { useAuth } from './useAuth';
+import { useAuthStore } from '../store/auth.store';
 
 interface UseEnhancedExerciseSwapOptions {
   autoGenerateBadges?: boolean;
@@ -34,11 +33,9 @@ export const useEnhancedExerciseSwap = (
 ): UseEnhancedExerciseSwapReturn => {
   const {
     autoGenerateBadges = true,
-    enableCache = true,
     useAIRanking = false,
   } = options;
-
-  const { user } = useAuth();
+  const user = useAuthStore((state) => state.user);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [response, setResponse] = useState<EnhancedSwapResponse | null>(null);
@@ -211,7 +208,6 @@ export const useEnhancedExerciseSwap = (
  * Helper hook to gather user context for swaps
  */
 export const useSwapContext = () => {
-  const { user } = useAuth();
   // TODO: Integrate with injury store, equipment store, program store
   // For now, return empty context that can be overridden
 

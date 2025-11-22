@@ -29,7 +29,7 @@ export default function MetricCard({
 }: MetricCardProps) {
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
-  const borderColor = isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight;
+  const borderColor = colors.border.light;
 
   const getTrendColor = () => {
     if (!trend) return colors.text.secondary;
@@ -56,7 +56,7 @@ export default function MetricCard({
         padding: variant === 'compact' ? tokens.spacing.md : tokens.spacing.lg,
         height: variant === 'compact' ? 140 : 120,
         ...tokens.shadows.md,
-        borderWidth: tokens.borders.primary.width,
+        borderWidth: 1,
         borderColor,
       }}
     >

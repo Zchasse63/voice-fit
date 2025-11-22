@@ -21,7 +21,6 @@ export default function ChatBubble({
   message,
   isUser,
   timestamp,
-  status,
 }: ChatBubbleProps) {
   const { isDark } = useTheme();
   const colors = tokens.colors[isDark ? "dark" : "light"];
@@ -56,12 +55,12 @@ export default function ChatBubble({
           {
             backgroundColor: bubbleColor,
             borderRadius: tokens.components.chat.bubbleBorderRadius,
-            maxWidth: tokens.components.chat.bubbleMaxWidth,
+            maxWidth: '75%' as any,
             paddingHorizontal: tokens.components.chat.bubblePadding.horizontal,
             paddingVertical: tokens.components.chat.bubblePadding.vertical,
             borderTopRightRadius: isUser ? 4 : tokens.components.chat.bubbleBorderRadius,
             borderTopLeftRadius: isUser ? tokens.components.chat.bubbleBorderRadius : 4,
-          },
+          } as any,
         ]}
       >
         <Text

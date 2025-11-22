@@ -130,6 +130,7 @@ class ChartDataService {
     const weeklyData = new Map<string, number>();
 
     for (const workout of workouts) {
+      if (!workout.startTime) continue;
       const weekStart = this.getWeekStart(workout.startTime);
       const sets = await database
         .get<Set>('sets')
@@ -234,7 +235,7 @@ class ChartDataService {
     const intercept = (sumY - slope * sumX) / n;
 
     // Predict 4, 8, 12 weeks ahead
-    const lastDate = new Date(historicalData[historicalData.length - 1].date);
+    const lastDate = new Date(historicalData[historicalData.length - 1]!.date);
     return [4, 8, 12].map((weeks) => {
       const futureDate = new Date(lastDate);
       futureDate.setDate(futureDate.getDate() + weeks * 7);

@@ -9,7 +9,7 @@ import React from 'react';
 import { View, Text, Modal, Pressable, ScrollView } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
-import { AlertCircle, TrendingDown, CheckCircle, X, Battery } from 'lucide-react-native';
+import { AlertCircle, TrendingDown, X, Battery } from 'lucide-react-native';
 import { FatigueAssessment, DeloadPrescription } from '../../services/deload/DeloadService';
 
 interface DeloadRecommendationModalProps {

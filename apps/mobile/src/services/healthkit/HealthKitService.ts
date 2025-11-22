@@ -5,10 +5,20 @@
  * Handles permissions, background sync, and data ingestion.
  */
 
-import AppleHealthKit, {
-  HealthValue,
-  HealthKitPermissions,
-} from 'react-native-health';
+// @ts-ignore - react-native-health types may not be available
+const AppleHealthKit = require('react-native-health');
+
+export interface HealthValue {
+  value: number;
+}
+
+export interface HealthKitPermissions {
+  permissions: {
+    read: string[];
+    write: string[];
+  };
+}
+
 import { supabase } from '../database/supabase.client';
 
 export interface HealthKitData {
@@ -88,7 +98,7 @@ class HealthKitService {
     // Sync every 30 minutes
     this.syncInterval = setInterval(() => {
       this.syncHealthData(userId);
-    }, 30 * 60 * 1000);
+    }, 30 * 60 * 1000) as any;
 
     console.log('[HealthKit] Background sync started');
   }
@@ -315,6 +325,57 @@ class HealthKitService {
       AppleHealthKit.getOxygenSaturationSamples(options, (err: any, results: any[]) => {
         if (err) {
           console.error('[HealthKit] SpO2 error:', err);
+          resolve([]);
+        } else {
+          resolve(results || []);
+        }
+      });
+    });
+  }
+
+  /**
+   * Get body temperature
+   */
+  private async getBodyTemperature(startDate: Date, endDate: Date): Promise<any[]> {
+    return new Promise((resolve) => {
+      const options = { startDate: startDate.toISOString(), endDate: endDate.toISOString() };
+      (AppleHealthKit as any).getBodyTemperatureSamples(options, (err: any, results: any[]) => {
+        if (err) {
+          console.error('[HealthKit] Body temperature error:', err);
+          resolve([]);
+        } else {
+          resolve(results || []);
+        }
+      });
+    });
+  }
+
+  /**
+   * Get weight
+   */
+  private async getWeight(startDate: Date, endDate: Date): Promise<any[]> {
+    return new Promise((resolve) => {
+      const options = { startDate: startDate.toISOString(), endDate: endDate.toISOString() };
+      (AppleHealthKit as any).getWeightSamples(options, (err: any, results: any[]) => {
+        if (err) {
+          console.error('[HealthKit] Weight error:', err);
+          resolve([]);
+        } else {
+          resolve(results || []);
+        }
+      });
+    });
+  }
+
+  /**
+   * Get body fat percentage
+   */
+  private async getBodyFatPercentage(startDate: Date, endDate: Date): Promise<any[]> {
+    return new Promise((resolve) => {
+      const options = { startDate: startDate.toISOString(), endDate: endDate.toISOString() };
+      (AppleHealthKit as any).getBodyFatPercentageSamples(options, (err: any, results: any[]) => {
+        if (err) {
+          console.error('[HealthKit] Body fat percentage error:', err);
           resolve([]);
         } else {
           resolve(results || []);

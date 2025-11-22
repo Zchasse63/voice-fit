@@ -35,7 +35,7 @@ class RunAnalyticsService {
         .select('id, start_time, distance, duration, pace, calories')
         .eq('user_id', userId)
         .order('start_time', { ascending: false })
-        .limit(limit);
+        .limit(limit) as any;
 
       if (error) {
         console.error('❌ getRecentRuns query failed:', {
@@ -58,7 +58,7 @@ class RunAnalyticsService {
         return [];
       }
 
-      return runs.map((run) => ({
+      return (runs as any[]).map((run: any) => ({
         id: run.id,
         startTime: new Date(run.start_time),
         distance: run.distance,
@@ -84,7 +84,7 @@ class RunAnalyticsService {
         .from('runs')
         .select('distance, duration, pace, calories')
         .eq('user_id', userId)
-        .gte('start_time', weekAgo.toISOString());
+        .gte('start_time', weekAgo.toISOString()) as any;
 
       if (error) {
         console.error('❌ getWeeklyRunStats query failed:', {
@@ -119,10 +119,10 @@ class RunAnalyticsService {
         };
       }
 
-      const totalDistance = runs.reduce((sum, run) => sum + run.distance, 0);
-      const totalDuration = runs.reduce((sum, run) => sum + run.duration, 0);
-      const totalCalories = runs.reduce((sum, run) => sum + run.calories, 0);
-      const avgPace = runs.reduce((sum, run) => sum + run.pace, 0) / runs.length;
+      const totalDistance = (runs as any[]).reduce((sum: number, run: any) => sum + run.distance, 0);
+      const totalDuration = (runs as any[]).reduce((sum: number, run: any) => sum + run.duration, 0);
+      const totalCalories = (runs as any[]).reduce((sum: number, run: any) => sum + run.calories, 0);
+      const avgPace = (runs as any[]).reduce((sum: number, run: any) => sum + run.pace, 0) / runs.length;
 
       return {
         totalDistance,

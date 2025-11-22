@@ -65,6 +65,10 @@ export interface DeloadRecommendation {
   suggested_reduction: number;
   duration_weeks: number;
   priority: 'low' | 'medium' | 'high';
+  // Backend API properties (snake_case)
+  deload_needed?: boolean;
+  deload_type?: 'programmed' | 'auto_regulation' | null;
+  confidence?: 'high' | 'medium' | 'low';
   metrics: {
     fatigue_score: number;
     volume_trend: string;

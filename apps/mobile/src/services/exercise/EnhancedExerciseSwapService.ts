@@ -1,4 +1,3 @@
-import { API_CONFIG } from '../api/config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../database/supabase.client';
 
@@ -69,7 +68,8 @@ export class EnhancedExerciseSwapService {
   private apiBaseUrl: string;
 
   private constructor() {
-    this.apiBaseUrl = API_CONFIG.BASE_URL || 'http://localhost:8000';
+    // Use environment variable or default to localhost
+    this.apiBaseUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000';
   }
 
   public static getInstance(): EnhancedExerciseSwapService {

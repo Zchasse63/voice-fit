@@ -11,6 +11,7 @@ import React from 'react';
 import { View, Text, Pressable, ScrollView } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { AlertTriangle, Clock, TrendingUp } from 'lucide-react-native';
+import tokens from '../../theme/tokens';
 
 interface InjuryLog {
   id: string;

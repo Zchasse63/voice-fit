@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import RecoveryCheckInModal from '../../../../src/components/injury/RecoveryCheckInModal';
 
 // Mock theme context
@@ -188,7 +188,7 @@ describe('RecoveryCheckInModal', () => {
     it('should show loading indicator when submitting', async () => {
       jest.useFakeTimers();
       const slowOnSubmit = jest.fn<Promise<void>, [any]>().mockImplementation(() => new Promise(resolve => setTimeout(() => resolve(), 5000)));
-      const { getByLabelText, queryByTestId, queryByText } = render(
+      const { getByLabelText } = render(
         <RecoveryCheckInModal
           visible={true}
           onClose={mockOnClose}

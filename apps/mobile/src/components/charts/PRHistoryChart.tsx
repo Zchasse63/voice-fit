@@ -263,7 +263,7 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
                     color: accentColors.blue,
                   }}
                 >
-                  {Math.round(state.y.oneRM.value)} lbs
+                  {Math.round((state.y.oneRM as any).value)} lbs
                 </Text>
                 <Text
                   style={{
@@ -271,7 +271,7 @@ const PRHistoryChart = React.memo(function PRHistoryChart({ exerciseId, exercise
                     color: colors.text.secondary,
                   }}
                 >
-                  {formatDate(new Date(state.x.value).toISOString())}
+                  {formatDate(new Date((state.x as any).value).toISOString())}
                 </Text>
               </View>
             </View>

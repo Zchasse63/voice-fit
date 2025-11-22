@@ -53,8 +53,8 @@ export default function StatsOverview({
                 padding: tokens.spacing.lg,
                 minWidth: 140,
                 ...tokens.shadows.sm,
-                borderWidth: tokens.borders.primary.width,
-                borderColor: isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight,
+                borderWidth: 1,
+                borderColor: colors.border.light,
               }}
             >
               <Text
@@ -129,8 +129,8 @@ export default function StatsOverview({
               flex: 1,
               minWidth: '45%',
               ...tokens.shadows.sm,
-              borderWidth: tokens.borders.primary.width,
-              borderColor: isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight,
+              borderWidth: 1,
+              borderColor: colors.border.light,
             }}
           >
             <Text

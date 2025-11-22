@@ -79,7 +79,7 @@ export default function ProgramLogScreen({ navigation, route }: ProgramLogScreen
         return {
           id: workout.id,
           name: workout.workoutName || "Workout",
-          date: workout.startTime,
+          date: workout.startTime as any,
           sets: sets.length,
           volume: Math.round(volume),
         };

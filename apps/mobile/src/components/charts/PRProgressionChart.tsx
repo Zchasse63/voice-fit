@@ -135,7 +135,7 @@ export default function PRProgressionChart({ data, exerciseName }: PRProgression
                     color: accentColors.orange,
                   }}
                 >
-                  {state.y.weight.value} lbs
+                  {(state.y.weight as any).value} lbs
                 </Text>
                 <Text
                   style={{
@@ -143,7 +143,7 @@ export default function PRProgressionChart({ data, exerciseName }: PRProgression
                     color: colors.text.secondary,
                   }}
                 >
-                  {formatDate(new Date(state.x.value).toISOString())}
+                  {formatDate(new Date((state.x as any).value).toISOString())}
                 </Text>
               </View>
             </View>

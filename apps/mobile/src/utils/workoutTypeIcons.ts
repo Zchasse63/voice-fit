@@ -163,7 +163,7 @@ export const getWorkoutTypeIcon = (workoutName: string): WorkoutTypeData => {
  *   {getWorkoutTypeBadge('Push Day', 18)}
  * </View>
  */
-export const getWorkoutTypeBadge = (workoutName: string, size: number = 16) => {
+export const getWorkoutTypeBadge = (workoutName: string, _size: number = 16) => {
   const { Icon, color, label } = getWorkoutTypeIcon(workoutName);
   
   return {

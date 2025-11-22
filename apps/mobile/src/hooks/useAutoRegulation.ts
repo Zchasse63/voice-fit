@@ -5,7 +5,7 @@
  * Checks if auto-regulation should be triggered before workout starts.
  */
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuthStore } from '../store/auth.store';
 import {
   autoRegulationService,

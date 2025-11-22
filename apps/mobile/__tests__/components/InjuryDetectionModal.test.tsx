@@ -11,7 +11,7 @@
  */
 
 import React from 'react';
-import { render, fireEvent, waitFor } from '@testing-library/react-native';
+import { render, fireEvent } from '@testing-library/react-native';
 import InjuryDetectionModal from '../../src/components/injury/InjuryDetectionModal';
 
 // Mock theme context

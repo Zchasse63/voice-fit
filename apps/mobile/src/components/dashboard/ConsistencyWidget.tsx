@@ -16,7 +16,8 @@ export const ConsistencyWidget: React.FC<ConsistencyWidgetProps> = ({
     history,
     style,
 }) => {
-    const { colors } = useTheme();
+    const { isDark } = useTheme();
+    const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background.secondary }, style]}>

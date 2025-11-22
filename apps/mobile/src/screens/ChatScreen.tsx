@@ -17,7 +17,6 @@ import {
   Platform,
   Alert,
   Text,
-  Pressable,
 } from "react-native";
 import { ScalePressable } from "../components/common/ScalePressable";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -40,7 +39,7 @@ import ExerciseSubstitutionService, {
 import { classifyChatMessageLocal } from "../services/chat/LocalChatClassifier";
 import { AnalyticsService } from "../services/analytics/AnalyticsService";
 import { AnalyticsEvents } from "../services/analytics/events";
-import { messagePersistenceService, ChatMessage as PersistedChatMessage } from "../services/chat/MessagePersistenceService";
+import { messagePersistenceService } from "../services/chat/MessagePersistenceService";
 
 const mapSubstitutionToSwapData = (
   sub: ExerciseSubstitution,
@@ -117,11 +116,6 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
   const [inputText, setInputText] = useState("");
   const [loading, setLoading] = useState(false);
   const [quickLogDraft, setQuickLogDraft] = useState<QuickLogDraft | null>(null);
-
-  // Session state
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [sessionStatus, setSessionStatus] = useState<'active' | 'expiring' | 'expired'>('active');
-  const [sessionTimeRemaining, setSessionTimeRemaining] = useState<number>(0); // seconds
 
   // Handle intents from navigation
   useEffect(() => {
@@ -594,6 +588,7 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
         </View>
 
         {/* Session Warning */}
+        {/* TODO: Implement session status tracking
         {sessionStatus === 'expiring' && sessionTimeRemaining > 0 && (
           <View style={[styles.sessionWarning, { backgroundColor: colors.backgroundSoft.warning }]}>
             <Text style={[styles.sessionWarningText, { color: colors.text.primary }]}>
@@ -601,6 +596,7 @@ export default function ChatScreen({ navigation, route }: ChatScreenProps) {
             </Text>
           </View>
         )}
+        */}
 
         {/* Messages */}
         <FlatList

@@ -21,6 +21,7 @@ jest.mock('../../src/theme/ThemeContext', () => ({
 
 describe('ActiveInjuryBanner', () => {
   const mockOnCheckInPress = jest.fn();
+  const mockOnInjuryPress = jest.fn();
 
   const mockInjuries = [
     {
@@ -53,6 +54,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -64,6 +66,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={[]}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -75,6 +78,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -87,6 +91,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={singleInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -98,6 +103,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -111,6 +117,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -123,6 +130,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -135,6 +143,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -147,6 +156,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -161,6 +171,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -178,6 +189,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={todayInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -194,6 +206,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={oldInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -213,6 +226,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={injuryNeedingCheckIn}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -230,6 +244,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={recentInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -247,6 +262,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={injuryNeedingCheckIn}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -268,6 +284,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={injuryWithOldCheckIn}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -285,6 +302,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={injuryWithRecentCheckIn}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -303,6 +321,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mildInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -319,6 +338,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={moderateInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -335,6 +355,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={severeInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -348,6 +369,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={mockInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -374,6 +396,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={manyInjuries}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -395,6 +418,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={noDescriptionInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 
@@ -411,6 +435,7 @@ describe('ActiveInjuryBanner', () => {
         <ActiveInjuryBanner
           injuries={resolvedInjury}
           onCheckInPress={mockOnCheckInPress}
+          onInjuryPress={mockOnInjuryPress}
         />
       );
 

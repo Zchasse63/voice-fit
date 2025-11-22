@@ -214,7 +214,7 @@ export class RecoveryCheckInService {
     status: 'improving' | 'plateau' | 'worsening' | 'resolved',
     requiresMedicalAttention: boolean,
     daysInRecovery: number,
-    severity: string
+    _severity: string
   ): string {
     if (requiresMedicalAttention) {
       return 'Your symptoms suggest you should consult a healthcare provider (physician, physical therapist, or sports medicine specialist) for proper evaluation.';

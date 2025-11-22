@@ -114,6 +114,7 @@ class VolumeService {
     const volumeByDate = new Map<string, number>();
 
     for (const workout of workouts) {
+      if (!workout.startTime) continue;
       const dateKey = workout.startTime.toISOString().split('T')[0];
       
       // Get sets for this workout

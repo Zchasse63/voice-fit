@@ -146,8 +146,8 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
                 paddingHorizontal: tokens.spacing.md,
                 paddingVertical: tokens.spacing.xs,
                 borderRadius: tokens.borderRadius.full,
-                borderWidth: tokens.borders.primary.width,
-                borderColor: isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight,
+                borderWidth: 1,
+                borderColor: colors.border.light,
                 backgroundColor: isActive ? colors.backgroundSoft.accent : colors.background.secondary,
                 opacity: pressed ? 0.85 : 1,
               };
@@ -248,7 +248,7 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
                     color: accentColors.green,
                   }}
                 >
-                  {formatVolume(state.y.tonnage.value)} lbs
+                  {formatVolume((state.y.tonnage as any).value)} lbs
                 </Text>
                 <Text
                   style={{
@@ -256,7 +256,7 @@ const VolumeTrendsChart = React.memo(function VolumeTrendsChart() {
                     color: colors.text.secondary,
                   }}
                 >
-                  Week of {formatDate(new Date(state.x.value).toISOString())}
+                  Week of {formatDate(new Date((state.x as any).value).toISOString())}
                 </Text>
               </View>
             </View>

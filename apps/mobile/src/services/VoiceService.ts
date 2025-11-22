@@ -138,11 +138,11 @@ export class VoiceService {
 
   // Event handlers
 
-  private onSpeechStart(event: any): void {
+  private onSpeechStart(_event: any): void {
     console.log('Speech started');
   }
 
-  private onSpeechEnd(event: any): void {
+  private onSpeechEnd(_event: any): void {
     console.log('Speech ended');
     this.isRecording = false;
   }

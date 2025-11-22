@@ -7,7 +7,6 @@
 
 import { InjuryLoggingService } from '../../src/services/injury/InjuryLoggingService';
 import { database } from '../../src/services/database/watermelon/database';
-import InjuryLog from '../../src/services/database/watermelon/models/InjuryLog';
 
 // Mock WatermelonDB
 jest.mock('../../src/services/database/watermelon/database', () => ({

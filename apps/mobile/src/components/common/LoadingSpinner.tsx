@@ -39,7 +39,7 @@ export default function LoadingSpinner({
       };
 
   return (
-    <View style={containerStyle}>
+    <View style={containerStyle as any}>
       <ActivityIndicator
         size={size}
         color={colors.accent.blue}

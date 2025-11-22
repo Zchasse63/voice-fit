@@ -475,7 +475,7 @@ export const useProgramStore = create<ProgramState>((set, get) => ({
       const userId = 'current-user-id';
 
       // Check for conflicts on the new date
-      const conflicts = await CalendarService.checkConflicts(
+      await CalendarService.checkConflicts(
         userId,
         newDate.toISOString().split('T')[0],
         workoutId
@@ -499,8 +499,8 @@ export const useProgramStore = create<ProgramState>((set, get) => ({
 
       set({ isLoading: false });
 
-      // Return conflict info for UI to handle
-      return conflicts;
+      // TODO: Handle conflict info for UI if needed
+      // conflicts can be used to show warnings to the user
     } catch (error) {
       console.error('Failed to reschedule workout:', error);
       set({ error: 'Failed to reschedule workout', isLoading: false });

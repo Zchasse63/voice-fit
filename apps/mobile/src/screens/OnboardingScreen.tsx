@@ -14,9 +14,12 @@ import Animated, {
   interpolate,
   Extrapolate,
 } from 'react-native-reanimated';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useTheme } from '../theme/ThemeContext';
 import { tokens } from '../theme/tokens';
 import { Mic, TrendingUp, MessageCircle, ChevronRight } from 'lucide-react-native';
+import type { AuthStackParamList } from '../navigation/AuthNavigator';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -52,16 +55,28 @@ const slides: OnboardingSlide[] = [
   },
 ];
 
+type OnboardingNavigationProp = NativeStackNavigationProp<AuthStackParamList, 'Onboarding'>;
+
 interface OnboardingScreenProps {
-  onComplete: () => void;
+  onComplete?: () => void;
 }
 
-export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
+export default function OnboardingScreen({ onComplete }: OnboardingScreenProps = {}) {
+  const navigation = useNavigation<OnboardingNavigationProp>();
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [currentIndex, setCurrentIndex] = useState(0);
   const scrollX = useSharedValue(0);
   const scrollViewRef = useRef<ScrollView>(null);
+
+  const handleComplete = () => {
+    if (onComplete) {
+      onComplete();
+    } else {
+      // Navigate to SignIn screen when used in navigation
+      navigation.navigate('SignIn');
+    }
+  };
 
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
@@ -72,12 +87,12 @@ export default function OnboardingScreen({ onComplete }: OnboardingScreenProps) 
         animated: true,
       });
     } else {
-      onComplete();
+      handleComplete();
     }
   };
 
   const handleSkip = () => {
-    onComplete();
+    handleComplete();
   };
 
   return (

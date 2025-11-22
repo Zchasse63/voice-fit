@@ -8,7 +8,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { ChevronLeft, Activity, Heart, Zap } from 'lucide-react-native';
+import { ChevronLeft } from 'lucide-react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { tokens } from '../theme/tokens';
 import { useAuthStore } from '../store/auth.store';
@@ -370,10 +370,10 @@ export default function RecoveryDetailScreen() {
                         color: accentColors.green,
                       }}
                     >
-                      {Math.round(state.y.compositeScore.value)}%
+                      {Math.round((state.y.compositeScore.value as any) as number)}%
                     </Text>
                     <Text style={{ fontSize: tokens.typography.fontSize.xs, color: colors.text.secondary }}>
-                      {formatDate(new Date(state.x.value).toISOString())}
+                      {formatDate(new Date((state.x.value as any) as number).toISOString())}
                     </Text>
                   </View>
                 </View>
@@ -416,7 +416,7 @@ export default function RecoveryDetailScreen() {
                       marginTop: tokens.spacing.xs,
                     }}
                   >
-                    {fatigueData.current_fatigue_score?.toFixed(1) || '--'}
+                    {fatigueData.current_fatigue?.fatigue_score?.toFixed(1) || '--'}
                   </Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
@@ -428,17 +428,17 @@ export default function RecoveryDetailScreen() {
                       fontSize: tokens.typography.fontSize.md,
                       fontWeight: tokens.typography.fontWeight.semibold,
                       color:
-                        (fatigueData.current_fatigue_score || 0) < 4
+                        (fatigueData.current_fatigue?.fatigue_score || 0) < 4
                           ? accentColors.green
-                          : (fatigueData.current_fatigue_score || 0) < 7
+                          : (fatigueData.current_fatigue?.fatigue_score || 0) < 7
                           ? accentColors.orange
                           : accentColors.coral,
                       marginTop: tokens.spacing.xs,
                     }}
                   >
-                    {(fatigueData.current_fatigue_score || 0) < 4
+                    {(fatigueData.current_fatigue?.fatigue_score || 0) < 4
                       ? 'Low'
-                      : (fatigueData.current_fatigue_score || 0) < 7
+                      : (fatigueData.current_fatigue?.fatigue_score || 0) < 7
                       ? 'Moderate'
                       : 'High'}
                   </Text>

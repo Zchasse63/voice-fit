@@ -29,7 +29,7 @@ describe("MetricCard component", () => {
 
   it("renders icon when provided", () => {
     const { getByTestId } = render(
-      <MetricCard title="Workouts" value="12" icon={DummyIcon} />,
+      <MetricCard title="Workouts" value="12" icon={DummyIcon as any} />,
     );
     expect(getByTestId("metric-icon")).toBeTruthy();
   });

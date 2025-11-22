@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
-import { Heart, AlertTriangle, TrendingUp, TrendingDown, ChevronRight } from 'lucide-react-native';
+import { Heart, AlertTriangle, ChevronRight } from 'lucide-react-native';
 import { useAuthStore } from '../../store/auth.store';
 import { supabase } from '../../services/database/supabase.client';
 
@@ -23,7 +23,7 @@ interface HealthSnapshotCardProps {
 export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps) {
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
-  const borderColor = isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight;
+  const borderColor = colors.border.light;
   const user = useAuthStore((state) => state.user);
   
   const [snapshot, setSnapshot] = useState<HealthSnapshot | null>(null);
@@ -81,7 +81,7 @@ export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps)
           justifyContent: 'center',
           alignItems: 'center',
           ...tokens.shadows.sm,
-          borderWidth: tokens.borders.primary.width,
+          borderWidth: 1,
           borderColor,
         }}
       >
@@ -99,7 +99,7 @@ export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps)
           padding: tokens.spacing.lg,
           minHeight: 180,
           ...tokens.shadows.sm,
-          borderWidth: tokens.borders.primary.width,
+          borderWidth: 1,
           borderColor,
         }}
       >
@@ -139,7 +139,7 @@ export default function HealthSnapshotCard({ onPress }: HealthSnapshotCardProps)
         padding: tokens.spacing.lg,
         minHeight: 180,
         ...tokens.shadows.sm,
-        borderWidth: tokens.borders.primary.width,
+        borderWidth: 1,
         borderColor,
       }}
     >

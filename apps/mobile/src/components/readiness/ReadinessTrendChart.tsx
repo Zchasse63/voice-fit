@@ -189,10 +189,10 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
                 />
                 {isActive && (
                   <Circle
-                    cx={state.x.position}
-                    cy={state.y.score.position}
+                    cx={(state.x as any).position}
+                    cy={(state.y.score as any).position}
                     r={8}
-                    color={getStatusColor(state.y.score.value)}
+                    color={getStatusColor((state.y.score as any).value)}
                     opacity={0.8}
                   />
                 )}
@@ -223,10 +223,10 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
                   style={{
                     fontSize: tokens.typography.fontSize.sm,
                     fontWeight: tokens.typography.fontWeight.bold,
-                    color: getStatusColor(state.y.score.value),
+                    color: getStatusColor((state.y.score as any).value),
                   }}
                 >
-                  {Math.round(state.y.score.value)}% Readiness
+                  {Math.round((state.y.score as any).value)}% Readiness
                 </Text>
                 <Text
                   style={{
@@ -234,7 +234,7 @@ const ReadinessTrendChart = React.memo(function ReadinessTrendChart() {
                     color: colors.text.secondary,
                   }}
                 >
-                  {formatDate(new Date(state.x.value).toISOString())}
+                  {formatDate(new Date((state.x as any).value).toISOString())}
                 </Text>
               </View>
             </View>

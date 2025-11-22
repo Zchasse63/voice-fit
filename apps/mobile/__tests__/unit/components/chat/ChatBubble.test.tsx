@@ -59,7 +59,7 @@ describe("ChatBubble component", () => {
   });
 
   it("applies correct bubble background and text color for user message", () => {
-    const { toJSON, getByText } = render(
+    const { toJSON } = render(
       <ChatBubble message="User text" isUser={true} />
     );
 

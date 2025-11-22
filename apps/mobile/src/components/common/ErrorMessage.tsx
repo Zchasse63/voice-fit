@@ -40,7 +40,7 @@ export default function ErrorMessage({
       };
 
   return (
-    <View style={containerStyle}>
+    <View style={containerStyle as any}>
       <AlertCircle
         color={isDark ? '#F87171' : '#DC2626'} 
         size={48} 

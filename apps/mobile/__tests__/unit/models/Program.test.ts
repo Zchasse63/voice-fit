@@ -3,8 +3,6 @@
  * Tests computed properties and business logic
  */
 
-import { Model } from '@nozbe/watermelondb';
-
 // Mock Program class for testing
 class MockProgram {
   userId: string;

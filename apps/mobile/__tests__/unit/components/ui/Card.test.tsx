@@ -1,6 +1,6 @@
 import React from "react";
 import { View } from "react-native";
-import { render, fireEvent } from "@testing-library/react-native";
+import { render } from "@testing-library/react-native";
 
 // Component under test
 import Card from "../../../../src/components/ui/Card";
@@ -12,7 +12,7 @@ jest.mock("../../../../src/theme/ThemeContext", () => ({
 
 describe("Card component", () => {
   it("renders children content", () => {
-    const { getByText } = render(
+    render(
       <Card>
         <View>
           <View>
@@ -330,7 +330,7 @@ describe("Card component", () => {
     ];
 
     variants.forEach((variant) => {
-      const { getByText, unmount } = render(
+      const { unmount } = render(
         <Card variant={variant}>
           <View>
             <></>
@@ -404,9 +404,9 @@ describe("Card component", () => {
 
   it("is pressable when onPress is provided", () => {
     const onPress = jest.fn();
-    const { getByText } = render(<Card onPress={onPress}><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /></Card>);
+    render(<Card onPress={onPress}><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /><View /></Card>);
     // There is no text to press; simulate press by re-rendering with a child text:
-    const { getByText: getByText2 } = render(
+    render(
       <Card onPress={onPress}>
         <View />
         <View />

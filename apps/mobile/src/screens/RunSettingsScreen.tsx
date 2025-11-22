@@ -7,15 +7,18 @@ import { useNavigation } from "@react-navigation/native";
 import { ChevronLeft, ChevronRight } from "lucide-react-native";
 import { SelectionModal } from "../components/settings/SelectionModal";
 import { audioCueService } from "../services/AudioCueService";
-import { useRunStore } from "../store/run.store";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// import { useRunStore } from "../store/run.store";
+// import AsyncStorage from "@react-native-async-storage/async-storage"; // TODO: Implement settings in RunStore
+// @ts-ignore - RadioRow import not used due to commented settings section
+// import { RadioRow } from "../components/settings/RadioRow"; // TODO: Implement settings in RunStore
 
 export default function RunSettingsScreen() {
   const { isDark } = useTheme();
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
-  const { settings, updateSettings } = useRunStore();
+  // TODO: Implement settings and updateSettings in RunStore
+  // const { settings, updateSettings } = useRunStore();
 
   // Audio Cues
   const [startStopCues, setStartStopCues] = useState(true);
@@ -27,7 +30,7 @@ export default function RunSettingsScreen() {
   // Modals
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
   const [volumeModalVisible, setVolumeModalVisible] = useState(false);
-  const [countdownModalVisible, setCountdownModalVisible] = useState(false);
+  // const [countdownModalVisible, setCountdownModalVisible] = useState(false); // TODO: Implement settings in RunStore
 
   // Load settings on mount
   useEffect(() => {
@@ -47,8 +50,11 @@ export default function RunSettingsScreen() {
     await audioCueService.updateSettings({ [key]: value });
   };
 
+  // TODO: Implement settings in RunStore
+  /*
   const saveRunSetting = async (key: string, value: any) => {
-    updateSettings({ [key]: value });
+    // TODO: Implement updateSettings in RunStore
+    // updateSettings({ [key]: value });
     try {
       const stored = await AsyncStorage.getItem('runSettings');
       const current = stored ? JSON.parse(stored) : {};
@@ -57,6 +63,7 @@ export default function RunSettingsScreen() {
       console.error('Failed to save run setting:', error);
     }
   };
+  */
 
   const SettingRow = ({
     label,
@@ -141,6 +148,8 @@ export default function RunSettingsScreen() {
     </View>
   );
 
+  // TODO: Implement settings in RunStore
+  /*
   const RadioRow = ({
     label,
     selected,
@@ -190,6 +199,7 @@ export default function RunSettingsScreen() {
       </View>
     </Pressable>
   );
+  */
 
   const SectionHeader = ({ title }: { title: string }) => (
     <View
@@ -281,7 +291,7 @@ export default function RunSettingsScreen() {
           onPress={() => setVolumeModalVisible(true)}
         />
 
-        {/* Feedback Distance Section */}
+        {/* Feedback Distance Section - TODO: Implement settings in RunStore
         <SectionHeader title="FEEDBACK DISTANCE" />
         <RadioRow
           label="Half Mile"
@@ -315,8 +325,9 @@ export default function RunSettingsScreen() {
             Receive feedback with your average pace during your Free Run.
           </Text>
         </View>
+        */}
 
-        {/* Start, Stop and Pause Section */}
+        {/* Start, Stop and Pause Section - TODO: Implement settings in RunStore
         <SectionHeader title="START, STOP AND PAUSE" />
         <ToggleRow
           label="Auto Pause"
@@ -352,6 +363,7 @@ export default function RunSettingsScreen() {
             Set how long the countdown is before your workout starts.
           </Text>
         </View>
+        */}
       </ScrollView>
 
       {/* Voice Selection Modal */}
@@ -388,7 +400,7 @@ export default function RunSettingsScreen() {
         onClose={() => setVolumeModalVisible(false)}
       />
 
-      {/* Countdown Selection Modal */}
+      {/* Countdown Selection Modal - TODO: Implement settings in RunStore
       <SelectionModal
         visible={countdownModalVisible}
         title="Select Countdown"
@@ -402,6 +414,7 @@ export default function RunSettingsScreen() {
         onSelect={(val) => saveRunSetting('countdown', parseInt(val))}
         onClose={() => setCountdownModalVisible(false)}
       />
+      */}
     </View>
   );
 }

@@ -62,12 +62,12 @@ export default function LogOverlay({ visible, onClose, workoutLogId }: LogOverla
 
       // Load sets for this workout
       const setsCollection = database.get<Set>('sets');
-      const workoutSets = await setsCollection
-        .query()
-        .where('workout_log_id', workoutLogId!)
+      const workoutSets = await ((setsCollection
+        .query() as any)
+        .where('workout_log_id', workoutLogId!))
         .fetch();
 
-      const formattedSets: SetData[] = workoutSets.map((set) => ({
+      const formattedSets: SetData[] = (workoutSets as any[]).map((set: any) => ({
         id: set.id,
         exerciseName: set.exerciseName,
         weight: set.weight,
@@ -93,19 +93,6 @@ export default function LogOverlay({ visible, onClose, workoutLogId }: LogOverla
       grouped[set.exerciseName].push(set);
     });
     return grouped;
-  };
-
-  const renderNotebookLine = (index: number) => {
-    return (
-      <View
-        key={`line-${index}`}
-        style={{
-          height: 32,
-          borderBottomWidth: 1,
-          borderBottomColor: colors.notebook.ruledLine,
-        }}
-      />
-    );
   };
 
   const renderSet = (set: SetData, setNumber: number) => {

@@ -50,6 +50,7 @@ export default function App() {
         syncService.stopBackgroundSync();
       };
     }
+    return undefined;
   }, [user?.id]);
 
   return (

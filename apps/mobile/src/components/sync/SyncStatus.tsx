@@ -76,11 +76,11 @@ export default function SyncStatus() {
     >
       <View style={styles.iconContainer}>
         {syncStatus.isSyncing ? (
-          <ActivityIndicator size="small" color={colors.text.brand} />
+          <ActivityIndicator size="small" color={colors.accent.blue} />
         ) : totalUnsynced > 0 ? (
-          <CloudOff size={16} color={colors.text.warning} />
+          <CloudOff size={16} color={colors.accent.warning} />
         ) : (
-          <Cloud size={16} color={colors.text.success} />
+          <Cloud size={16} color={colors.accent.success} />
         )}
       </View>
 

@@ -45,6 +45,10 @@ export default class WorkoutLog extends Model {
   @field('warmup_duration_min') warmupDurationMin?: number;
   @field('cooldown_duration_min') cooldownDurationMin?: number;
 
+  // Additional fields for test compatibility
+  @field('duration_minutes') durationMinutes?: number;
+  @field('workout_type') workoutType?: string;
+
   // Sync metadata
   @field('synced') synced!: boolean;
   @readonly @date('created_at') createdAt!: Date;

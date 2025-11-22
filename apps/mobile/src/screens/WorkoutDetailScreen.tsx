@@ -68,7 +68,7 @@ export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetail
           exerciseName: set.exerciseName,
           weight: set.weight,
           reps: set.reps,
-          rpe: set.rpe,
+          rpe: set.rpe ?? 0,
         });
       });
 
@@ -170,11 +170,11 @@ export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetail
                 color: colors.text.secondary,
               }}
             >
-              {workout.startTime.toLocaleDateString('en-US', {
+              {workout.startTime?.toLocaleDateString('en-US', {
                 weekday: 'long',
                 month: 'long',
                 day: 'numeric',
-              })}
+              }) || 'Unknown date'}
             </Text>
           </View>
         </View>
@@ -220,7 +220,7 @@ export default function WorkoutDetailScreen({ workoutId, onBack }: WorkoutDetail
                 color: colors.text.primary,
               }}
             >
-              {formatDuration(workout.startTime, workout.endTime)}
+              {workout.startTime && workout.endTime ? formatDuration(workout.startTime, workout.endTime) : 'Unknown duration'}
             </Text>
           </View>
 

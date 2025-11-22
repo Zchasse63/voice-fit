@@ -41,15 +41,7 @@ export interface VoiceParseResponse {
   message?: string;
 }
 
-/**
- * Generic API Response type
- */
-interface APIResponse<T = any> {
-  data?: T;
-  error?: string;
-  message?: string;
-  success?: boolean;
-}
+
 
 /**
  * HTTP Client for API requests
@@ -66,7 +58,7 @@ class APIClient {
    */
   private getAuthToken(): string | null {
     const state = useAuthStore.getState();
-    return state.session?.access_token || null;
+    return (state as any).session?.access_token || null;
   }
 
   /**

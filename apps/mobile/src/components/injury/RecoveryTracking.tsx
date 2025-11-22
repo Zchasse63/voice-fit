@@ -22,6 +22,8 @@ import { RecoveryCheckInService, RecoveryProgressResult } from '../../services/i
 import RecoveryCheckInModal, { CheckInData } from './RecoveryCheckInModal';
 import InjuryLog from '../../services/database/watermelon/models/InjuryLog';
 
+// TODO: Implement RecoveryCheckIn interface if needed
+/*
 interface RecoveryCheckIn {
   id: string;
   injury_id: string;
@@ -30,6 +32,7 @@ interface RecoveryCheckIn {
   mobility_level: number;
   notes?: string;
 }
+*/
 
 type ActiveInjury = InjuryLog;
 
@@ -37,7 +40,7 @@ interface RecoveryTrackingProps {
   onClose?: () => void;
 }
 
-export default function RecoveryTracking({ onClose }: RecoveryTrackingProps) {
+export default function RecoveryTracking({}: RecoveryTrackingProps) {
   const { isDark } = useTheme();
   const user = useAuthStore((state) => state.user);
   const mode = isDark ? 'dark' : 'light';

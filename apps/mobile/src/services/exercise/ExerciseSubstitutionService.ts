@@ -330,8 +330,8 @@ class ExerciseSubstitutionService {
    */
   async getAvailableExercises(): Promise<string[]> {
     try {
-      const { data, error } = await supabase
-        .from('exercise_substitutions')
+      const { data, error } = await (supabase
+        .from('exercise_substitutions') as any)
         .select('exercise_name')
         .order('exercise_name');
 
@@ -341,7 +341,7 @@ class ExerciseSubstitutionService {
       }
 
       // Get unique exercise names
-      const uniqueExercises = [...new Set(data?.map(row => row.exercise_name) || [])];
+      const uniqueExercises = [...new Set((data as any[])?.map((row: any) => row.exercise_name) || [])];
       return uniqueExercises;
     } catch (error) {
       console.error('[ExerciseSubstitutionService] getAvailableExercises error:', error);
@@ -491,8 +491,8 @@ class ExerciseSubstitutionService {
   ): Promise<Array<ExerciseSubstitution & { stress_on_injured_part: number | null }>> {
     try {
       // Step 1: Get all substitutions for the exercise
-      const { data: substitutions, error: subError } = await supabase
-        .from('exercise_substitutions')
+      const { data: substitutions, error: subError } = await (supabase
+        .from('exercise_substitutions') as any)
         .select('*')
         .eq('exercise_name', exercise_name)
         .gte('similarity_score', min_similarity_score)
@@ -508,9 +508,9 @@ class ExerciseSubstitutionService {
       }
 
       // Step 2: Get stress data for all substitute exercises
-      const substituteNames = substitutions.map(s => s.substitute_name);
-      const { data: stressData, error: stressError } = await supabase
-        .from('exercise_body_part_stress')
+      const substituteNames = (substitutions as any[]).map((s: any) => s.substitute_name);
+      const { data: stressData, error: stressError } = await (supabase
+        .from('exercise_body_part_stress') as any)
         .select('*')
         .in('exercise_name', substituteNames)
         .eq('body_part', injured_body_part);
@@ -523,13 +523,13 @@ class ExerciseSubstitutionService {
       // Step 3: Map stress intensity to each substitution
       const stressMap = new Map<string, number>();
       if (stressData) {
-        stressData.forEach(stress => {
+        (stressData as any[]).forEach((stress: any) => {
           stressMap.set(stress.exercise_name, stress.stress_intensity);
         });
       }
 
       // Step 4: Combine data and add stress_on_injured_part field
-      const enrichedSubstitutions = substitutions.map(sub => ({
+      const enrichedSubstitutions = (substitutions as any[]).map((sub: any) => ({
         ...sub,
         stress_on_injured_part: stressMap.get(sub.substitute_name) || null,
       }));

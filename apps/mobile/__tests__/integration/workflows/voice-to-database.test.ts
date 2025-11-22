@@ -15,7 +15,6 @@ jest.unmock("@supabase/supabase-js");
 
 import {
   initializeTestEnvironment,
-  getTestEnvironment,
   getSupabaseClient,
   getAuthenticatedTestUser,
   makeAuthenticatedRequest,
@@ -57,8 +56,6 @@ describe("Integration: Voice-to-Database Workflow", () => {
 
   describe("Voice Parsing API", () => {
     it("should parse simple voice input", async () => {
-      const env = getTestEnvironment();
-
       const response = await makeAuthenticatedRequest(
         "/api/voice/parse",
         testUser.accessToken,

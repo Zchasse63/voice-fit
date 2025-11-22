@@ -17,7 +17,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import {
-  Battery,
   BatteryFull,
   BatteryMedium,
   BatteryLow,

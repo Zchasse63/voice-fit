@@ -22,7 +22,6 @@ import {
   Alert,
   ActivityIndicator,
   Switch,
-  SectionList,
   SafeAreaView,
 } from "react-native";
 import {
@@ -30,7 +29,6 @@ import {
   Camera,
   User,
   Bell,
-  Lock,
   HelpCircle,
   LogOut,
   Watch,
@@ -52,7 +50,7 @@ export default function ProfileScreenRedesign({
   navigation,
   onNavigateToWearables,
 }: ProfileScreenRedesignProps = {}) {
-  const { isDark, setTheme, theme } = useTheme();
+  const { isDark, setTheme } = useTheme();
   const user = useAuthStore((state) => state.user);
   const signOut = useAuthStore((state) => state.signOut);
 
@@ -235,11 +233,10 @@ export default function ProfileScreenRedesign({
               {item.badge && (
                 <View
                   style={{
-                    fontSize: tokens.typography.fontSize.lg,
                     marginRight: tokens.spacing.sm,
                   }}
                 >
-                  <Text style={{ color: colors.accent.green }}>
+                  <Text style={{ color: colors.accent.green, fontSize: tokens.typography.fontSize.lg }}>
                     {item.badge}
                   </Text>
                 </View>
@@ -370,7 +367,7 @@ export default function ProfileScreenRedesign({
           >
             {user?.email}
           </Text>
-          {user?.authProvider && (
+          {(user as any)?.authProvider && (
             <View
               style={{
                 marginTop: tokens.spacing.sm,
@@ -387,14 +384,14 @@ export default function ProfileScreenRedesign({
                   textTransform: "capitalize",
                 }}
               >
-                Signed in with {user.authProvider}
+                Signed in with {(user as any).authProvider}
               </Text>
             </View>
           )}
         </View>
 
         {/* Settings Sections */}
-        {sections.map((section, sectionIndex) => (
+        {sections.map((section) => (
           <View key={section.title}>
             {renderSectionHeader(section.title)}
             <View

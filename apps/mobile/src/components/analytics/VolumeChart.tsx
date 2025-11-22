@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { View, Text, Dimensions } from 'react-native';
+// @ts-ignore - victory-native exports may not be fully typed
 import { VictoryLine, VictoryChart, VictoryTheme, VictoryAxis, VictoryArea } from 'victory-native';
 import { Defs, LinearGradient, Stop } from 'react-native-svg';
 import { VolumeTrend as ApiVolumeTrend, VolumeByMuscle as ApiVolumeByMuscle } from '../../services/api/AnalyticsAPIClient';

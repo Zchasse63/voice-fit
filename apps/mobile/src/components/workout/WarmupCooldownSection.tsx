@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 
 interface Exercise {
   name: string;
@@ -33,7 +34,8 @@ export const WarmupCooldownSection: React.FC<WarmupCooldownSectionProps> = ({
   data,
   onStartTimer,
 }) => {
-  const { colors } = useTheme();
+  const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
   const [isExpanded, setIsExpanded] = useState(false);
 
   const title = type === 'warmup' ? '🔥 Warmup' : '🧘 Cooldown';
@@ -44,7 +46,7 @@ export const WarmupCooldownSection: React.FC<WarmupCooldownSectionProps> = ({
       {/* Header */}
       <Pressable
         onPress={() => setIsExpanded(!isExpanded)}
-        style={[styles.header, { borderBottomColor: colors.border.default }]}
+        style={[styles.header, { borderBottomColor: colors.border.primary }]}
       >
         <View style={styles.headerLeft}>
           <Text style={[styles.title, { color: colors.text.primary }]}>{title}</Text>

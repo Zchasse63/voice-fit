@@ -38,7 +38,7 @@ describe("Button component", () => {
 
   it("does not call onPress when loading and hides label", () => {
     const onPress = jest.fn();
-    const { queryByText, getByTestId } = render(
+    const { queryByText } = render(
       <Button loading onPress={onPress}>
         Loading
       </Button>

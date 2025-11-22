@@ -340,7 +340,7 @@ export default function VolumeDetailScreen() {
                         color: accentColors.green,
                       }}
                     >
-                      {formatVolume(state.y.tonnage.value)} lbs
+                      {formatVolume((state.y.tonnage as any).value)} lbs
                     </Text>
                     <Text
                       style={{
@@ -348,7 +348,7 @@ export default function VolumeDetailScreen() {
                         color: colors.text.secondary,
                       }}
                     >
-                      Week of {formatDate(new Date(state.x.value).toISOString())}
+                      Week of {formatDate(new Date((state.x as any).value).toISOString())}
                     </Text>
                   </View>
                 </View>

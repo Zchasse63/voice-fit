@@ -46,7 +46,7 @@ describe("TimelineItem component", () => {
         title="Run"
         subtitle="5.2 mi"
         time="Today"
-        icon={DummyIcon}
+        icon={DummyIcon as any}
         iconColor="#9900ff"
       />,
     );
@@ -116,7 +116,7 @@ describe("TimelineItem component", () => {
         title="Swim"
         subtitle="1.2 km"
         time="Wed"
-        icon={DummyIcon}
+        icon={DummyIcon as any}
         iconBackgroundColor={bg}
       />,
     );

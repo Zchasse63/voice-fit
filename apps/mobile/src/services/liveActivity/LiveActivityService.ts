@@ -237,7 +237,7 @@ class LiveActivityService {
           // Rest timer completed
           this.stopRestTimer();
         }
-      }, 1000);
+      }, 1000) as any;
 
       console.log(`✅ Rest timer started: ${targetRestTime}s`);
       return true;
@@ -311,7 +311,7 @@ class LiveActivityService {
       if (this.activeActivityId && this.startTime) {
         this.updateActivity({});
       }
-    }, 5000); // Update every 5 seconds
+    }, 5000) as any; // Update every 5 seconds
   }
 
   /**
@@ -391,10 +391,3 @@ class LiveActivityService {
 
 // Export singleton instance
 export const liveActivityService = new LiveActivityService();
-
-// Export types
-export type {
-  WorkoutActivityAttributes,
-  WorkoutActivityState,
-  LiveActivityData,
-};

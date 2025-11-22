@@ -16,9 +16,85 @@ import Message from '../database/watermelon/models/Message';
 import ReadinessScore from '../database/watermelon/models/ReadinessScore';
 import PRHistory from '../database/watermelon/models/PRHistory';
 
+// Type definitions for Supabase data
+interface WorkoutLogRow {
+  id: string;
+  user_id: string;
+  workout_name: string;
+  start_time: string;
+  end_time: string | null;
+  created_at: string;
+  updated_at: string;
+  [key: string]: any;
+}
+
+interface RunRow {
+  id: string;
+  user_id: string;
+  start_time: string;
+  end_time: string;
+  distance: number;
+  duration: number;
+  pace: number;
+  avg_speed: number;
+  calories: number;
+  elevation_gain: number;
+  elevation_loss: number;
+  grade_adjusted_pace: number;
+  grade_percent: number;
+  terrain_difficulty: string;
+  route: any;
+  workout_type: string;
+  workout_name: string;
+  created_at: string;
+  updated_at: string;
+  [key: string]: any;
+}
+
+interface MessageRow {
+  id: string;
+  user_id: string;
+  text: string;
+  sender: string;
+  message_type: string;
+  data: any;
+  created_at: string;
+  updated_at: string;
+  [key: string]: any;
+}
+
+interface ReadinessScoreRow {
+  id: string;
+  user_id: string;
+  date: string;
+  score: number;
+  type: string;
+  emoji: string;
+  sleep_quality: number;
+  soreness: number;
+  stress: number;
+  energy: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  [key: string]: any;
+}
+
+interface PRHistoryRow {
+  id: string;
+  user_id: string;
+  exercise_name: string;
+  weight: number;
+  reps: number;
+  date: string;
+  created_at: string;
+  updated_at: string;
+  [key: string]: any;
+}
+
 export class SyncService {
   private isSyncing = false;
-  private syncInterval: NodeJS.Timeout | null = null;
+  private syncInterval: ReturnType<typeof setInterval> | null = null;
   private readonly SYNC_INTERVAL_MS = 30000; // 30 seconds
 
   /**
@@ -85,11 +161,11 @@ export class SyncService {
 
       for (const workout of unsyncedWorkouts) {
         // Upload to Supabase
-        const { error } = await supabase.from('workout_logs').insert({
+        const { error } = await (supabase as any).from('workout_logs').insert({
           id: workout.id,
           user_id: workout.userId,
           workout_name: workout.workoutName,
-          start_time: workout.startTime.toISOString(),
+          start_time: workout.startTime?.toISOString() || new Date().toISOString(),
           end_time: workout.endTime?.toISOString(),
           created_at: workout.createdAt.toISOString(),
           updated_at: workout.updatedAt.toISOString(),
@@ -134,7 +210,7 @@ export class SyncService {
 
       for (const set of unsyncedSets) {
         // Upload to Supabase
-        const { error } = await supabase.from('sets').insert({
+        const { error } = await supabase.from('sets').insert([{
           id: set.id,
           workout_log_id: set.workoutLogId,
           exercise_id: set.exerciseId,
@@ -144,7 +220,7 @@ export class SyncService {
           voice_command_id: set.voiceCommandId,
           created_at: set.createdAt.toISOString(),
           updated_at: set.updatedAt.toISOString(),
-        });
+        }] as any);
 
         if (error) {
           console.error('[SyncService] Error syncing set:', error);
@@ -194,7 +270,7 @@ export class SyncService {
         }
 
         // Upload to Supabase
-        const { error } = await supabase.from('runs').insert({
+        const { error } = await (supabase as any).from('runs').insert({
           id: run.id,
           user_id: run.userId,
           start_time: run.startTime.toISOString(),
@@ -265,7 +341,7 @@ export class SyncService {
         }
 
         // Upload to Supabase
-        const { error } = await supabase.from('messages').insert({
+        const { error } = await (supabase as any).from('messages').insert({
           id: message.id,
           user_id: message.userId,
           text: message.text,
@@ -315,7 +391,7 @@ export class SyncService {
 
       for (const score of unsyncedScores) {
         // Upload to Supabase
-        const { error } = await supabase.from('readiness_scores').insert({
+        const { error } = await (supabase as any).from('readiness_scores').insert({
           id: score.id,
           user_id: score.userId,
           date: score.date.toISOString(),
@@ -370,7 +446,7 @@ export class SyncService {
 
       for (const pr of unsyncedPRs) {
         // Upload to Supabase
-        const { error } = await supabase.from('pr_history').insert({
+        const { error } = await (supabase as any).from('pr_history').insert({
           id: pr.id,
           user_id: pr.userId,
           exercise_id: pr.exerciseId,
@@ -426,7 +502,7 @@ export class SyncService {
         .from('workout_logs')
         .select('*')
         .eq('user_id', userId)
-        .gt('created_at', lastUpdated.toISOString());
+        .gt('created_at', lastUpdated.toISOString()) as { data: WorkoutLogRow[] | null; error: any };
 
       if (error) {
         console.error('[SyncService] Error downloading workouts:', error);
@@ -442,7 +518,7 @@ export class SyncService {
 
       // Insert or update workouts into local database with conflict resolution
       await database.write(async () => {
-        for (const workout of workouts) {
+        for (const workout of workouts as WorkoutLogRow[]) {
           // Check if workout already exists locally
           const existingWorkout = await database
             .get<WorkoutLog>('workout_logs')
@@ -506,7 +582,7 @@ export class SyncService {
         .from('runs')
         .select('*')
         .eq('user_id', userId)
-        .gt('created_at', lastUpdated.toISOString());
+        .gt('created_at', lastUpdated.toISOString()) as { data: RunRow[] | null; error: any };
 
       if (error) {
         console.error('[SyncService] Error downloading runs:', error);
@@ -522,7 +598,7 @@ export class SyncService {
 
       // Insert or update runs into local database with conflict resolution
       await database.write(async () => {
-        for (const run of runs) {
+        for (const run of runs as RunRow[]) {
           // Check if run already exists locally
           const existingRun = await database
             .get<Run>('runs')
@@ -610,7 +686,7 @@ export class SyncService {
         .from('messages')
         .select('*')
         .eq('user_id', userId)
-        .gt('created_at', lastUpdated.toISOString());
+        .gt('created_at', lastUpdated.toISOString()) as { data: MessageRow[] | null; error: any };
 
       if (error) {
         console.error('[SyncService] Error downloading messages:', error);
@@ -626,7 +702,7 @@ export class SyncService {
 
       // Insert or update messages into local database with conflict resolution
       await database.write(async () => {
-        for (const message of messages) {
+        for (const message of messages as MessageRow[]) {
           // Check if message already exists locally
           const existingMessage = await database
             .get<Message>('messages')
@@ -692,7 +768,7 @@ export class SyncService {
         .from('readiness_scores')
         .select('*')
         .eq('user_id', userId)
-        .gt('created_at', lastUpdated.toISOString());
+        .gt('created_at', lastUpdated.toISOString()) as { data: ReadinessScoreRow[] | null; error: any };
 
       if (error) {
         console.error('[SyncService] Error downloading readiness scores:', error);
@@ -708,7 +784,7 @@ export class SyncService {
 
       // Insert or update readiness scores into local database with conflict resolution
       await database.write(async () => {
-        for (const score of scores) {
+        for (const score of scores as ReadinessScoreRow[]) {
           // Check if readiness score already exists locally
           const existingScore = await database
             .get<ReadinessScore>('readiness_scores')
@@ -784,7 +860,7 @@ export class SyncService {
         .from('pr_history')
         .select('*')
         .eq('user_id', userId)
-        .gt('created_at', lastUpdated.toISOString());
+        .gt('created_at', lastUpdated.toISOString()) as { data: PRHistoryRow[] | null; error: any };
 
       if (error) {
         console.error('[SyncService] Error downloading PR history:', error);
@@ -800,7 +876,7 @@ export class SyncService {
 
       // Insert or update PR records into local database with conflict resolution
       await database.write(async () => {
-        for (const pr of prs) {
+        for (const pr of prs as PRHistoryRow[]) {
           // Check if PR record already exists locally
           const existingPR = await database
             .get<PRHistory>('pr_history')

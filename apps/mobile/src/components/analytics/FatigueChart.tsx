@@ -6,7 +6,8 @@
 
 import React from 'react';
 import { View, Text, Dimensions } from 'react-native';
-import { VictoryLine, VictoryChart, VictoryTheme, VictoryAxis, VictoryArea } from 'victory-native';
+// @ts-ignore - victory-native exports may not be fully typed
+import { VictoryChart, VictoryTheme, VictoryAxis, VictoryArea } from 'victory-native';
 import { FatigueHistory as ApiFatigueHistory, CurrentFatigue as ApiCurrentFatigue } from '../../services/api/AnalyticsAPIClient';
 import { tokens } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';

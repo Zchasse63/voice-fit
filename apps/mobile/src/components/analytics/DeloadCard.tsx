@@ -8,7 +8,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { AlertCircle, CheckCircle, Info } from 'lucide-react-native';
 import { DeloadRecommendation } from '../../services/api/AnalyticsAPIClient';
-import { useTheme } from '../../hooks/useTheme';
+import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
 
 interface DeloadCardProps {
@@ -218,7 +218,7 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
       </Text>
 
       {/* Recommendation */}
-      {deloadRecommendation.recommendation && (
+      {deloadRecommendation.reason && (
         <View
           style={{
             padding: tokens.spacing.sm,
@@ -245,14 +245,14 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
                 color: colors.text.secondary,
               }}
             >
-              {deloadRecommendation.recommendation}
+              {deloadRecommendation.reason}
             </Text>
           </View>
         </View>
       )}
 
       {/* Indicators */}
-      {Object.keys(deloadRecommendation.indicators).length > 0 && (
+      {Object.keys(deloadRecommendation.metrics).length > 0 && (
         <View
           style={{
             marginBottom: tokens.spacing.sm,
@@ -268,7 +268,7 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
           >
             Indicators
           </Text>
-          {Object.entries(deloadRecommendation.indicators).map(([key, value]) => (
+          {Object.entries(deloadRecommendation.metrics).map(([key, value]) => (
             <View
               key={key}
               style={{
@@ -301,7 +301,7 @@ export const DeloadCard: React.FC<DeloadCardProps> = ({
       )}
 
       {/* Action Buttons */}
-      {deloadRecommendation.deload_needed && deloadRecommendation.requires_approval && (
+      {deloadRecommendation.recommended && deloadRecommendation.auto_regulation?.enabled && (
         <View
           style={{
             flexDirection: 'row',

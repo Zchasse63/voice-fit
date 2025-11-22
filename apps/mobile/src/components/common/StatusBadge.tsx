@@ -16,7 +16,8 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
     showDot = true,
     style
 }) => {
-    const { colors } = useTheme();
+    const { isDark } = useTheme();
+    const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
     const getStatusColors = () => {
         switch (status) {

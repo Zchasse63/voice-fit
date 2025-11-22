@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useTheme } from '../../contexts/ThemeContext';
+import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 
 export type SportType = 'strength' | 'running' | 'cycling' | 'swimming' | 'crossfit' | 'hybrid';
 
@@ -61,7 +62,8 @@ export const SportSelector: React.FC<SportSelectorProps> = ({
   onSelectSport,
   disabled = false,
 }) => {
-  const { colors } = useTheme();
+  const { isDark } = useTheme();
+  const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
   return (
     <View style={styles.container}>
@@ -87,7 +89,7 @@ export const SportSelector: React.FC<SportSelectorProps> = ({
                   backgroundColor: isSelected
                     ? colors.accent.green
                     : colors.background.secondary,
-                  borderColor: isSelected ? colors.accent.green : colors.border.default,
+                  borderColor: isSelected ? colors.accent.green : colors.border.primary,
                   opacity: disabled ? 0.5 : 1,
                 },
               ]}

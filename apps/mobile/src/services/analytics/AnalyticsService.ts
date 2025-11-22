@@ -22,7 +22,7 @@ export class AnalyticsService {
     if (!AMPLITUDE_API_KEY) return;
 
     try {
-      await Amplitude.setUserIdAsync(userId ?? undefined);
+      await Amplitude.setUserIdAsync(userId);
     } catch (error) {
       console.warn("[Analytics] Failed to set user id", error);
     }
@@ -31,11 +31,11 @@ export class AnalyticsService {
   /**
    * Log a typed analytics event.
    */
-  static async logEvent(eventName: string, properties?: Record<string, unknown>) {
+  static async logEvent(eventName: string, _properties?: Record<string, unknown>) {
     if (!AMPLITUDE_API_KEY) return;
 
     try {
-      await Amplitude.logEventAsync(eventName, properties);
+      await Amplitude.logEventAsync(eventName);
     } catch (error) {
       console.warn(`[Analytics] Failed to log event ${eventName}`, error);
     }

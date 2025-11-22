@@ -6,8 +6,7 @@
  * Extracts structured data for program generation.
  */
 
-import { database } from './database/watermelon/database';
-import { apiClient, APIError } from './api/config';
+import { apiClient } from './api/config';
 import { useAuthStore } from '../store/auth.store';
 import { supabase } from './database/supabase.client';
 
@@ -234,8 +233,8 @@ This helps me avoid exercises that might aggravate them. If you're injury-free, 
       const userId = useAuthStore.getState().user?.id || 'current_user';
 
       // Save onboarding data to user_onboarding table
-      const { error: onboardingError } = await supabase
-        .from('user_onboarding')
+      const { error: onboardingError } = await (supabase
+        .from('user_onboarding') as any)
         .upsert({
           user_id: userId,
           is_complete: false, // Will be set to true after program generation
@@ -259,37 +258,37 @@ This helps me avoid exercises that might aggravate them. If you're injury-free, 
       });
 
       // Save generated program to database
-      const { data: savedProgram, error: programError } = await supabase
-        .from('generated_programs')
+      const { data: savedProgram, error: programError } = await ((supabase
+        .from('generated_programs') as any)
         .insert({
           user_id: userId,
           program_data: program,
           created_at: new Date().toISOString(),
         })
         .select()
-        .single();
+        .single());
 
       if (programError) {
         console.error('Error saving program:', programError);
       } else if (savedProgram) {
         // Update user profile with current program ID
-        await supabase
-          .from('user_profiles')
+        await ((supabase
+          .from('user_profiles') as any)
           .upsert({
             user_id: userId,
-            current_program_id: savedProgram.id,
+            current_program_id: (savedProgram as any).id,
             updated_at: new Date().toISOString(),
-          });
+          }));
       }
 
       // Mark onboarding as complete
-      await supabase
-        .from('user_onboarding')
+      await ((supabase
+        .from('user_onboarding') as any)
         .update({
           is_complete: true,
           completed_at: new Date().toISOString(),
         })
-        .eq('user_id', userId);
+        .eq('user_id', userId));
 
       return `Perfect! I've got everything I need. 🎉
 

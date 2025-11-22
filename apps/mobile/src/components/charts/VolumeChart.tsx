@@ -94,7 +94,7 @@ export default function VolumeChart({ data, title = 'Weekly Volume' }: VolumeCha
             yKeys={['volume']}
             domainPadding={{ left: 20, right: 20, top: 20, bottom: 20 }}
           >
-            {({ points, chartBounds }) => (
+            {({ points }) => (
               <>
                 <Line
                   points={points.volume}
@@ -142,7 +142,7 @@ export default function VolumeChart({ data, title = 'Weekly Volume' }: VolumeCha
                     color: accentColors.green,
                   }}
                 >
-                  {formatVolume(state.y.volume.value)} lbs
+                  {formatVolume((state.y.volume as any).value)} lbs
                 </Text>
                 <Text
                   style={{
@@ -150,7 +150,7 @@ export default function VolumeChart({ data, title = 'Weekly Volume' }: VolumeCha
                     color: colors.text.secondary,
                   }}
                 >
-                  {formatDate(new Date(state.x.value).toISOString())}
+                  {formatDate(new Date((state.x as any).value).toISOString())}
                 </Text>
               </View>
             </View>

@@ -466,6 +466,7 @@ export async function createTestWorkoutLog(
 
   const { data: workoutLog, error } = await client
     .from("workouts")
+    // @ts-ignore - Supabase type definition issue
     .insert({
       user_id: userId,
       name: "Test Workout",
@@ -503,6 +504,7 @@ export async function createTestSets(
     rpe: 7 + i,
   }));
 
+  // @ts-ignore - Supabase type definition issue
   const { data, error } = await client.from("sets").insert(sets).select();
 
   if (error) {

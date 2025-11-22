@@ -28,6 +28,9 @@ export default class Set extends Model {
   @readonly @date('created_at') createdAt!: Date;
   @readonly @date('updated_at') updatedAt!: Date;
 
+  // Additional field for test compatibility
+  @field('set_number') setNumber?: number;
+
   @relation('workout_logs', 'workout_log_id') workoutLog!: Relation<WorkoutLog>;
 }
 

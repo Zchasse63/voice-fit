@@ -13,7 +13,6 @@
 import { Database } from '@nozbe/watermelondb';
 import { Q } from '@nozbe/watermelondb';
 import {
-  getTestEnvironment,
   getSupabaseClient,
   getAuthenticatedTestUser,
   createTestWorkoutLog,
@@ -265,7 +264,7 @@ describe('Integration: WatermelonDB <-> Supabase Sync', () => {
     it('should sync workout with sets from cloud to local', async () => {
       // Create workout with sets in Supabase
       const cloudWorkout = await createTestWorkoutLog(testUser.id);
-      const cloudSets = await createTestSets(cloudWorkout.id, 'Squat', 3);
+      await createTestSets(cloudWorkout.id, 'Squat', 3);
 
       // Sync
       await syncService.syncNow(testUser.id);
@@ -450,7 +449,7 @@ describe('Integration: WatermelonDB <-> Supabase Sync', () => {
       await supabaseClient
         .from('workout_logs')
         .update({ duration_minutes: 120 })
-        .eq('id', workoutId);
+        .eq('id', workoutId!);
 
       // Sync 3
       await syncService.syncNow(testUser.id);

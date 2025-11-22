@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Svg, Path, Defs, LinearGradient, Stop } from 'react-native-svg';
-import { tokens } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
+import { tokens } from '../../theme/tokens';
 
 interface MetricSparklineProps {
     data: number[];
@@ -21,7 +21,8 @@ export const MetricSparkline: React.FC<MetricSparklineProps> = ({
     style,
     trend,
 }) => {
-    const { colors } = useTheme();
+    const { isDark } = useTheme();
+    const colors = isDark ? tokens.colors.dark : tokens.colors.light;
 
     // Default color based on trend if not provided
     const getTrendColor = () => {

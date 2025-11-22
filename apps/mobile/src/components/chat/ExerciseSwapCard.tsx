@@ -46,11 +46,11 @@ export default function ExerciseSwapCard({
 
   return (
     <Pressable
-      style={({ pressed }) => [
+      style={({ pressed }: any) => [
         styles.container,
         {
-          backgroundColor: colors.surfaceBase,
-          borderColor: colors.border,
+          backgroundColor: colors.background.secondary,
+          borderColor: colors.border.light,
           opacity: pressed ? 0.7 : disabled ? 0.5 : 1,
         },
       ]}
@@ -65,7 +65,7 @@ export default function ExerciseSwapCard({
         <Text
           style={[
             styles.exerciseName,
-            { color: colors.textPrimary },
+            { color: colors.text.primary },
           ]}
           numberOfLines={1}
         >
@@ -75,14 +75,14 @@ export default function ExerciseSwapCard({
           style={[
             styles.similarityBadge,
             {
-              backgroundColor: colors.brandPrimary + "20",
+              backgroundColor: colors.accent.blue + "20",
             },
           ]}
         >
           <Text
             style={[
               styles.similarityText,
-              { color: colors.brandPrimary },
+              { color: colors.accent.blue },
             ]}
           >
             {Math.round(exercise.similarity_score * 100)}%
@@ -94,7 +94,7 @@ export default function ExerciseSwapCard({
       <Text
         style={[
           styles.whyRecommended,
-          { color: colors.textSecondary },
+          { color: colors.text.secondary },
         ]}
         numberOfLines={2}
       >
@@ -106,7 +106,7 @@ export default function ExerciseSwapCard({
         <Text
           style={[
             styles.subtitle,
-            { color: colors.textTertiary },
+            { color: colors.text.tertiary },
           ]}
           numberOfLines={1}
         >
@@ -119,14 +119,14 @@ export default function ExerciseSwapCard({
         style={[
           styles.selectButton,
           {
-            backgroundColor: colors.brandPrimary,
+            backgroundColor: colors.accent.blue,
           },
         ]}
       >
         <Text
           style={[
             styles.selectButtonText,
-            { color: colors.textInverse },
+            { color: colors.text.inverse },
           ]}
         >
           Use This

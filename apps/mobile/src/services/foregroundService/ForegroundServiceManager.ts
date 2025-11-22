@@ -223,7 +223,7 @@ class ForegroundServiceManager {
       if (this.isServiceRunning && this.currentState?.status === 'active') {
         this.updateService({});
       }
-    }, 5000); // Update every 5 seconds
+    }, 5000) as any; // Update every 5 seconds
   }
 
   /**
@@ -300,10 +300,3 @@ class ForegroundServiceManager {
 
 // Export singleton instance
 export const foregroundServiceManager = new ForegroundServiceManager();
-
-// Export types
-export type {
-  WorkoutServiceState,
-  NotificationConfig,
-  NotificationAction,
-};

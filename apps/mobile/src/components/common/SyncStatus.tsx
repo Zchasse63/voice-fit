@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
-import { Cloud, CloudOff, CheckCircle } from 'lucide-react-native';
+import { CloudOff, CheckCircle } from 'lucide-react-native';
 import { syncService } from '../../services/sync/SyncService';
 
 export default function SyncStatus() {

@@ -40,7 +40,6 @@ class DeloadService {
   private readonly DELOAD_VOLUME_MIN = 0.40; // 40% of normal volume
   private readonly DELOAD_VOLUME_MAX = 0.60; // 60% of normal volume
   private readonly DELOAD_INTENSITY_MIN = 0.85; // 85% of normal intensity
-  private readonly DELOAD_INTENSITY_MAX = 0.90; // 90% of normal intensity
 
   /**
    * Assess fatigue levels and determine if deload is needed
@@ -219,7 +218,7 @@ class DeloadService {
    * Check if user is in a programmed deload week
    * Programmed deloads occur at weeks 4, 8, 12, etc.
    */
-  async isProgrammedDeloadWeek(userId: string, programStartDate: Date): Promise<boolean> {
+  async isProgrammedDeloadWeek(_userId: string, programStartDate: Date): Promise<boolean> {
     const now = new Date();
     const weeksSinceStart = Math.floor(
       (now.getTime() - programStartDate.getTime()) / (7 * 24 * 60 * 60 * 1000)

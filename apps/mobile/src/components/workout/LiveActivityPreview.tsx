@@ -69,6 +69,7 @@ export const LiveActivityPreview: React.FC<LiveActivityPreviewProps> = ({
       pulse.start();
       return () => pulse.stop();
     }
+    return undefined;
   }, [status, pulseAnim]);
 
   // Format elapsed time

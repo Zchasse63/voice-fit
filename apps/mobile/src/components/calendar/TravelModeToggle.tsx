@@ -9,8 +9,9 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, Modal, Alert } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { tokens } from '../../theme/tokens';
-import { Plane, X, Calendar as CalendarIcon } from 'lucide-react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { Plane, X } from 'lucide-react-native';
+// TODO: Install @react-native-community/datetimepicker when available
+// import DateTimePicker from '@react-native-community/datetimepicker';
 import CalendarService from '../../services/calendar/CalendarService';
 import { useAuthStore } from '../../store/auth.store';
 
@@ -22,16 +23,17 @@ export default function TravelModeToggle({ onAvailabilityCreated }: TravelModeTo
   const { isDark } = useTheme();
   const user = useAuthStore((state) => state.user);
   const colors = isDark ? tokens.colors.dark : tokens.colors.light;
-  
+
   const [showModal, setShowModal] = useState(false);
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(new Date());
-  const [showStartPicker, setShowStartPicker] = useState(false);
-  const [showEndPicker, setShowEndPicker] = useState(false);
+  const [startDate, _setStartDate] = useState(new Date());
+  const [endDate, _setEndDate] = useState(new Date());
+  const [_showStartPicker, _setShowStartPicker] = useState(false);
+  const [_showEndPicker, _setShowEndPicker] = useState(false);
   const [availabilityType, setAvailabilityType] = useState<'travel' | 'vacation' | 'injury' | 'other'>('travel');
   const [notes, setNotes] = useState('');
 
-  const calendarService = new CalendarService();
+  // CalendarService is exported as a singleton
+  const calendarService = CalendarService;
 
   const handleCreateAvailability = async () => {
     if (!user?.id) return;
@@ -194,7 +196,7 @@ export default function TravelModeToggle({ onAvailabilityCreated }: TravelModeTo
             </Text>
             <View style={{ flexDirection: 'row', gap: tokens.spacing.md, marginBottom: tokens.spacing.lg }}>
               <Pressable
-                onPress={() => setShowStartPicker(true)}
+                onPress={() => _setShowStartPicker(true)}
                 style={{
                   flex: 1,
                   padding: tokens.spacing.md,
@@ -210,7 +212,7 @@ export default function TravelModeToggle({ onAvailabilityCreated }: TravelModeTo
                 </Text>
               </Pressable>
               <Pressable
-                onPress={() => setShowEndPicker(true)}
+                onPress={() => _setShowEndPicker(true)}
                 style={{
                   flex: 1,
                   padding: tokens.spacing.md,
@@ -272,12 +274,13 @@ export default function TravelModeToggle({ onAvailabilityCreated }: TravelModeTo
             </View>
 
             {/* Date Pickers */}
-            {showStartPicker && (
+            {/* TODO: Uncomment when @react-native-community/datetimepicker is installed */}
+            {/* {showStartPicker && (
               <DateTimePicker
                 value={startDate}
                 mode="date"
                 display="default"
-                onChange={(event, selectedDate) => {
+                onChange={(_: any, selectedDate: any) => {
                   setShowStartPicker(false);
                   if (selectedDate) setStartDate(selectedDate);
                 }}
@@ -288,12 +291,12 @@ export default function TravelModeToggle({ onAvailabilityCreated }: TravelModeTo
                 value={endDate}
                 mode="date"
                 display="default"
-                onChange={(event, selectedDate) => {
+                onChange={(_: any, selectedDate: any) => {
                   setShowEndPicker(false);
                   if (selectedDate) setEndDate(selectedDate);
                 }}
               />
-            )}
+            )} */}
           </View>
         </View>
       </Modal>

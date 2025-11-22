@@ -185,8 +185,8 @@ export function itIntegration(name: string, fn: () => void | Promise<void>, time
     process.env.EXPO_PUBLIC_SUPABASE_URL;
 
   if (!envAvailable) {
-    it.skip(`${name} (SKIPPED - Integration environment not available)`, fn, timeout);
+    it.skip(`${name} (SKIPPED - Integration environment not available)`, fn as any, timeout);
   } else {
-    it(name, fn, timeout);
+    it(name, fn as any, timeout);
   }
 }

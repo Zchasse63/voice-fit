@@ -429,8 +429,8 @@ export default function HomeScreen({ navigation }: any) {
                         padding: tokens.spacing.md,
                         height: 140,
                         ...tokens.shadows.md,
-                        borderWidth: tokens.borders.primary.width,
-                        borderColor: isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight,
+                        borderWidth: 1,
+                        borderColor: colors.border.subtle,
                       }}
                     >
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -512,8 +512,8 @@ export default function HomeScreen({ navigation }: any) {
                         padding: tokens.spacing.md,
                         height: 140,
                         ...tokens.shadows.md,
-                        borderWidth: tokens.borders.primary.width,
-                        borderColor: isDark ? tokens.borders.primary.colorDark : tokens.borders.primary.colorLight,
+                        borderWidth: 1,
+                        borderColor: colors.border.subtle,
                       }}
                     >
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>

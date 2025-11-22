@@ -8,7 +8,6 @@ import LoadingSpinner from '../components/common/LoadingSpinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import SyncStatus from '../components/common/SyncStatus';
 import { database } from '../services/database/watermelon/database';
-import Set from '../services/database/watermelon/models/Set';
 import PRHistory from '../services/database/watermelon/models/PRHistory';
 import { Q } from '@nozbe/watermelondb';
 import { useAuthStore } from '../store/auth.store';
@@ -20,12 +19,6 @@ interface PersonalRecord {
   reps: number;
   date: Date;
   improvement: string;
-}
-
-interface ProgressionPoint {
-  date: string;
-  weight: number;
-  reps: number;
 }
 
 const fitnessMetrics = [
@@ -43,7 +36,7 @@ export default function PRsScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
-  const [progression, setProgression] = useState<ProgressionPoint[]>([]);
+  const [progression] = useState<any[]>([]);
   const [metrics, setMetrics] = useState(fitnessMetrics);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);

@@ -80,7 +80,7 @@ class CalendarService {
     excludeWorkoutId?: string
   ): Promise<ConflictInfo> {
     try {
-      const { data, error } = await supabase.rpc('check_schedule_conflicts', {
+      const { data, error } = await (supabase.rpc as any)('check_schedule_conflicts', {
         p_user_id: userId,
         p_date: date,
         p_exclude_workout_id: excludeWorkoutId,
@@ -89,7 +89,7 @@ class CalendarService {
       if (error) throw error;
 
       // Process the raw data into ConflictInfo format
-      const conflicts = data || [];
+      const conflicts = (data as any[]) || [];
       const totalDuration = conflicts.reduce(
         (sum: number, c: any) => sum + (c.estimated_duration || 0),
         0
@@ -147,8 +147,8 @@ class CalendarService {
     notes?: string
   ): Promise<AvailabilityWindow> {
     try {
-      const { data, error } = await supabase
-        .from('availability_windows')
+      const { data, error } = await ((supabase
+        .from('availability_windows') as any)
         .insert({
           user_id: userId,
           start_date: startDate,
@@ -157,7 +157,7 @@ class CalendarService {
           notes,
         })
         .select()
-        .single();
+        .single());
 
       if (error) throw error;
       return data;

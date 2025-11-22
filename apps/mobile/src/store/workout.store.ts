@@ -3,7 +3,7 @@ import { devtools } from "zustand/middleware";
 import { Platform } from "react-native";
 import { database } from "../services/database/watermelon/database";
 import WorkoutLog from "../services/database/watermelon/models/WorkoutLog";
-import Set from "../services/database/watermelon/models/Set";
+import SetModel from "../services/database/watermelon/models/Set";
 import { useAuthStore } from "./auth.store";
 import { syncService } from "../services/sync/SyncService";
 import { workoutNotificationManager } from "../services/workoutNotification/WorkoutNotificationManager";
@@ -178,7 +178,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
             // Create sets
             for (const set of sets) {
-              await database.collections.get<Set>("sets").create((s) => {
+              await database.collections.get<SetModel>("sets").create((s: any) => {
                 s.workoutLogId = workoutLog.id;
                 s.exerciseId = generateUUID(); // Generate exercise ID
                 s.exerciseName = set.exerciseName;

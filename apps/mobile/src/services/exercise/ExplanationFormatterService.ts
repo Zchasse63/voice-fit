@@ -179,7 +179,7 @@ class ExplanationFormatterService {
    * Format "Recovery Context" section (injury-specific)
    */
   private formatRecoveryContext(
-    substitution: ExerciseSubstitution,
+    _substitution: ExerciseSubstitution,
     context: ExplanationContext
   ): string {
     const bodyPartName = this.formatBodyPartName(context.injured_body_part!);
@@ -290,7 +290,7 @@ class ExplanationFormatterService {
   }
 
   private getExperienceGuidance(
-    substitution: ExerciseSubstitution,
+    _substitution: ExerciseSubstitution,
     experienceLevel: string
   ): string {
     if (experienceLevel === 'beginner') {
@@ -302,7 +302,7 @@ class ExplanationFormatterService {
     }
   }
 
-  private getRecoveryWeekGuidance(recoveryWeek: number, painLevel?: number): string {
+  private getRecoveryWeekGuidance(recoveryWeek: number, _painLevel?: number): string {
     if (recoveryWeek <= 2) {
       return `**Week ${recoveryWeek} Recovery:** Start with 40-50% of your normal weight. Focus on pain-free movement and building confidence.`;
     } else if (recoveryWeek <= 4) {

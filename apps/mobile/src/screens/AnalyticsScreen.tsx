@@ -12,7 +12,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, RefreshControl, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { tokens } from '../theme/tokens';
-import { useTheme } from '../hooks/useTheme';
+import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
 import { useCoachStore } from '../store/coach.store';
 import AnalyticsAPIClient, {
@@ -70,9 +70,9 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
 
       // Fetch all analytics data in parallel
       const [volume, fatigue, deload] = await Promise.all([
-        AnalyticsAPIClient.getVolumeAnalytics(effectiveUserId, token),
-        AnalyticsAPIClient.getFatigueAnalytics(effectiveUserId, token),
-        AnalyticsAPIClient.getDeloadRecommendation(effectiveUserId, token),
+        AnalyticsAPIClient.getVolumeAnalytics(effectiveUserId),
+        AnalyticsAPIClient.getFatigueAnalytics(effectiveUserId),
+        AnalyticsAPIClient.getDeloadRecommendation(effectiveUserId),
       ]);
 
       setVolumeAnalytics(volume);
@@ -218,7 +218,7 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
         {/* Fatigue Chart */}
         {fatigueAnalytics && (
           <FatigueChart
-            fatigueHistory={fatigueAnalytics.fatigue_history}
+            fatigueHistory={fatigueAnalytics.history as any}
             currentFatigue={fatigueAnalytics.current_fatigue}
           />
         )}
@@ -226,8 +226,11 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
         {/* Volume Chart */}
         {volumeAnalytics && (
           <VolumeChart
-            volumeTrend={volumeAnalytics.volume_trend}
-            volumeByMuscle={volumeAnalytics.weekly_volume.volume_by_muscle}
+            volumeTrend={volumeAnalytics.weekly_trend as any}
+            volumeByMuscle={volumeAnalytics.volume_by_muscle.reduce((acc: any, item: any) => {
+              acc[item.muscle_group] = item;
+              return acc;
+            }, {})}
           />
         )}
 
@@ -273,7 +276,7 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
                   color: colors.text.primary,
                 }}
               >
-                {volumeAnalytics.weekly_volume.total_workouts}
+                {volumeAnalytics.current_week}
               </Text>
             </View>
             <View
@@ -298,7 +301,7 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
                   color: colors.text.primary,
                 }}
               >
-                {volumeAnalytics.weekly_volume.total_sets}
+                {volumeAnalytics.total_volume}
               </Text>
             </View>
             <View
@@ -313,7 +316,7 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
                   color: colors.text.secondary,
                 }}
               >
-                Muscle Groups Trained
+                Change vs Last Week
               </Text>
               <Text
                 style={{
@@ -322,7 +325,7 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
                   color: colors.text.primary,
                 }}
               >
-                {Object.keys(volumeAnalytics.weekly_volume.volume_by_muscle).length}
+                {volumeAnalytics.change_percentage}%
               </Text>
             </View>
           </View>
@@ -370,7 +373,7 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
                   color: colors.text.primary,
                 }}
               >
-                {volumeAnalytics.monthly_volume.total_workouts}
+                {volumeAnalytics.previous_week}
               </Text>
             </View>
             <View
@@ -385,7 +388,7 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
                   color: colors.text.secondary,
                 }}
               >
-                Total Sets
+                Muscle Groups
               </Text>
               <Text
                 style={{
@@ -394,7 +397,7 @@ export default function AnalyticsScreen({ route }: AnalyticsScreenProps) {
                   color: colors.text.primary,
                 }}
               >
-                {volumeAnalytics.monthly_volume.total_sets}
+                {volumeAnalytics.volume_by_muscle.length}
               </Text>
             </View>
           </View>

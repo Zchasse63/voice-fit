@@ -13,7 +13,6 @@ import RunScreen from "../screens/RunScreen";
 import ProfileScreen from "../screens/ProfileScreen";
 import ProgramLogScreen from "../screens/ProgramLogScreen";
 import TrainingCalendarScreen from "../screens/TrainingCalendarScreen";
-import JournalScreen from "../screens/JournalScreen";
 import SplitsScreen from "../screens/SplitsScreen";
 import RunSummaryScreen from "../screens/RunSummaryScreen";
 import RunSettingsScreen from "../screens/RunSettingsScreen";
@@ -145,13 +144,6 @@ export default function RootNavigator() {
       <Stack.Screen
         name="TrainingCalendar"
         component={TrainingCalendarScreen}
-        options={{
-          animation: "slide_from_right",
-        }}
-      />
-      <Stack.Screen
-        name="Journal"
-        component={JournalScreen}
         options={{
           animation: "slide_from_right",
         }}

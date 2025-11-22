@@ -54,6 +54,7 @@ export default function Toast({
       return () => clearTimeout(timer);
     } else {
       hideToast();
+      return undefined;
     }
   }, [visible]);
 
@@ -105,7 +106,7 @@ export default function Toast({
     }
   };
 
-  if (!visible && opacity._value === 0) {
+  if (!visible && (opacity as any)._value === 0) {
     return null;
   }
 

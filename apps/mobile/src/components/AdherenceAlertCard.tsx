@@ -27,7 +27,6 @@ interface AdherenceAlertCardProps {
 }
 
 export default function AdherenceAlertCard({
-  alertType,
   title,
   description,
   severity,

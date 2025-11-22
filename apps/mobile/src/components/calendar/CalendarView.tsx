@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Pressable, ScrollView, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react-native';
 import { database } from '../../services/database/watermelon/database';
 import ScheduledWorkout from '../../services/database/watermelon/models/ScheduledWorkout';
 import { Q } from '@nozbe/watermelondb';
-import { GestureDetector, Gesture } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, runOnJS } from 'react-native-reanimated';
 import CalendarService, { type ConflictInfo } from '../../services/calendar/CalendarService';
 import ConflictWarningModal from './ConflictWarningModal';
 import { useAuthStore } from '../../store/auth.store';
@@ -42,7 +40,8 @@ export default function CalendarView() {
     conflicts: ConflictInfo;
   } | null>(null);
 
-  const calendarService = new CalendarService();
+  // CalendarService is exported as a singleton
+  const calendarService = CalendarService;
 
   useEffect(() => {
     loadWorkoutDates();
@@ -93,8 +92,8 @@ export default function CalendarView() {
       );
 
       const conflictSet = new Set<string>();
-      Object.entries(conflicts).forEach(([date, info]) => {
-        if (info.has_conflict) {
+      Object.entries(conflicts).forEach(([date, info]: [string, any]) => {
+        if ((info as any).has_conflict) {
           conflictSet.add(date);
         }
       });
@@ -199,7 +198,6 @@ export default function CalendarView() {
     if (!user?.id) return;
 
     // Find workouts on this date
-    const dateKey = new Date(date).toISOString().split('T')[0];
     const workouts = await database
       .get<ScheduledWorkout>('scheduled_workouts')
       .query(

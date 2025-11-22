@@ -21,7 +21,7 @@ import Animated, {
   withTiming,
   withSpring,
 } from 'react-native-reanimated';
-import { presets, durations, getStaggerDelay } from '../../theme/animations';
+import { durations, getStaggerDelay, springConfigs } from '../../theme/animations';
 
 interface AnimatedListItemProps {
   children: React.ReactNode;
@@ -59,7 +59,7 @@ export default function AnimatedListItem({
       );
       translateY.value = withDelay(
         delay,
-        withSpring(0, presets.listStagger.spring)
+        withSpring(0, springConfigs.gentle)
       );
     } else if (animationType === 'scale') {
       // Scale + fade in
@@ -69,7 +69,7 @@ export default function AnimatedListItem({
       );
       scale.value = withDelay(
         delay,
-        withSpring(1, presets.listStagger.spring)
+        withSpring(1, springConfigs.gentle)
       );
     }
   }, [index, animationType, staggerDelay]);

@@ -294,11 +294,6 @@ class WorkoutNotificationManager {
   }
 }
 
-// Export singleton instance
+// Export class and singleton instance
+export { WorkoutNotificationManager };
 export const workoutNotificationManager = new WorkoutNotificationManager();
-
-// Export types
-export type {
-  WorkoutNotificationState,
-  WorkoutNotificationCallbacks,
-};

@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import type {
   EnhancedSwapResponse,
@@ -20,7 +19,7 @@ interface EnhancedExerciseSwapCardProps {
   showDebugInfo?: boolean;
 }
 
-const { width } = Dimensions.get('window');
+
 
 export const EnhancedExerciseSwapCard: React.FC<EnhancedExerciseSwapCardProps> = ({
   response,
