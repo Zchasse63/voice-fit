@@ -584,6 +584,12 @@ Allow users to share successful strategies, injury recovery stories, and trainin
 - **Complexity:** High (email/SMS automation)
 - **Estimated Effort:** 12-16 weeks
 
+**F1. Apple Watch Companion App**
+- **Why:** High user demand, competitive parity
+- **Impact:** Increases engagement, reduces phone dependency during workouts
+- **Complexity:** High (native watchOS development)
+- **Estimated Effort:** 12-16 weeks
+
 ### Tier 3: Advanced Features (24+ months)
 
 **C1-C3. Advanced Biometric Integration (Nix, Core, Stryd)**
@@ -597,6 +603,18 @@ Allow users to share successful strategies, injury recovery stories, and trainin
 - **Impact:** Viral growth potential
 - **Complexity:** High (content moderation, privacy, scaling)
 - **Estimated Effort:** 16-20 weeks
+
+**F2. In-App Music Controls**
+- **Why:** Convenience, reduces app switching
+- **Impact:** Improves user experience during workouts
+- **Complexity:** Medium (music API integrations)
+- **Estimated Effort:** 6-8 weeks
+
+**F3. Exercise Technique Video Library**
+- **Why:** User education and injury prevention
+- **Impact:** Increases credibility and engagement
+- **Complexity:** Low-Medium (partnership and curation work)
+- **Estimated Effort:** 4-6 weeks
 
 ---
 
@@ -624,6 +642,13 @@ Allow users to share successful strategies, injury recovery stories, and trainin
 - Viral coefficient (invites per user)
 - Retention lift from social features
 
+**For Enhanced Workout Experience (F1-F3):**
+- Apple Watch app adoption rate
+- % of workouts logged via Apple Watch
+- Music controls usage rate
+- Video library engagement (views per user)
+- User satisfaction scores for workout experience
+
 ---
 
 ## 📝 Review & Prioritization Process
@@ -648,6 +673,412 @@ Allow users to share successful strategies, injury recovery stories, and trainin
 - Assess team capacity and skills
 - Identify external dependencies (APIs, partnerships)
 - Create realistic timelines
+
+---
+
+## 🎧 F. Enhanced Workout Experience Features
+
+### F1. Apple Watch Companion App
+
+**Status:** Idea – revisit after Live Activity native implementation is complete
+**Timeline:** 18-24 months
+**Priority:** HIGH (if Apple Watch adoption is high among users)
+
+**Overview:**
+Build a companion Apple Watch app that allows users to log workouts, view workout details, and control music directly from their wrist without needing to pull out their phone.
+
+**Technical Approach - Research Needed:**
+
+**Option 1: Native watchOS App (Recommended)**
+- Build standalone watchOS app using SwiftUI
+- Communicates with React Native mobile app via Watch Connectivity framework
+- Pros: Full access to watchOS APIs, better performance, native UI
+- Cons: Requires Swift/SwiftUI development, separate codebase to maintain
+
+**Option 2: React Native Extension**
+- Investigate if React Native can extend to Apple Watch
+- Research: react-native-watch-connectivity or similar libraries
+- Pros: Shared codebase with mobile app
+- Cons: Limited watchOS API access, potential performance issues
+
+**Recommendation:** Native watchOS app is likely required for best experience. Research needed to confirm.
+
+---
+
+#### Requirements for Strength Workouts
+
+**Display Current Set Information:**
+- Exercise name (e.g., "Barbell Squat")
+- Target weight, reps, and RPE
+- Set number (e.g., "Set 3 of 5")
+- Rest timer countdown
+
+**Show Next Upcoming Set:**
+- Preview next exercise or next set
+- Helps user prepare mentally and physically
+
+**Two Logging Methods:**
+
+**1. Voice Logging via Microphone Button:**
+- Tap microphone icon on watch face
+- Speak: "315 pounds, 5 reps, RPE 8"
+- Uses existing voice processing backend
+- Confirmation haptic feedback
+
+**2. Quick "Accept as Prescribed" Checkmark:**
+- Single tap to log set exactly as prescribed
+- Fastest logging method (one tap)
+- Haptic feedback on successful log
+- Syncs to phone immediately
+
+**Real-Time Sync:**
+- Watch and phone stay in sync via Watch Connectivity
+- Changes on watch appear on phone instantly
+- Changes on phone appear on watch instantly
+
+**UI Design:**
+- Large, readable text (optimized for small screen)
+- Minimal taps required (one-tap logging)
+- Haptic feedback for all actions
+- Complications for quick access
+
+---
+
+#### Requirements for Running Workouts
+
+**Display Current Interval/Lap Information:**
+- Current interval name (e.g., "Tempo Interval 2 of 5")
+- Target pace or heart rate zone
+- Interval time remaining (countdown)
+- Current pace, distance, time, heart rate
+
+**Interval Alerts and Transitions:**
+- Haptic + audio alert when interval starts/ends
+- "Starting 800m @ 6:30 pace"
+- "Interval complete. Recovery jog for 2 minutes."
+
+**Structured Workout Push (Garmin-Style):**
+- Build workout in mobile app (intervals, target paces, HR zones, distances)
+- Push workout to Apple Watch before starting
+- Watch acts as primary coach during workout:
+  - Interval countdowns and alerts
+  - Target pace/HR zone guidance ("Speed up to 6:30 pace")
+  - Next interval preview ("Next: 400m @ 6:00 pace")
+  - Automatic lap/interval transitions
+- Post-workout sync back to phone with compliance data
+
+**Apple Watch Workout APIs:**
+- Use HealthKit WorkoutBuilder for GPS tracking
+- Use HKWorkoutConfiguration for structured workouts
+- Research: Can we push custom interval workouts to Apple Watch?
+
+---
+
+#### Requirements for CrossFit/HIIT Workouts
+
+**Display Workout Timer:**
+- Large timer display (AMRAP, EMOM, Tabata, For Time)
+- Current round number (e.g., "Round 3 of 5")
+- Time elapsed or time remaining
+
+**Show Current Movement and Reps:**
+- "10 Burpees" (with reps remaining)
+- "15 Box Jumps"
+- "20 Wall Balls"
+
+**Next Movement Preview:**
+- "Next: 15 Box Jumps"
+- Helps user prepare for transitions
+
+**Interval Alerts:**
+- Haptic + audio alerts for round transitions
+- "Round 3 complete. Starting Round 4."
+- EMOM alerts every minute
+
+---
+
+#### Requirements for Cycling, HYROX, and Other Workout Types
+
+**Apply Same Pattern:**
+- Display current activity and metrics
+- Show next activity as preview
+- Workout-specific timers and tracking
+- Real-time sync with phone
+
+**Cycling:**
+- Speed, cadence, power (if available), heart rate
+- Interval timers for structured rides
+- Elevation gain/loss
+
+**HYROX:**
+- Station-by-station tracking (run → ski erg → sled push)
+- Transition timers
+- Cumulative time
+
+---
+
+#### Technical Implementation
+
+**Watch Connectivity Framework:**
+```swift
+// Send workout data from phone to watch
+func sendWorkoutToWatch(workout: Workout) {
+    let session = WCSession.default
+    let message = [
+        "type": "workout_start",
+        "workout_id": workout.id,
+        "exercises": workout.exercises.map { $0.toDictionary() }
+    ]
+    session.sendMessage(message, replyHandler: nil)
+}
+
+// Receive set log from watch
+func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+    if message["type"] as? String == "set_logged" {
+        let setData = message["set"] as! [String: Any]
+        logSetFromWatch(setData)
+    }
+}
+```
+
+**HealthKit Integration:**
+```swift
+// Start workout session on watch
+let configuration = HKWorkoutConfiguration()
+configuration.activityType = .traditionalStrengthTraining
+configuration.locationType = .indoor
+
+let builder = HKWorkoutBuilder(healthStore: healthStore, configuration: configuration, device: .local())
+builder.beginCollection(withStart: Date()) { success, error in
+    // Workout started
+}
+```
+
+**Research Needed:**
+1. Can we push custom interval workouts to Apple Watch via HealthKit?
+2. What's the best way to sync workout state between phone and watch?
+3. Can we use Siri on watch for voice logging?
+4. What's the battery impact of continuous sync during workouts?
+5. Do we need separate watchOS app or can we use WatchKit extension?
+
+**Development Complexity:**
+- **High** - Requires native watchOS development (Swift/SwiftUI)
+- **Estimated Effort:** 12-16 weeks
+  - Week 1-2: Research and technical spike
+  - Week 3-6: Strength workout features
+  - Week 7-10: Running workout features
+  - Week 11-14: CrossFit/HIIT features
+  - Week 15-16: Testing and polish
+
+**Dependencies:**
+- Live Activity native implementation (provides foundation)
+- Apple Watch ownership among user base (validate demand first)
+- Swift/SwiftUI development expertise
+
+**Business Impact:**
+- **High engagement:** Users can leave phone in locker/pocket
+- **Competitive parity:** Most fitness apps have Apple Watch apps
+- **Premium feature:** Could be part of premium subscription
+- **Retention:** Increases platform stickiness
+
+---
+
+### F2. In-App Music Controls
+
+**Status:** Idea – revisit after core workout features are stable
+**Timeline:** 18-24 months
+**Priority:** MEDIUM
+
+**Overview:**
+Integrate music playback controls directly into workout screens so users don't need to switch apps or pull down control center.
+
+**Core Features:**
+
+**Playback Controls:**
+- Play/pause button
+- Skip forward/backward
+- Volume slider
+- Currently playing track display (song name, artist, album art)
+
+**Streaming Service Support:**
+- **Apple Music** - Native iOS integration via MusicKit
+- **Spotify** - Spotify SDK integration
+- **YouTube Music** - YouTube Music API (if available)
+
+**UI Integration:**
+- Inline controls at top of workout screen
+- Collapsible/expandable music widget
+- Minimal screen real estate (doesn't interfere with workout tracking)
+
+**Optional: Smart Playlist Recommendations:**
+- Match playlist tempo/energy to workout type:
+  - **Tempo run** → High-energy music (140-160 BPM)
+  - **Easy run** → Moderate tempo (120-140 BPM)
+  - **Heavy strength day** → Aggressive/motivational music
+  - **Yoga/stretching** → Calm, ambient music
+- Learn user preferences over time
+- Suggest playlists based on workout type
+
+**Optional: Apple Watch Integration:**
+- Control music from Apple Watch during workouts
+- Sync with phone music controls
+
+**Technical Implementation:**
+
+**Apple Music (MusicKit):**
+```swift
+import MusicKit
+
+// Request authorization
+let status = await MusicAuthorization.request()
+
+// Play a song
+let player = ApplicationMusicPlayer.shared
+try await player.play()
+
+// Get currently playing track
+let currentEntry = player.queue.currentEntry
+```
+
+**Spotify (Spotify SDK):**
+```typescript
+import SpotifySDK from 'react-native-spotify-remote';
+
+// Connect to Spotify
+await SpotifySDK.connect();
+
+// Play/pause
+await SpotifySDK.pause();
+await SpotifySDK.resume();
+
+// Get current track
+const track = await SpotifySDK.getPlayerState();
+```
+
+**YouTube Music:**
+- Research: Is there a YouTube Music API for mobile apps?
+- May require web-based integration or YouTube Data API
+
+**Development Complexity:**
+- **Medium** - Requires integration with multiple music APIs
+- **Estimated Effort:** 6-8 weeks
+  - Week 1-2: Apple Music integration
+  - Week 3-4: Spotify integration
+  - Week 5-6: YouTube Music research and integration
+  - Week 7-8: Smart recommendations and testing
+
+**Dependencies:**
+- User subscriptions to music streaming services
+- API access from Spotify, YouTube Music
+- Apple Music requires iOS 15.4+
+
+**Business Impact:**
+- **Convenience:** Users stay in VoiceFit during workouts
+- **Retention:** Reduces app switching, keeps users engaged
+- **Differentiation:** Not many fitness apps have integrated music controls
+- **Potential partnerships:** Could partner with Spotify for co-marketing
+
+---
+
+### F3. Exercise Technique Video Library with Influencer Partnerships
+
+**Status:** Idea – revisit after core product is stable and user base is established
+**Timeline:** 24+ months
+**Priority:** MEDIUM-LOW
+
+**Overview:**
+Partner with trusted fitness influencers and content creators to provide high-quality exercise technique videos directly within the app.
+
+**Core Features:**
+
+**Video Library:**
+- Link exercises to YouTube technique videos
+- Curated library organized by:
+  - Muscle group (chest, back, legs, etc.)
+  - Movement pattern (squat, hinge, push, pull)
+  - Equipment type (barbell, dumbbell, bodyweight, machines)
+  - Difficulty level (beginner, intermediate, advanced)
+
+**Influencer Partnerships:**
+- Partner with specialized coaches and content creators:
+  - **Bret Contreras** - Glute exercises and hip thrusts
+  - **Jeff Nippard** - Science-based training and technique
+  - **Squat University** - Mobility and injury prevention
+  - **AthleanX** - Functional training and form corrections
+  - **Meg Squats** - Powerlifting and strength training
+  - **Running-specific:** Sage Canaday, The Run Experience
+  - **CrossFit:** Ben Bergeron, Invictus Fitness
+
+**Partnership Model:**
+
+**Benefits for Influencers:**
+- Drive views to their YouTube channels
+- Expand audience reach to VoiceFit users
+- Potential revenue share or flat fee per video
+- Co-marketing opportunities (featured in VoiceFit, influencer promotes VoiceFit)
+
+**Benefits for VoiceFit:**
+- High-quality, trusted technique instruction
+- Credibility from association with respected coaches
+- Content without needing to produce videos ourselves
+- SEO benefits from linking to popular fitness content
+
+**Permission & Agreements:**
+- Obtain permission to link to videos
+- Establish partnership agreements (revenue share, attribution, exclusivity)
+- Ensure videos remain available (backup plan if videos are deleted)
+
+**UI Integration:**
+- Display video link within exercise detail screen
+- "Watch Technique Video" button
+- Thumbnail preview with play button
+- Opens in-app YouTube player or external YouTube app
+
+**Optional: In-App Video Player:**
+- Embed videos directly in app (requires YouTube API)
+- Picture-in-picture mode (watch video while logging sets)
+- Offline downloads for premium users
+
+**Curation & Quality Control:**
+- Vet all videos for accuracy and safety
+- Prioritize evidence-based coaches over "bro science"
+- Update library as new videos are released
+- Remove videos if technique is outdated or unsafe
+
+**Database Schema:**
+```typescript
+interface ExerciseVideo {
+  id: string;
+  exercise_id: string; // FK to Exercise
+  video_url: string; // YouTube URL
+  creator_name: string; // e.g., "Jeff Nippard"
+  creator_channel: string; // YouTube channel name
+  video_title: string;
+  duration_seconds: number;
+  view_count: number; // track popularity
+  is_verified: boolean; // vetted by VoiceFit team
+  tags: string[]; // e.g., ["beginner", "barbell", "squat"]
+}
+```
+
+**Development Complexity:**
+- **Low-Medium** - Mostly partnership and curation work
+- **Estimated Effort:** 4-6 weeks
+  - Week 1-2: Outreach to influencers and partnership agreements
+  - Week 3-4: Video curation and database setup
+  - Week 5-6: UI integration and testing
+
+**Dependencies:**
+- Influencer partnerships and agreements
+- YouTube API access (if embedding videos)
+- Legal review of partnership terms
+
+**Business Impact:**
+- **User education:** Helps users learn proper technique
+- **Injury prevention:** Reduces risk of poor form
+- **Credibility:** Association with respected coaches
+- **Engagement:** Users spend more time in app watching videos
+- **Potential revenue:** Could charge premium for video library access
 
 ---
 

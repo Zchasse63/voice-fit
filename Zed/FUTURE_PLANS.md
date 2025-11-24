@@ -1,82 +1,26 @@
 # VoiceFit Future Plans & Advanced Features
 
-**Date:** 2025-01-24  
-**Purpose:** Long-term roadmap for advanced personalization, multi-sport expansion, and cutting-edge features  
+**Date:** 2025-01-24 (Updated: 2025-11-24)
+**Purpose:** Roadmap for planned features (6-12 months timeline)
 **Timeline:** 6-12 months post-Phase 4 completion
 
 ---
 
 ## Overview
 
-This document captures future enhancement ideas that go beyond the core context-aware system. These features require:
+This document captures **planned features** for the next 6-12 months. These features require:
 - Additional hardware integrations (wearables, cameras)
 - Expanded domain expertise (sport-specific training)
 - Advanced ML/AI capabilities
 - Longer development cycles (2+ months each)
 
-**Status:** Planned, not yet prioritized  
+**Status:** Planned, not yet prioritized
 **Review Cadence:** Quarterly
 
----
-
-## 🎯 PRIORITY FEATURES (In Development)
-
-### ✅ Program Scheduling & Calendar View
-**Status:** ✅ COMPLETE (Sprint 3 - 2025-01-16)  
-**Timeline:** DELIVERED  
-**Priority:** HIGH
-
-**Features:**
-- [x] Interactive calendar view (list-based, Runna-inspired)
-- [x] Week-based navigation with expand/collapse
-- [x] Scheduled workouts on specific dates
-- [x] Workout templates and program management
-- [x] Color-coded by workout type
-- [x] Completion status tracking
-- [ ] Drag-and-drop workout rescheduling (Next: Backend APIs needed)
-- [ ] Conflict detection & warnings
-- [ ] Travel mode adjustments
-- [ ] AI-powered schedule suggestions
-
-**See:** [COMPREHENSIVE_FEATURE_PLANNING.md](./COMPREHENSIVE_FEATURE_PLANNING.md#4-program-scheduling--calendar-view) for detailed specs.
-
----
-
-### ✅ Lock Screen Widget & Live Activity
-**Status:** ✅ COMPLETE (Sprint 2 - 2025-01-15)  
-**Timeline:** DELIVERED  
-**Priority:** HIGH
-
-**Features:**
-- [x] iOS Live Activity with Dynamic Island support (scaffolded)
-- [x] Lock screen widget with workout tracking
-- [x] Real-time workout tracking (elapsed time, set counter)
-- [x] LiveActivityPreview component for in-app preview
-- [x] Android foreground notification equivalent (scaffolded)
-- [x] Unified cross-platform notification manager
-- [ ] Native iOS implementation in Swift (pending Xcode work)
-- [ ] Native Android implementation in Kotlin (pending)
-
-**See:** [COMPREHENSIVE_FEATURE_PLANNING.md](./COMPREHENSIVE_FEATURE_PLANNING.md#5-lock-screen-widget--live-activity) for detailed specs.
-
----
-
-### ✅ Smart Exercise Creation & Synonym Checking
-**Status:** ✅ COMPLETE (Sprint 1 - 2025-01-14)  
-**Timeline:** DELIVERED  
-**Priority:** HIGH
-
-**Features:**
-- [x] Automatic duplicate detection via fuzzy matching
-- [x] Synonym generation & checking
-- [x] AI-powered exercise classification
-- [x] Proper metadata categorization (muscles, equipment, etc.)
-- [x] Phonetic matching (Soundex algorithm)
-- [x] Embedding-based semantic matching
-- [x] POST /api/exercises/create-or-match endpoint
-- [x] Comprehensive test suite (53 tests)
-
-**See:** [COMPREHENSIVE_FEATURE_PLANNING.md](./COMPREHENSIVE_FEATURE_PLANNING.md#6-smart-exercise-creation--synonym-checking) for detailed specs.
+**Related Documents:**
+- [COMPLETED_FEATURES_ARCHIVE.md](./COMPLETED_FEATURES_ARCHIVE.md) - Features that have been completed and delivered
+- [LONG_TERM_VISION.md](./LONG_TERM_VISION.md) - Long-term ideas (12-24+ months) to revisit after user feedback
+- [FEATURE_IMPLEMENTATION_STATUS.md](./FEATURE_IMPLEMENTATION_STATUS.md) - Current implementation status of in-progress features
 
 ---
 
@@ -756,23 +700,7 @@ Okay, I think we need to make a push to GitHub to see if that syntax error... ..
 
 **Synergies:** Builds on Phase 3 voice processing and lock-screen/live-activity work; complements Phase 10 voice-first features.
 
-#### B2. In-App Quick Logging Interface
-
-**Status:** ✅ COMPLETE (Implemented in mobile app – Quick Log bar + chat integration, 2025-11-18)
-
-**Location:** Within or anchored to the bottom of the chat/workout interface.
-
-**Features:**
-- "Accept" button to log the set exactly as prescribed
-- + / – controls for quick adjustments to weight, reps, and RPE
-- Optimized for one-hand use as an alternative to voice
-- Could share components with Apple Watch quick actions for consistency
-
-**Synergies:**
-- Uses the same logging backend as current workout completion flows
-- Pairs naturally with voice interactions (voice for complex changes, quick UI for small tweaks)
-
-#### B3. Workout Push to Wearables (Garmin-style)
+#### B2. Workout Push to Wearables (Garmin-style)
 
 **Goal:** Author workouts in VoiceFit and push them to wearables so the watch can act as the primary coach during the session.
 
@@ -836,22 +764,84 @@ Okay, I think we need to make a push to GitHub to see if that syntax error... ..
 
 #### C2. Running Shoe Tracking & Analytics
 
-**Goal:** Track shoe mileage and performance impact rather than just logging which pair was used.
+**Status:** Planned – 6-12 months
+**Priority:** MEDIUM-HIGH
+**Timeline:** 6-8 weeks development
 
-**Features:**
-- Log which shoes are used for each run (with simple selection and defaults)
-- Automatic mileage tracking and replacement alerts
-- Correlate shoe usage with:
-  - Split times and pacing patterns
-  - Heart-rate and effort (RPE)
-  - Subjective feedback (soreness, comfort, perceived quality of the session)
+**Goal:** Track shoe mileage and performance impact to help runners make informed decisions about which shoe brands/models work best for their biomechanics and running style.
+
+**Core Features:**
+
+**Shoe Selection & Tracking:**
+- Allow users to select which running shoes they're wearing for each run
+- Simple shoe picker UI with defaults (last used shoe)
+- Add new shoes with brand, model, and purchase date
+- Track total mileage per shoe automatically
+
+**Mileage Tracking & Replacement Alerts:**
+- Automatic mileage accumulation per shoe
+- Configurable replacement thresholds (default: 300-500 miles)
+- Proactive alerts: "Your Nike Pegasus 40 has 450 miles. Consider replacing soon."
+- Visual indicators (e.g., progress bar showing shoe lifespan)
+
+**Performance Correlation & Analytics:**
+- Correlate shoe choice with performance metrics:
+  - **Heart rate at given pace** - "These shoes correlate with 5% better pace at same heart rate"
+  - **Perceived exertion (RPE)** - "You rate runs in these shoes 1 point lower RPE on average"
+  - **Pace consistency** - "Your pace variability is 8% lower in these shoes"
+  - **Overall performance trends** - Track performance over shoe lifespan
+- Analyze performance degradation over shoe mileage
+  - "Performance declined 3% after 300 miles in these shoes"
+  - "Consider replacing - these shoes show declining performance"
+
+**AI-Powered Insights:**
+- "Your Hoka Clifton 9 correlates with better performance on long runs (10+ miles)"
+- "You run 15 seconds/mile faster in your racing flats vs training shoes at same effort"
+- "These shoes work best for tempo runs but not for easy runs"
+- "Your injury rate is lower when rotating between 2+ shoe models"
+
+**Shoe Comparison:**
+- Compare performance across different shoe models
+- Identify which shoes work best for specific workout types (easy runs, tempo, intervals, long runs)
+- Help users decide which shoes to replace or repurchase
+
+**Database Schema:**
+```typescript
+interface RunningShoe {
+  id: string;
+  user_id: string;
+  brand: string; // e.g., "Nike", "Hoka", "Brooks"
+  model: string; // e.g., "Pegasus 40", "Clifton 9"
+  purchase_date: Date;
+  total_mileage: number;
+  replacement_threshold: number; // default 400 miles
+  is_active: boolean; // retired shoes marked inactive
+  notes?: string; // user notes about the shoe
+}
+
+// Add to Run model:
+interface Run {
+  // ... existing fields
+  shoe_id?: string; // FK to RunningShoe
+}
+```
 
 **Unique Value:**
-- Move beyond simple "shoe mileage" to shoe **performance** feedback, which most competitors do not provide.
+- Move beyond simple "shoe mileage" to shoe **performance** feedback, which most competitors do not provide
+- Help runners make data-driven decisions about shoe purchases
+- Identify which shoes work best for their unique biomechanics
 
 **Synergies:**
 - Natural pairing with Stryd and AI Health Intelligence for deeper performance modeling
+- Integrates with heart rate data from Apple Health/WHOOP
 - Support for e-commerce/affiliate opportunities later (recommended replacement models)
+- Could partner with running shoe brands for sponsored recommendations
+
+**Business Impact:**
+- Increases engagement (runners check shoe stats regularly)
+- Potential affiliate revenue from shoe recommendations
+- Differentiator vs competitors (Strava, Nike Run Club don't offer this)
+- Valuable data for shoe brand partnerships
 
 #### C3. Stryd Integration
 
@@ -1023,27 +1013,7 @@ The AI should generate a personalized race day strategy based on:
 - Extends "Phase 9: Community & Social Features" beyond substitution-specific content
 - Potential cross-posting with other platforms in future
 
-#### D2. Analytics & User Behavior Tracking
-
-**Status:** ✅ COMPLETE (Initial instrumentation + backend analytics endpoints, 2025-11-18)
-
-**Goal:** Build a robust analytics layer to understand real usage and inform product decisions.
-
-**Data to Track:**
-- Navigation flows and drop-off points
-- Feature and button usage (e.g., voice vs quick logging vs manual edits)
-- Adoption of new features (e.g., shoe tracking, watch quick actions)
-
-**Business Value:**
-- Identify features to improve, simplify, or remove
-- Support A/B experiments and pricing/packaging decisions
-- Provide quantitative input to the prioritization framework already defined in this document
-
-**Synergies:**
-- Underpins evaluation criteria and Tier prioritization in this file
-- Required foundation for proving impact of AI Health Intelligence, enterprise features, and community features
-
-#### D3. Demo Mode for Investors/Stakeholders
+#### D2. Demo Mode for Investors/Stakeholders
 
 **Goal:** Provide a guided, zero-setup way to demonstrate VoiceFit without needing a live account.
 
