@@ -868,6 +868,144 @@ Okay, I think we need to make a push to GitHub to see if that syntax error... ..
 - Enhances running shoe analytics and cardio coaching quality
 - Feeds directly into AI Health Intelligence (better predictors for running performance and injury risk)
 
+#### C4. Race Day Plan Generator
+
+**Status:** Planned – not yet prioritized
+**Timeline:** 12-18 months (requires multiple integrations and AI capabilities)
+**Priority:** MEDIUM-HIGH (high user value, moderate complexity)
+
+**Goal:** Generate personalized race day strategies for endurance events (initially running, with future expansion to cycling, swimming, and other endurance sports).
+
+**Core Functionality:**
+
+**1. Race Selection & Discovery:**
+- Integrate with race database APIs to allow users to search and select upcoming races
+- Research available APIs for race information (e.g., race calendars, official race databases)
+- Display race details: date, location, distance, elevation profile, course map
+- Filter by distance, location, date range, and event type
+
+**2. Manual Race Entry (Fallback):**
+- Allow users to manually enter race details if their event isn't in the database
+- Enable manual route/course input via map interface
+- Support custom elevation profile upload or drawing
+- Import GPX/TCX files for course data
+
+**3. Race Day Plan Generation:**
+
+The AI should generate a personalized race day strategy based on:
+
+**Terrain Analysis:**
+- Elevation map and course profile
+- Hills/flats distribution and gradient percentages
+- Technical sections (trails, turns, surface changes)
+- Aid station locations
+
+**Weather Forecast:**
+- Temperature and humidity on race day
+- Wind conditions and direction
+- Precipitation probability
+- Heat index and recommended hydration adjustments
+
+**Historical Performance:**
+- User's past runs at similar distances
+- Training plan adherence and consistency
+- Fitness trends over training cycle
+- Recent race performances and PRs
+
+**Training Data:**
+- Completed workouts and volume trends
+- Pace progression throughout training
+- Long run performances
+- Tempo and interval workout results
+- Recovery patterns and fatigue indicators
+
+**Personal Records:**
+- Best times at various distances (5K, 10K, half marathon, marathon)
+- Recent race performances
+- Training paces (easy, tempo, threshold, interval)
+- Heart rate zones and lactate threshold
+
+**4. Plan Output Should Include:**
+
+**Pacing Strategy:**
+- Mile-by-mile or km-by-km target splits
+- Terrain-adjusted pacing (slower uphill, faster downhill)
+- Negative split strategy recommendations
+- Conservative start pacing to avoid early burnout
+
+**Nutrition/Hydration Recommendations:**
+- Pre-race meal timing and composition
+- During-race fueling schedule (gels, chews, drinks)
+- Hydration strategy based on weather and sweat rate
+- Electrolyte replacement recommendations
+- Aid station utilization plan
+
+**Terrain-Specific Tactics:**
+- When to push (downhills, flats, final miles)
+- When to conserve (steep climbs, early miles)
+- Hill running form cues
+- Mental strategies for difficult sections
+
+**Weather-Adjusted Expectations:**
+- Pace adjustments for heat/humidity
+- Clothing and gear recommendations
+- Sun protection and cooling strategies
+- Wind strategy (drafting, effort management)
+
+**Race Day Checklist:**
+- Pre-race preparation timeline
+- Gear and equipment list
+- Warm-up routine
+- Mental preparation strategies
+
+**5. Post-Race Analysis:**
+- Compare actual performance to plan
+- Identify where pacing deviated from strategy
+- Analyze splits and effort distribution
+- Generate insights for future races
+- Update AI model with race data for better future predictions
+
+**Technical Requirements:**
+- Race database API integration (research needed: RunSignUp, Active.com, UltraSignup, etc.)
+- Weather API integration (OpenWeather, Weather.com)
+- Elevation/terrain analysis algorithms
+- AI/ML model for personalized pacing recommendations
+- GPX/TCX file parsing
+- Map rendering for course visualization
+
+**Estimated Timeline:** 12-16 weeks for initial implementation
+**Dependencies:**
+- Race database API partnerships
+- Weather API integration
+- Historical training data (requires users to have 8-12 weeks of training logged)
+- AI Health Intelligence Engine (Phase 7) for advanced predictions
+
+**Synergies:**
+- Builds on **Running/Cardio Voice Coaching System (C1)** for training data
+- Leverages **AI Health Intelligence Engine (Phase 7)** for performance predictions
+- Uses **Stryd Integration (C3)** for power-based pacing if available
+- Integrates with **Running Shoe Tracking (C2)** for gear recommendations
+- Extends **Program Scheduling & Calendar View** for race-specific training plans
+
+**Competitive Advantage:**
+- Most race planning tools are generic calculators
+- VoiceFit will use actual training data + AI for truly personalized plans
+- Integration with training history makes predictions more accurate
+- Terrain-aware pacing is rare in consumer apps
+
+**Monetization Potential:**
+- Premium feature (race plan generation)
+- Freemium: 1 free race plan, unlimited for premium
+- Potential partnerships with race organizers
+- Affiliate opportunities with race registration platforms
+
+**Future Expansion:**
+- Cycling events (road races, gran fondos, gravel races)
+- Swimming events (open water, triathlons)
+- Multi-sport events (triathlons, duathlons)
+- Ultra-endurance events (100-mile runs, multi-day races)
+- Team relay strategy planning
+
 ### D. Engagement, Community & Insights
 
 #### D1. Community/Social Feed (Optional)
@@ -1014,7 +1152,7 @@ Add to this document with:
 
 ---
 
-**Last Updated:** 2025-11-17
-**Next Review:** 2026-02-17
+**Last Updated:** 2025-11-24
+**Next Review:** 2026-02-24
 **Owner:** Product Team
 **Status:** Living document
