@@ -56,6 +56,15 @@ class HealthKitService {
             AppleHealthKit.Constants.Permissions.BodyTemperature,
             AppleHealthKit.Constants.Permissions.Weight,
             AppleHealthKit.Constants.Permissions.BodyFatPercentage,
+            // Nutrition permissions
+            AppleHealthKit.Constants.Permissions.DietaryEnergyConsumed,
+            AppleHealthKit.Constants.Permissions.DietaryProtein,
+            AppleHealthKit.Constants.Permissions.DietaryCarbohydrates,
+            AppleHealthKit.Constants.Permissions.DietaryFatTotal,
+            AppleHealthKit.Constants.Permissions.DietaryFiber,
+            AppleHealthKit.Constants.Permissions.DietarySugar,
+            AppleHealthKit.Constants.Permissions.DietarySodium,
+            AppleHealthKit.Constants.Permissions.WaterConsumed,
           ],
           write: [],
         },
@@ -143,6 +152,7 @@ class HealthKitService {
         bodyTemp,
         weight,
         bodyFat,
+        nutrition,
       ] = await Promise.all([
         this.getHeartRate(yesterday, now),
         this.getHRV(yesterday, now),
@@ -156,6 +166,7 @@ class HealthKitService {
         this.getBodyTemperature(yesterday, now),
         this.getWeight(yesterday, now),
         this.getBodyFatPercentage(yesterday, now),
+        this.getNutritionData(yesterday, now),
       ]);
 
       // Send to backend
@@ -172,6 +183,7 @@ class HealthKitService {
         bodyTemp,
         weight,
         bodyFat,
+        nutrition,
       });
 
       console.log('[HealthKit] Sync completed successfully');
@@ -379,6 +391,59 @@ class HealthKitService {
           resolve([]);
         } else {
           resolve(results || []);
+        }
+      });
+    });
+  }
+
+  /**
+   * Get nutrition data (calories, macros, micros, water)
+   */
+  private async getNutritionData(startDate: Date, endDate: Date): Promise<any> {
+    return new Promise((resolve) => {
+      const options = { startDate: startDate.toISOString(), endDate: endDate.toISOString() };
+
+      // Fetch all nutrition data in parallel
+      Promise.all([
+        this._getNutritionMetric('dietaryEnergyConsumed', options),
+        this._getNutritionMetric('dietaryProtein', options),
+        this._getNutritionMetric('dietaryCarbohydrates', options),
+        this._getNutritionMetric('dietaryFatTotal', options),
+        this._getNutritionMetric('dietaryFiber', options),
+        this._getNutritionMetric('dietarySugar', options),
+        this._getNutritionMetric('dietarySodium', options),
+        this._getNutritionMetric('waterConsumed', options),
+      ])
+        .then(([calories, protein, carbs, fat, fiber, sugar, sodium, water]) => {
+          resolve({
+            calories: calories,
+            protein: protein,
+            carbs: carbs,
+            fat: fat,
+            fiber: fiber,
+            sugar: sugar,
+            sodium: sodium,
+            water: water,
+          });
+        })
+        .catch((err) => {
+          console.error('[HealthKit] Nutrition data error:', err);
+          resolve({});
+        });
+    });
+  }
+
+  /**
+   * Helper to fetch individual nutrition metric
+   */
+  private async _getNutritionMetric(metric: string, options: any): Promise<number> {
+    return new Promise((resolve) => {
+      (AppleHealthKit as any).getDailyNutritionSamples(metric, options, (err: any, results: any) => {
+        if (err) {
+          console.error(`[HealthKit] ${metric} error:`, err);
+          resolve(0);
+        } else {
+          resolve(results?.value || 0);
         }
       });
     });

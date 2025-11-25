@@ -4071,6 +4071,14 @@ async def terra_webhook(
             # Upsert
             upsert_result = supabase.table('daily_summaries').upsert(merged).execute()
             result = {"success": True, "summary_id": upsert_result.data[0]['id'] if upsert_result.data else None}
+        elif event_type == "nutrition":
+            # Nutrition data from Terra (MyFitnessPal, Cronometer, MacroFactor, etc.)
+            nutrition = wearables_service.normalization_service.normalize_terra_nutrition(body)
+            nutrition['user_id'] = user_id
+
+            # Upsert nutrition data
+            nutrition_result = supabase.table('daily_nutrition_summary').upsert(nutrition).execute()
+            result = {"success": True, "nutrition_id": nutrition_result.data[0]['id'] if nutrition_result.data else None}
         elif event_type == "athlete":
             # User profile update - store in metadata for now
             result = {"success": True, "message": "Athlete profile update received"}
@@ -4416,6 +4424,275 @@ async def get_wearable_connections(
         raise HTTPException(
             status_code=500, detail=f"Failed to fetch connections: {str(e)}"
         )
+
+
+# ============================================================================
+# Nutrition Endpoints
+# ============================================================================
+
+@app.post("/api/nutrition/manual")
+async def log_nutrition_manually(
+    user_id: str,
+    date: str,
+    calories: int,
+    protein_g: float,
+    carbs_g: float,
+    fat_g: float,
+    fiber_g: Optional[float] = None,
+    sugar_g: Optional[float] = None,
+    sodium_mg: Optional[int] = None,
+    water_ml: Optional[int] = None,
+    notes: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Manually log nutrition data for a specific date.
+
+    Args:
+        user_id: User ID
+        date: Date in YYYY-MM-DD format
+        calories: Total calories
+        protein_g: Protein in grams
+        carbs_g: Carbohydrates in grams
+        fat_g: Fat in grams
+        fiber_g: Fiber in grams (optional)
+        sugar_g: Sugar in grams (optional)
+        sodium_mg: Sodium in mg (optional)
+        water_ml: Water in ml (optional)
+        notes: Additional notes (optional)
+
+    Returns:
+        Created nutrition entry
+    """
+    try:
+        # Verify user is logging their own nutrition
+        if user["id"] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        nutrition_entry = {
+            "user_id": user_id,
+            "date": date,
+            "calories": calories,
+            "protein_g": protein_g,
+            "carbs_g": carbs_g,
+            "fat_g": fat_g,
+            "fiber_g": fiber_g or 0,
+            "sugar_g": sugar_g or 0,
+            "sodium_mg": sodium_mg or 0,
+            "water_ml": water_ml or 0,
+            "source": "manual",
+            "source_priority": 100,  # Manual entry has highest priority
+            "notes": notes,
+            "created_at": datetime.now().isoformat(),
+        }
+
+        # Upsert (replace if exists for this date)
+        result = supabase.table("daily_nutrition_summary").upsert(nutrition_entry).execute()
+
+        return {
+            "success": True,
+            "nutrition_id": result.data[0]["id"] if result.data else None,
+            "entry": result.data[0] if result.data else nutrition_entry
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error logging nutrition: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to log nutrition: {str(e)}")
+
+
+@app.get("/api/nutrition/{user_id}")
+async def get_nutrition_data(
+    user_id: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Get user's nutrition data for a date range.
+
+    Args:
+        user_id: User ID
+        start_date: Optional start date (YYYY-MM-DD)
+        end_date: Optional end date (YYYY-MM-DD)
+
+    Returns:
+        List of nutrition entries
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        query = supabase.table("daily_nutrition_summary").select("*").eq("user_id", user_id)
+
+        if start_date:
+            query = query.gte("date", start_date)
+        if end_date:
+            query = query.lte("date", end_date)
+
+        result = query.order("date", desc=True).execute()
+        return {"nutrition_data": result.data}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error fetching nutrition data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch nutrition data: {str(e)}")
+
+
+@app.delete("/api/nutrition/{user_id}/{date}")
+async def delete_nutrition_entry(
+    user_id: str,
+    date: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Delete a nutrition entry for a specific date.
+
+    Args:
+        user_id: User ID
+        date: Date in YYYY-MM-DD format
+
+    Returns:
+        Success status
+    """
+    try:
+        # Verify user is deleting their own entry
+        if user["id"] != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+        # Only allow deletion of manual entries
+        result = supabase.table("daily_nutrition_summary").delete().eq(
+            "user_id", user_id
+        ).eq("date", date).eq("source", "manual").execute()
+
+        return {"success": True, "deleted": len(result.data) > 0}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting nutrition entry: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete nutrition entry: {str(e)}")
+
+
+@app.post("/api/wearables/terra/callback")
+async def terra_oauth_callback(
+    request_data: dict,
+    supabase: Client = Depends(get_supabase_client),
+):
+    """
+    Handle Terra OAuth callback - exchange code for token
+    """
+    try:
+        from terra_oauth_service import TerraOAuthService
+
+        user_id = request_data.get("user_id")
+        code = request_data.get("code")
+
+        if not user_id or not code:
+            raise HTTPException(status_code=400, detail="Missing user_id or code")
+
+        oauth_service = TerraOAuthService(supabase)
+        token_data = await oauth_service.exchange_code_for_token(code, user_id)
+
+        return token_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in Terra callback: {e}")
+        raise HTTPException(status_code=500, detail=f"OAuth callback failed: {str(e)}")
+
+
+@app.post("/api/wearables/whoop/callback")
+async def whoop_oauth_callback(
+    request_data: dict,
+    supabase: Client = Depends(get_supabase_client),
+):
+    """
+    Handle WHOOP OAuth callback - exchange code for token
+    """
+    try:
+        from whoop_oauth_service import WHOOPOAuthService
+
+        user_id = request_data.get("user_id")
+        code = request_data.get("code")
+
+        if not user_id or not code:
+            raise HTTPException(status_code=400, detail="Missing user_id or code")
+
+        oauth_service = WHOOPOAuthService(supabase)
+        token_data = await oauth_service.exchange_code_for_token(code, user_id)
+
+        return token_data
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error in WHOOP callback: {e}")
+        raise HTTPException(status_code=500, detail=f"OAuth callback failed: {str(e)}")
+
+
+@app.delete("/api/wearables/disconnect/terra")
+async def disconnect_terra(
+    request_data: dict,
+    supabase: Client = Depends(get_supabase_client),
+):
+    """
+    Disconnect Terra wearable integration
+    """
+    try:
+        user_id = request_data.get("user_id")
+
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Missing user_id")
+
+        # Mark connection as inactive
+        supabase.table("wearable_provider_connections").update(
+            {"is_active": False}
+        ).eq("user_id", user_id).eq("provider", "terra").execute()
+
+        return {"success": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error disconnecting Terra: {e}")
+        raise HTTPException(status_code=500, detail=f"Disconnect failed: {str(e)}")
+
+
+@app.post("/api/wearables/whoop/refresh")
+async def whoop_refresh_token(
+    request_data: dict,
+    supabase: Client = Depends(get_supabase_client),
+):
+    """
+    Refresh WHOOP access token
+    """
+    try:
+        from whoop_oauth_service import WHOOPOAuthService
+
+        user_id = request_data.get("user_id")
+
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Missing user_id")
+
+        oauth_service = WHOOPOAuthService(supabase)
+        new_token = await oauth_service.refresh_access_token(user_id)
+
+        if not new_token:
+            raise HTTPException(status_code=401, detail="Failed to refresh token")
+
+        return {"access_token": new_token}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error refreshing WHOOP token: {e}")
+        raise HTTPException(status_code=500, detail=f"Token refresh failed: {str(e)}")
 
 
 @app.post("/api/wearables/connect/{provider}")
@@ -5480,6 +5757,878 @@ async def revoke_coach_access(
         raise HTTPException(
             status_code=500, detail=f"Failed to revoke access: {str(e)}"
         )
+
+
+# ============================================================================
+# RUNNING SHOES ENDPOINTS
+# ============================================================================
+
+@app.post("/api/shoes")
+async def add_shoe(
+    request: dict,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Add a new running shoe to user's inventory"""
+    try:
+        user_id = user["sub"]
+
+        # Validate required fields
+        required_fields = ["brand", "model", "purchase_date"]
+        for field in required_fields:
+            if field not in request:
+                raise HTTPException(status_code=400, detail=f"Missing required field: {field}")
+
+        shoe_data = {
+            "user_id": user_id,
+            "brand": request["brand"],
+            "model": request["model"],
+            "purchase_date": request["purchase_date"],
+            "replacement_threshold": request.get("replacement_threshold", 400),
+            "notes": request.get("notes", ""),
+            "is_active": True,
+        }
+
+        result = supabase.table("running_shoes").insert(shoe_data).execute()
+        return {"success": True, "shoe": result.data[0]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error adding shoe: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to add shoe: {str(e)}")
+
+
+@app.get("/api/shoes")
+async def list_shoes(
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """List all running shoes for the user"""
+    try:
+        user_id = user["sub"]
+
+        result = supabase.table("running_shoes").select("*").eq(
+            "user_id", user_id
+        ).order("created_at", desc=True).execute()
+
+        return {"success": True, "shoes": result.data}
+
+    except Exception as e:
+        print(f"Error listing shoes: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to list shoes: {str(e)}")
+
+
+@app.put("/api/shoes/{shoe_id}")
+async def update_shoe(
+    shoe_id: str,
+    request: dict,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Update shoe details"""
+    try:
+        user_id = user["sub"]
+
+        # Verify ownership
+        shoe = supabase.table("running_shoes").select("*").eq(
+            "id", shoe_id
+        ).single().execute()
+
+        if not shoe.data or shoe.data["user_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Update allowed fields
+        update_data = {}
+        allowed_fields = ["brand", "model", "replacement_threshold", "notes", "is_active", "retired_date"]
+        for field in allowed_fields:
+            if field in request:
+                update_data[field] = request[field]
+
+        result = supabase.table("running_shoes").update(update_data).eq(
+            "id", shoe_id
+        ).execute()
+
+        return {"success": True, "shoe": result.data[0]}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error updating shoe: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update shoe: {str(e)}")
+
+
+@app.delete("/api/shoes/{shoe_id}")
+async def delete_shoe(
+    shoe_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Delete a running shoe"""
+    try:
+        user_id = user["sub"]
+
+        # Verify ownership
+        shoe = supabase.table("running_shoes").select("*").eq(
+            "id", shoe_id
+        ).single().execute()
+
+        if not shoe.data or shoe.data["user_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        supabase.table("running_shoes").delete().eq("id", shoe_id).execute()
+
+        return {"success": True}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error deleting shoe: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete shoe: {str(e)}")
+
+
+@app.get("/api/shoes/{shoe_id}/mileage")
+async def get_shoe_mileage(
+    shoe_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Get mileage tracking for a specific shoe"""
+    try:
+        user_id = user["sub"]
+
+        # Verify ownership
+        shoe = supabase.table("running_shoes").select("*").eq(
+            "id", shoe_id
+        ).single().execute()
+
+        if not shoe.data or shoe.data["user_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Get all runs with this shoe
+        runs = supabase.table("runs").select("*").eq(
+            "shoe_id", shoe_id
+        ).order("start_time", desc=True).execute()
+
+        total_mileage = sum(run["distance"] / 1609.34 for run in runs.data) if runs.data else 0
+
+        return {
+            "success": True,
+            "shoe_id": shoe_id,
+            "total_mileage": round(total_mileage, 2),
+            "run_count": len(runs.data) if runs.data else 0,
+            "replacement_threshold": shoe.data["replacement_threshold"],
+            "mileage_remaining": round(shoe.data["replacement_threshold"] - total_mileage, 2),
+            "replacement_percentage": round((total_mileage / shoe.data["replacement_threshold"]) * 100, 1),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting shoe mileage: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get shoe mileage: {str(e)}")
+
+
+@app.get("/api/shoes/{shoe_id}/analytics")
+async def get_shoe_analytics(
+    shoe_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """Get performance analytics for a specific shoe"""
+    try:
+        user_id = user["sub"]
+
+        # Verify ownership
+        shoe = supabase.table("running_shoes").select("*").eq(
+            "id", shoe_id
+        ).single().execute()
+
+        if not shoe.data or shoe.data["user_id"] != user_id:
+            raise HTTPException(status_code=403, detail="Not authorized")
+
+        # Get all runs with this shoe
+        runs = supabase.table("runs").select("*").eq(
+            "shoe_id", shoe_id
+        ).order("start_time", desc=True).execute()
+
+        if not runs.data:
+            return {
+                "success": True,
+                "shoe_id": shoe_id,
+                "run_count": 0,
+                "total_distance": 0,
+                "total_duration": 0,
+                "avg_pace": 0,
+                "avg_speed": 0,
+                "total_calories": 0,
+            }
+
+        total_distance = sum(run["distance"] / 1609.34 for run in runs.data)
+        total_duration = sum(run["duration"] for run in runs.data)
+        avg_pace = sum(run["pace"] for run in runs.data) / len(runs.data)
+        avg_speed = sum(run["avg_speed"] for run in runs.data) / len(runs.data)
+        total_calories = sum(run["calories"] for run in runs.data)
+
+        return {
+            "success": True,
+            "shoe_id": shoe_id,
+            "run_count": len(runs.data),
+            "total_distance": round(total_distance, 2),
+            "total_duration": total_duration,
+            "avg_pace": round(avg_pace, 2),
+            "avg_speed": round(avg_speed, 2),
+            "total_calories": total_calories,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error getting shoe analytics: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to get shoe analytics: {str(e)}")
+
+
+# ============================================================================
+# Health Intelligence Endpoints (Phase 1)
+# ============================================================================
+
+@app.get("/api/health-intelligence/correlations/{user_id}")
+async def get_health_correlations(
+    user_id: str,
+    days: int = 30,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Discover correlations between nutrition, performance, recovery, and injuries.
+
+    Args:
+        user_id: User ID
+        days: Number of days to analyze (default: 30)
+
+    Returns:
+        Discovered correlations with strength and interpretation
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        from health_intelligence_service import HealthIntelligenceService
+
+        service = HealthIntelligenceService(supabase)
+        correlations = service.discover_correlations(user_id, days=days)
+
+        return correlations
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error discovering correlations: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to discover correlations: {str(e)}")
+
+
+@app.get("/api/health-intelligence/injury-risk/{user_id}")
+async def predict_injury_risk(
+    user_id: str,
+    days: int = 30,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Predict injury risk based on training load, recovery, and historical patterns.
+
+    Args:
+        user_id: User ID
+        days: Number of days to analyze (default: 30)
+
+    Returns:
+        Injury risk prediction with factors and recommendations
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        from health_intelligence_service import HealthIntelligenceService
+
+        service = HealthIntelligenceService(supabase)
+        prediction = service.predict_injury_risk(user_id, days=days)
+
+        return prediction
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error predicting injury risk: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to predict injury risk: {str(e)}")
+
+
+@app.get("/api/health-intelligence/performance/{user_id}")
+async def predict_performance(
+    user_id: str,
+    days: int = 30,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Predict workout performance based on recovery, nutrition, and sleep.
+
+    Args:
+        user_id: User ID
+        days: Number of days to analyze (default: 30)
+
+    Returns:
+        Performance prediction with readiness score and recommendations
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        from health_intelligence_service import HealthIntelligenceService
+
+        service = HealthIntelligenceService(supabase)
+        prediction = service.predict_performance(user_id, days=days)
+
+        return prediction
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error predicting performance: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to predict performance: {str(e)}")
+
+
+@app.get("/api/health-intelligence/insights/{user_id}")
+async def get_personalized_insights(
+    user_id: str,
+    days: int = 30,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Generate personalized insights and recommendations based on all health data.
+
+    Args:
+        user_id: User ID
+        days: Number of days to analyze (default: 30)
+
+    Returns:
+        Personalized insights with actionable recommendations
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        from health_intelligence_service import HealthIntelligenceService
+
+        service = HealthIntelligenceService(supabase)
+        insights = service.generate_personalized_insights(user_id, days=days)
+
+        return insights
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating insights: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate insights: {str(e)}")
+
+
+@app.get("/api/health-intelligence/weekly-summary/{user_id}")
+async def get_weekly_summary(
+    user_id: str,
+    supabase: Client = Depends(get_supabase_client),
+    user: dict = Depends(verify_token),
+):
+    """
+    Generate a weekly summary of health metrics and recommendations.
+
+    Args:
+        user_id: User ID
+
+    Returns:
+        Weekly summary with key metrics and trends
+    """
+    try:
+        # Verify access
+        if user["id"] != user_id:
+            coach_check = supabase.table("client_assignments").select("id").eq(
+                "coach_id", user["id"]
+            ).eq("client_id", user_id).is_("revoked_at", "null").execute()
+
+            if not coach_check.data:
+                raise HTTPException(status_code=403, detail="Access denied")
+
+        from health_intelligence_service import HealthIntelligenceService
+
+        service = HealthIntelligenceService(supabase)
+        summary = service.get_weekly_summary(user_id)
+
+        return summary
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error generating weekly summary: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate weekly summary: {str(e)}")
+
+
+# ============================================================================
+# STRYD INTEGRATION ENDPOINTS
+# ============================================================================
+
+
+def get_stryd_service(supabase: Client = Depends(get_supabase_client)):
+    """Dependency injection for Stryd service"""
+    from stryd_service import StrydService
+    return StrydService(supabase)
+
+
+@app.get("/api/stryd/oauth-url")
+async def get_stryd_oauth_url(
+    state: str,
+    service = Depends(get_stryd_service),
+    user: dict = Depends(verify_token),
+):
+    """Get Stryd OAuth authorization URL"""
+    try:
+        url = service.get_oauth_url(state)
+        return {"success": True, "oauth_url": url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get OAuth URL: {str(e)}")
+
+
+@app.post("/api/stryd/exchange-code")
+async def exchange_stryd_code(
+    code: str,
+    service = Depends(get_stryd_service),
+    user: dict = Depends(verify_token),
+):
+    """Exchange authorization code for access token"""
+    try:
+        result = service.exchange_code_for_token(code)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+        # Store token in database
+        supabase = Depends(get_supabase_client)
+        supabase.table("wearable_connections").insert({
+            "user_id": user["sub"],
+            "provider": "stryd",
+            "access_token": result.get("access_token"),
+            "refresh_token": result.get("refresh_token"),
+            "expires_at": result.get("expires_in"),
+        }).execute()
+
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to exchange code: {str(e)}")
+
+
+@app.get("/api/stryd/power-data")
+async def get_stryd_power_data(
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    service = Depends(get_stryd_service),
+    user: dict = Depends(verify_token),
+):
+    """Fetch power data from Stryd"""
+    try:
+        # Get access token from database
+        conn_result = supabase.table("wearable_connections").select("access_token").eq(
+            "user_id", user["sub"]
+        ).eq("provider", "stryd").single().execute()
+
+        access_token = conn_result.data.get("access_token") if conn_result.data else None
+        if not access_token:
+            raise HTTPException(status_code=401, detail="Stryd not connected")
+
+        result = service.get_power_data(user["sub"], access_token, start_date, end_date)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch power data: {str(e)}")
+
+
+@app.get("/api/stryd/mechanics/{activity_id}")
+async def analyze_stryd_mechanics(
+    activity_id: str,
+    service = Depends(get_stryd_service),
+    user: dict = Depends(verify_token),
+):
+    """Analyze running mechanics from power data"""
+    try:
+        # Get access token
+        conn_result = supabase.table("wearable_connections").select("access_token").eq(
+            "user_id", user["sub"]
+        ).eq("provider", "stryd").single().execute()
+
+        access_token = conn_result.data.get("access_token") if conn_result.data else None
+        if not access_token:
+            raise HTTPException(status_code=401, detail="Stryd not connected")
+
+        result = service.analyze_running_mechanics(user["sub"], activity_id, access_token)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to analyze mechanics: {str(e)}")
+
+
+@app.get("/api/stryd/shoe-correlation/{activity_id}")
+async def get_shoe_power_correlation(
+    activity_id: str,
+    service = Depends(get_stryd_service),
+    user: dict = Depends(verify_token),
+):
+    """Correlate power data with shoe selection"""
+    try:
+        result = service.correlate_with_shoe_and_surface(user["sub"], activity_id)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to correlate data: {str(e)}")
+
+
+@app.get("/api/stryd/training-load")
+async def get_stryd_training_load(
+    days: int = 7,
+    service = Depends(get_stryd_service),
+    user: dict = Depends(verify_token),
+):
+    """Get training load analysis"""
+    try:
+        result = service.get_training_load_analysis(user["sub"], days)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to analyze training load: {str(e)}")
+
+
+# ============================================================================
+# RACE DAY PLAN GENERATOR ENDPOINTS
+# ============================================================================
+
+
+def get_race_day_plan_service(supabase: Client = Depends(get_supabase_client)):
+    """Dependency injection for Race Day Plan service"""
+    from race_day_plan_service import RaceDayPlanService
+    return RaceDayPlanService(supabase)
+
+
+@app.post("/api/race-day/generate-plan")
+async def generate_race_plan(
+    race_name: str,
+    race_type: str,
+    distance_km: float,
+    elevation_gain_m: int,
+    weather_forecast: Optional[Dict[str, Any]] = None,
+    user_pr: Optional[float] = None,
+    service = Depends(get_race_day_plan_service),
+    user: dict = Depends(verify_token),
+):
+    """Generate personalized race day plan"""
+    try:
+        result = service.generate_race_plan(
+            user["sub"], race_name, race_type, distance_km, elevation_gain_m,
+            weather_forecast, user_pr
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate plan: {str(e)}")
+
+
+@app.post("/api/race-day/analyze-terrain")
+async def analyze_terrain(
+    race_name: str,
+    elevation_profile: Optional[List[Dict[str, Any]]] = None,
+    service = Depends(get_race_day_plan_service),
+    user: dict = Depends(verify_token),
+):
+    """Analyze race terrain"""
+    try:
+        result = service.analyze_terrain(race_name, elevation_profile)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to analyze terrain: {str(e)}")
+
+
+@app.get("/api/race-day/nutrition-strategy")
+async def get_nutrition_strategy(
+    race_type: str,
+    distance_km: float,
+    weather_temp: Optional[float] = None,
+    service = Depends(get_race_day_plan_service),
+    user: dict = Depends(verify_token),
+):
+    """Get nutrition and hydration strategy"""
+    try:
+        result = service.get_nutrition_strategy(race_type, distance_km, weather_temp)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get strategy: {str(e)}")
+
+
+# ============================================================================
+# VOICE-FIRST ENHANCEMENTS ENDPOINTS
+# ============================================================================
+
+
+def get_voice_first_service(supabase: Client = Depends(get_supabase_client)):
+    """Dependency injection for Voice-First service"""
+    from voice_first_service import VoiceFirstService
+    return VoiceFirstService(supabase)
+
+
+@app.post("/api/voice/process-command")
+async def process_voice_command(
+    command: str,
+    context: Optional[Dict[str, Any]] = None,
+    service = Depends(get_voice_first_service),
+    user: dict = Depends(verify_token),
+):
+    """Process voice command for exercise swap or modification"""
+    try:
+        result = service.process_voice_command(user["sub"], command, context)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to process command: {str(e)}")
+
+
+@app.get("/api/voice/form-cue/{exercise}")
+async def get_form_cue(
+    exercise: str,
+    focus_area: Optional[str] = None,
+    service = Depends(get_voice_first_service),
+    user: dict = Depends(verify_token),
+):
+    """Get voice-activated form cue for an exercise"""
+    try:
+        result = service.get_form_cue(exercise, focus_area)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get form cue: {str(e)}")
+
+
+@app.post("/api/voice/modify-program")
+async def modify_program_by_voice(
+    program_id: str,
+    modification_request: str,
+    service = Depends(get_voice_first_service),
+    user: dict = Depends(verify_token),
+):
+    """Generate program modification based on conversational request"""
+    try:
+        result = service.generate_conversational_modification(
+            user["sub"], program_id, modification_request
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to modify program: {str(e)}")
+
+
+@app.get("/api/voice/shortcuts")
+async def get_voice_shortcuts(
+    service = Depends(get_voice_first_service),
+    user: dict = Depends(verify_token),
+):
+    """Get available voice shortcuts"""
+    try:
+        result = service.get_voice_shortcuts()
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch shortcuts: {str(e)}")
+
+
+# ============================================================================
+# HYBRID ATHLETE TRAINING ENDPOINTS
+# ============================================================================
+
+
+def get_hybrid_athlete_service(supabase: Client = Depends(get_supabase_client)):
+    """Dependency injection for Hybrid Athlete service"""
+    from hybrid_athlete_service import HybridAthleteService
+    return HybridAthleteService(supabase)
+
+
+@app.post("/api/hybrid-athlete/generate-program")
+async def generate_hybrid_program(
+    primary_goal: str,
+    secondary_goal: str,
+    duration_weeks: int = 12,
+    service = Depends(get_hybrid_athlete_service),
+    user: dict = Depends(verify_token),
+):
+    """Generate a hybrid athlete training program"""
+    try:
+        result = service.generate_hybrid_program(
+            user["sub"], primary_goal, secondary_goal, duration_weeks
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate program: {str(e)}")
+
+
+@app.get("/api/hybrid-athlete/interference-mitigation")
+async def get_interference_mitigation(
+    primary_goal: str,
+    secondary_goal: str,
+    service = Depends(get_hybrid_athlete_service),
+    user: dict = Depends(verify_token),
+):
+    """Get interference mitigation strategies"""
+    try:
+        result = service.get_interference_mitigation(primary_goal, secondary_goal)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch strategies: {str(e)}")
+
+
+@app.get("/api/hybrid-athlete/recovery-protocol")
+async def get_recovery_protocol(
+    primary_goal: str,
+    secondary_goal: str,
+    service = Depends(get_hybrid_athlete_service),
+    user: dict = Depends(verify_token),
+):
+    """Get recovery protocol for hybrid training"""
+    try:
+        result = service.get_recovery_protocol(primary_goal, secondary_goal)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch protocol: {str(e)}")
+
+
+# ============================================================================
+# SPORT-SPECIFIC TRAINING ENDPOINTS
+# ============================================================================
+
+
+def get_sport_specific_training_service(supabase: Client = Depends(get_supabase_client)):
+    """Dependency injection for Sport-Specific Training service"""
+    from sport_specific_training_service import SportSpecificTrainingService
+    return SportSpecificTrainingService(supabase)
+
+
+@app.post("/api/sport-training/generate-program")
+async def generate_sport_program(
+    sport: str,
+    position: Optional[str] = None,
+    season: str = "off-season",
+    duration_weeks: int = 12,
+    service = Depends(get_sport_specific_training_service),
+    user: dict = Depends(verify_token),
+):
+    """Generate a sport-specific training program"""
+    try:
+        result = service.generate_program(
+            user["sub"], sport, position, season, duration_weeks
+        )
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate program: {str(e)}")
+
+
+@app.get("/api/sport-training/positions/{sport}")
+async def get_sport_positions(
+    sport: str,
+    service = Depends(get_sport_specific_training_service),
+    user: dict = Depends(verify_token),
+):
+    """Get position-specific variations for a sport"""
+    try:
+        result = service.get_position_variations(sport)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch positions: {str(e)}")
+
+
+@app.get("/api/sport-training/periodization/{sport}")
+async def get_sport_periodization(
+    sport: str,
+    duration_weeks: int = 52,
+    service = Depends(get_sport_specific_training_service),
+    user: dict = Depends(verify_token),
+):
+    """Get season periodization plan for a sport"""
+    try:
+        result = service.get_season_periodization(sport, duration_weeks)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch periodization: {str(e)}")
+
+
+# ============================================================================
+# CROSSFIT WOD MODIFICATION ENDPOINTS
+# ============================================================================
+
+
+def get_crossfit_wod_service(supabase: Client = Depends(get_supabase_client)):
+    """Dependency injection for CrossFit WOD service"""
+    from crossfit_wod_service import CrossFitWODService
+    return CrossFitWODService(supabase)
+
+
+@app.post("/api/crossfit/parse-wod")
+async def parse_wod(
+    wod_text: str,
+    wod_service = Depends(get_crossfit_wod_service),
+    user: dict = Depends(verify_token),
+):
+    """Parse CrossFit WOD text to extract structure"""
+    try:
+        result = wod_service.parse_wod(wod_text)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse WOD: {str(e)}")
+
+
+@app.post("/api/crossfit/modify-wod")
+async def modify_wod(
+    wod_text: str,
+    user_id: str,
+    wod_service = Depends(get_crossfit_wod_service),
+    user: dict = Depends(verify_token),
+):
+    """Generate WOD modifications based on user's injuries and limitations"""
+    try:
+        # Verify user can only modify their own WOD
+        if user["sub"] != user_id:
+            raise HTTPException(status_code=403, detail="Unauthorized")
+
+        result = wod_service.generate_modifications(user_id, wod_text)
+        return {"success": True, "data": result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to modify WOD: {str(e)}")
+
+
+@app.post("/api/crossfit/suggest-substitution")
+async def suggest_substitution(
+    movement: str,
+    reason: str,
+    wod_service = Depends(get_crossfit_wod_service),
+    user: dict = Depends(verify_token),
+):
+    """Suggest exercise substitutions for a movement"""
+    try:
+        result = wod_service.suggest_substitutions(movement, reason)
+        return {"success": True, "data": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to suggest substitutions: {str(e)}")
 
 
 if __name__ == "__main__":

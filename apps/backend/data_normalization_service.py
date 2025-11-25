@@ -165,6 +165,39 @@ class DataNormalizationService:
         }
 
     # ============================================================================
+    # Apple Health Nutrition Normalization
+    # ============================================================================
+
+    def normalize_apple_health_nutrition(
+        self, apple_payload: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Normalize Apple Health nutrition data to our daily_nutrition_summary schema.
+
+        Args:
+            apple_payload: Raw Apple Health nutrition payload from HealthKit
+
+        Returns:
+            Normalized nutrition data
+        """
+        nutrition = apple_payload.get("nutrition", {})
+
+        return {
+            "calories": nutrition.get("calories", 0),
+            "protein_g": nutrition.get("protein", 0),
+            "carbs_g": nutrition.get("carbs", 0),
+            "fat_g": nutrition.get("fat", 0),
+            "fiber_g": nutrition.get("fiber", 0),
+            "sugar_g": nutrition.get("sugar", 0),
+            "sodium_mg": nutrition.get("sodium", 0),
+            "water_ml": nutrition.get("water", 0),
+            "metadata": {
+                "source_apps": nutrition.get("source_apps", []),
+                "synced_at": datetime.now().isoformat(),
+            }
+        }
+
+    # ============================================================================
     # WHOOP API Normalization
     # ============================================================================
 
@@ -294,5 +327,64 @@ class DataNormalizationService:
             'source': 'whoop',
             'source_id': whoop_payload.get('id'),
             'metadata': whoop_payload.get('score', {})
+        }
+
+    # ============================================================================
+    # Terra Nutrition Normalization
+    # ============================================================================
+
+    def normalize_terra_nutrition(self, terra_payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize Terra nutrition webhook payload to our daily_nutrition_summary schema.
+
+        Args:
+            terra_payload: Raw Terra nutrition webhook payload
+
+        Returns:
+            Normalized nutrition data
+        """
+        data = terra_payload.get('data', {})
+        nutrition_date = data.get('date', str(date.today()))
+
+        # Extract meal-level data if available
+        meals = data.get('meals', [])
+        total_calories = 0
+        total_protein = 0
+        total_carbs = 0
+        total_fat = 0
+        total_fiber = 0
+        total_sugar = 0
+        total_sodium = 0
+        total_water = 0
+
+        for meal in meals:
+            total_calories += meal.get('calories', 0)
+            total_protein += meal.get('macros', {}).get('protein_g', 0)
+            total_carbs += meal.get('macros', {}).get('carbohydrates_g', 0)
+            total_fat += meal.get('macros', {}).get('fat_g', 0)
+            total_fiber += meal.get('macros', {}).get('fiber_g', 0)
+            total_sugar += meal.get('macros', {}).get('sugar_g', 0)
+            total_sodium += meal.get('macros', {}).get('sodium_mg', 0)
+
+        # Water intake (if provided separately)
+        total_water = data.get('water_ml', 0)
+
+        return {
+            'date': nutrition_date,
+            'calories': int(total_calories),
+            'protein_g': round(total_protein, 1),
+            'carbs_g': round(total_carbs, 1),
+            'fat_g': round(total_fat, 1),
+            'fiber_g': round(total_fiber, 1),
+            'sugar_g': round(total_sugar, 1),
+            'sodium_mg': int(total_sodium),
+            'water_ml': int(total_water),
+            'source': 'terra',
+            'source_priority': 55,  # Terra has lower priority than manual entry (100)
+            'meal_count': len(meals),
+            'metadata': {
+                'provider': terra_payload.get('provider'),
+                'meals': meals
+            }
         }
 

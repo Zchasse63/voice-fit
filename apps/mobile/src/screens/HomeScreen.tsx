@@ -24,6 +24,8 @@ import CurrentSetBar from "../components/workout/CurrentSetBar";
 import { ScalePressable } from "../components/common/ScalePressable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import SyncStatus from "../components/sync/SyncStatus";
+import { NutritionInsights } from "../components/nutrition/NutritionInsights";
+import { supabase } from "../services/supabase";
 
 export default function HomeScreen({ navigation }: any) {
   const { isDark } = useTheme();
@@ -47,6 +49,10 @@ export default function HomeScreen({ navigation }: any) {
   const [prCount, setPrCount] = useState<number>(0);
   const [analyticsLoading, setAnalyticsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Nutrition state
+  const [todayNutrition, setTodayNutrition] = useState<any>(null);
+  const [scheduledWorkout, setScheduledWorkout] = useState<any>(null);
 
   // Run analytics state
   const [runStats, setRunStats] = useState<WeeklyRunStats>({
@@ -124,6 +130,30 @@ export default function HomeScreen({ navigation }: any) {
         setFatigueData(fatigue);
       } catch (error) {
         console.log("Fatigue analytics not available:", error);
+      }
+
+      // Load nutrition data
+      try {
+        const today = new Date().toISOString().split("T")[0];
+        const { data: nutritionData } = await supabase
+          .from("daily_nutrition_summary")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("date", today)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (nutritionData) {
+          setTodayNutrition({
+            calories: nutritionData.calories || 0,
+            protein_g: nutritionData.protein_g || 0,
+            carbs_g: nutritionData.carbs_g || 0,
+            fat_g: nutritionData.fat_g || 0,
+          });
+        }
+      } catch (error) {
+        console.log("Nutrition data not available:", error);
       }
 
     } catch (error) {
@@ -586,6 +616,16 @@ export default function HomeScreen({ navigation }: any) {
               </View>
             </View>
           </View>
+
+          {/* Nutrition Insights */}
+          {todayNutrition && (
+            <View style={{ marginTop: tokens.spacing.lg, marginBottom: tokens.spacing.lg }}>
+              <NutritionInsights
+                nutrition={todayNutrition}
+                scheduledWorkout={scheduledWorkout}
+              />
+            </View>
+          )}
 
           {/* Quick Action - Start Workout */}
           <ScalePressable

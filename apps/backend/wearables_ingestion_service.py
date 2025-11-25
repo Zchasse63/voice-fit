@@ -135,6 +135,8 @@ class WearablesIngestionService:
             return self._normalize_garmin(event_type, payload)
         elif provider == "oura":
             return self._normalize_oura(event_type, payload)
+        elif provider == "apple_health":
+            return self._normalize_apple_health(event_type, payload)
         else:
             # Generic fallback
             return {"date": str(date.today()), "metrics": [], "nutrition": None}
@@ -198,6 +200,31 @@ class WearablesIngestionService:
         # Oura-specific normalization
         # TODO: Implement based on Oura API documentation
         return {"date": str(date.today()), "metrics": [], "nutrition": None}
+
+    def _normalize_apple_health(self, event_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Normalize Apple Health data from HealthKit sync
+
+        Args:
+            event_type: Type of data (nutrition, activity, sleep, etc.)
+            payload: Raw Apple Health data
+
+        Returns:
+            Normalized data with metrics and nutrition
+        """
+        today = str(date.today())
+
+        if event_type == "nutrition":
+            # Apple Health nutrition data
+            nutrition = self.normalization_service.normalize_apple_health_nutrition(payload)
+            return {
+                "date": today,
+                "metrics": [],
+                "nutrition": nutrition
+            }
+        else:
+            # Other Apple Health data types
+            return {"date": today, "metrics": [], "nutrition": None}
 
     def _upsert_daily_metrics(
         self, user_id: str, metric_date: str, source: str, metrics: List[Dict[str, Any]]

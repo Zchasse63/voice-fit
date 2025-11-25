@@ -69,6 +69,8 @@ class UserContextBuilder:
         latest_snapshot = await self._get_latest_health_snapshot(user_id)
         # NEW: User preferences
         user_preferences = await self._get_user_preferences(user_id)
+        # NEW: Recovery data from WHOOP
+        recovery_data = await self._get_recovery_data(user_id, days=7)
 
         # Build context string
         context_parts = []
@@ -283,6 +285,37 @@ class UserContextBuilder:
                 context_parts.append(f"- {provider.upper()}: Last sync {last_sync} ({status})")
             context_parts.append("")
 
+        # Recovery Data (WHOOP)
+        if recovery_data:
+            context_parts.append("**Recovery Status (Last 7 Days):**")
+
+            # Get latest recovery score
+            latest_recovery = recovery_data[0] if recovery_data else None
+            if latest_recovery:
+                score = latest_recovery.get("recovery_score", 0)
+                hrv = latest_recovery.get("hrv_avg", 0)
+                rhr = latest_recovery.get("resting_hr", 0)
+                strain = latest_recovery.get("strain_score", 0)
+
+                context_parts.append(f"- Today's Recovery Score: {score}/100")
+                if score >= 80:
+                    context_parts.append("  Status: EXCELLENT - User is well-recovered, can handle high intensity")
+                elif score >= 60:
+                    context_parts.append("  Status: GOOD - User is adequately recovered, normal training recommended")
+                else:
+                    context_parts.append("  Status: LOW - User needs recovery, suggest lighter workouts or rest day")
+
+                context_parts.append(f"- HRV (Heart Rate Variability): {hrv:.0f} ms")
+                context_parts.append(f"- Resting Heart Rate: {rhr} bpm")
+                context_parts.append(f"- Strain Score: {strain:.1f}")
+
+            # 7-day trend
+            if len(recovery_data) > 1:
+                avg_recovery = sum(r.get("recovery_score", 0) for r in recovery_data) / len(recovery_data)
+                context_parts.append(f"- 7-Day Average Recovery: {avg_recovery:.0f}/100")
+
+            context_parts.append("")
+
         # Health Metrics (Recovery & Readiness)
         if health_metrics:
             context_parts.append("**Health Metrics (Last 7 Days):**")
@@ -459,6 +492,22 @@ class UserContextBuilder:
         context_parts.append(
             "**Important:** Use this context to provide personalized advice. Consider their injury history, current volume, recovery status, experience level, recent PRs, training consistency, sleep quality, wearable data, health snapshot insights, and user preferences when making recommendations. Strictly respect user preferences (equipment, exercise dislikes, coaching style)."
         )
+
+        context_parts.append("")
+        context_parts.append("**Recovery-Based Recommendations:**")
+        context_parts.append("- If recovery score >= 80: Recommend high-intensity workouts, strength focus, or challenging conditioning")
+        context_parts.append("- If recovery score 60-79: Recommend normal training intensity, balanced approach")
+        context_parts.append("- If recovery score < 60: Recommend lighter workouts, mobility/flexibility work, or suggest a rest day")
+
+        context_parts.append("")
+        context_parts.append("**Nutrition-Based Recommendations:**")
+        context_parts.append("- If daily calories < 1800 + strength training: Flag potential under-recovery, suggest increasing calorie intake")
+        context_parts.append("- If carbs < 150g + scheduled long run (>45min): Suggest carb-loading before the run")
+        context_parts.append("- If protein > 150g: Acknowledge excellent protein intake supports muscle recovery")
+        context_parts.append("- If macro distribution is balanced (P:25-35%, C:40-50%, F:20-35%): Reinforce balanced nutrition supports performance")
+        context_parts.append("- If hydration < 2L: Suggest increasing water intake, especially on training days")
+        context_parts.append("- If HRV is trending down: Suggest deload week or increased recovery focus")
+        context_parts.append("- If resting HR is elevated: Indicate potential overtraining, recommend recovery emphasis")
 
         context = "\n".join(context_parts)
 
@@ -868,6 +917,26 @@ class UserContextBuilder:
             return result.data if result.data else []
         except Exception as e:
             print(f"Error fetching wearable connections: {e}")
+            return []
+
+    async def _get_recovery_data(
+        self, user_id: str, days: int = 7
+    ) -> List[Dict[str, Any]]:
+        """Fetch recovery data from WHOOP (last N days)"""
+        try:
+            cutoff_date = (datetime.now() - timedelta(days=days)).date().isoformat()
+            result = (
+                self.supabase.table("wearable_recovery_data")
+                .select("*")
+                .eq("user_id", user_id)
+                .eq("provider", "whoop")
+                .gte("date", cutoff_date)
+                .order("date", desc=True)
+                .execute()
+            )
+            return result.data if result.data else []
+        except Exception as e:
+            print(f"Error fetching recovery data: {e}")
             return []
 
     async def _get_health_metrics(

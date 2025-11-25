@@ -16,6 +16,9 @@ import { chartDataService, ReadinessDataPoint } from '../services/charts/ChartDa
 import AnalyticsAPIClient, { FatigueAnalytics } from '../services/api/AnalyticsAPIClient';
 import { CartesianChart, Line, useChartPressState } from 'victory-native';
 import { Circle } from '@shopify/react-native-skia';
+import { WHOOPRecoveryCard } from '../components/recovery/WHOOPRecoveryCard';
+import { RecoveryTrendsChart } from '../components/recovery/RecoveryTrendsChart';
+import { supabase } from '../services/supabase';
 
 type TimeRange = '1W' | '1M' | '3M' | 'All';
 
@@ -28,6 +31,8 @@ export default function RecoveryDetailScreen() {
   
   const [readinessData, setReadinessData] = useState<ReadinessDataPoint[]>([]);
   const [fatigueData, setFatigueData] = useState<FatigueAnalytics | null>(null);
+  const [whoopData, setWhoopData] = useState<any[]>([]);
+  const [whoopConnected, setWhoopConnected] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedRange, setSelectedRange] = useState<TimeRange>('1M');
   const { state, isActive } = useChartPressState({ x: 0, y: { compositeScore: 0 } });
@@ -41,7 +46,31 @@ export default function RecoveryDetailScreen() {
 
     try {
       setIsLoading(true);
-      
+
+      // Check WHOOP connection
+      const { data: connection } = await supabase
+        .from('wearable_provider_connections')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('provider', 'whoop')
+        .single();
+
+      if (connection?.is_active) {
+        setWhoopConnected(true);
+        // Fetch WHOOP recovery data for last 7 days
+        const { data: whoopRecovery } = await supabase
+          .from('wearable_recovery_data')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('provider', 'whoop')
+          .gte('date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+          .order('date', { ascending: false });
+
+        if (whoopRecovery) {
+          setWhoopData(whoopRecovery);
+        }
+      }
+
       // Fetch readiness trends
       const readiness = await chartDataService.getReadinessTrend(user.id);
       setReadinessData(readiness);

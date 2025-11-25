@@ -24,7 +24,6 @@
 - **WHOOP:** Need WHOOP developer account and OAuth app registration
 - **Live Activity:** Requires Xcode and physical iOS 16.1+ device for testing
 - **Android Foreground Service:** Requires Android Studio and physical Android device
-
 ---
 
 ## 🎯 TIER 1: Resume Immediately (High ROI, Nearly Complete)
